@@ -306,67 +306,100 @@ func TestTransaction_MatchRewards(t *testing.T) {
 }
 
 func TestTransaction_GetToHashBytes(t *testing.T) {
-	tx1 := Transaction{
-		ID: []byte{88},
-		Vin: []transactionbase.TXInput{
-			{Txid: []byte{24, 48}, Vout: 10, Signature: nil, PubKey: []byte{32, 64}},
+	tests := []struct {
+		name          string
+		tx            *Transaction
+		expectedRes   []byte
+	}{
+		{
+			name: "noTipOrGas",
+			tx: &Transaction{
+				ID: []byte{0x58},
+				Vin: []transactionbase.TXInput{
+					{Txid: []byte{0x18, 0x30}, Vout: 10, Signature: nil, PubKey: []byte{0x20, 0x40}},
+				},
+				Vout: []transactionbase.TXOutput{
+					{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{0x40, 0x80}), Contract: "test"},
+				},
+			},
+			expectedRes: []byte{0x18, 0x30, 0x0, 0x0, 0x0, 0xa, 0x20, 0x40, 0x1, 0x40, 0x80, 0x74, 0x65, 0x73, 0x74},
 		},
-		Vout: []transactionbase.TXOutput{
-			{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{64, 128}), Contract: "test"},
+		{
+			name: "withTipAndGas",
+			tx: &Transaction{
+				ID: []byte{0x66},
+				Vin: []transactionbase.TXInput{
+					{Txid: []byte{0xc7, 0x4d}, Vout: 10, Signature: nil, PubKey: []byte{0x7c, 0x4d}},
+					{Txid: []byte{0xc8, 0x4e}, Vout: 10, Signature: nil, PubKey: []byte{0x7d, 0x4e}},
+				},
+				Vout: []transactionbase.TXOutput{
+					{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{0xc6, 0x49}), Contract: "test"},
+					{Value: common.NewAmount(2), PubKeyHash: account.PubKeyHash([]byte{0xc7, 0x4a}), Contract: "test"},
+				},
+				Tip: common.NewAmount(5),
+				GasLimit: common.NewAmount(1024),
+				GasPrice: common.NewAmount(1),
+				Type: TxTypeNormal,
+			},
+			expectedRes: []byte{0xc7, 0x4d, 0x0, 0x0, 0x0, 0xa, 0x7c, 0x4d, 0xc8, 0x4e, 0x0, 0x0, 0x0, 0xa, 0x7d, 0x4e, 0x1, 0xc6, 0x49, 0x74, 0x65, 0x73, 0x74, 0x2, 0xc7, 0x4a, 0x74, 0x65, 0x73, 0x74, 0x5, 0x4, 0x0, 0x1, 0x0, 0x0, 0x0, 0x1},
+		},
+		{
+			name: "emptyVinVout",
+			tx: &Transaction{
+				ID: []byte{0x0},
+				Vin: []transactionbase.TXInput{},
+				Vout: []transactionbase.TXOutput{},
+			},
+			expectedRes: []byte(nil),
 		},
 	}
-	tx2 := Transaction{
-		ID: []byte{102},
-		Vin: []transactionbase.TXInput{
-			{Txid: []byte{199, 77}, Vout: 10, Signature: nil, PubKey: []byte{124, 77}},
-			{Txid: []byte{200, 78}, Vout: 10, Signature: nil, PubKey: []byte{125, 78}},
-		},
-		Vout: []transactionbase.TXOutput{
-			{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{198, 73}), Contract: "test"},
-			{Value: common.NewAmount(2), PubKeyHash: account.PubKeyHash([]byte{199, 74}), Contract: "test"},
-		},
-		Tip: common.NewAmount(5),
-		GasLimit: common.NewAmount(1024),
-		GasPrice: common.NewAmount(1),
-		Type: TxTypeNormal,
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expectedRes, tt.tx.GetToHashBytes())
+		})
 	}
-	tx3 := Transaction{
-		ID: []byte{0},
-		Vin: []transactionbase.TXInput{},
-		Vout: []transactionbase.TXOutput{},
-	}
-	expected1 := []byte{0x18, 0x30, 0x0, 0x0, 0x0, 0xa, 0x20, 0x40, 0x1, 0x40, 0x80, 0x74, 0x65, 0x73, 0x74}
-	expected2 := []byte{0xc7, 0x4d, 0x0, 0x0, 0x0, 0xa, 0x7c, 0x4d, 0xc8, 0x4e, 0x0, 0x0, 0x0, 0xa, 0x7d, 0x4e, 0x1, 0xc6, 0x49, 0x74, 0x65, 0x73, 0x74, 0x2, 0xc7, 0x4a, 0x74, 0x65, 0x73, 0x74, 0x5, 0x4, 0x0, 0x1, 0x0, 0x0, 0x0, 0x1}
-	assert.Equal(t, expected1, tx1.GetToHashBytes())
-	assert.Equal(t, expected2, tx2.GetToHashBytes())
-	assert.Equal(t, []byte(nil), tx3.GetToHashBytes())
 }
 
 func TestTransaction_Hash(t *testing.T) {
-	tx1 := Transaction{
-		ID: []byte{102},
-		Vin: []transactionbase.TXInput{
-			{Txid: []byte{199, 77}, Vout: 10, Signature: nil, PubKey: []byte{124, 77}},
-			{Txid: []byte{200, 78}, Vout: 10, Signature: nil, PubKey: []byte{125, 78}},
+	tests := []struct {
+		name          string
+		tx            *Transaction
+		expectedRes   []byte
+	}{
+		{
+			name: "normal",
+			tx: &Transaction{
+				ID: []byte{0x66},
+				Vin: []transactionbase.TXInput{
+					{Txid: []byte{0xc7, 0x4d}, Vout: 10, Signature: nil, PubKey: []byte{0x7c, 0x4d}},
+					{Txid: []byte{0xc8, 0x4e}, Vout: 10, Signature: nil, PubKey: []byte{0x7d, 0x4e}},
+				},
+				Vout: []transactionbase.TXOutput{
+					{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{0xc6, 0x49}), Contract: "test"},
+					{Value: common.NewAmount(2), PubKeyHash: account.PubKeyHash([]byte{0xc7, 0x4a}), Contract: "test"},
+				},
+				Tip: common.NewAmount(5),
+				GasLimit: common.NewAmount(1024),
+				GasPrice: common.NewAmount(1),
+				Type: TxTypeNormal,
+			},
+			expectedRes: []byte{0x4f, 0xda, 0x27, 0xf8, 0x2c, 0xa, 0x49, 0x9d, 0x8c, 0x19, 0x37, 0x46, 0x2c, 0x19, 0x9, 0xc6, 0x96, 0x54, 0x31, 0x99, 0x9f, 0x1f, 0xc6, 0x84, 0xf5, 0xc0, 0xc5, 0x6b, 0xbd, 0xbd, 0xe, 0xc8},
 		},
-		Vout: []transactionbase.TXOutput{
-			{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{198, 73}), Contract: "test"},
-			{Value: common.NewAmount(2), PubKeyHash: account.PubKeyHash([]byte{199, 74}), Contract: "test"},
+		{
+			name: "emptyVinVout",
+			tx: &Transaction{
+				ID: []byte{0},
+				Vin: []transactionbase.TXInput{},
+				Vout: []transactionbase.TXOutput{},
+			},
+			expectedRes: []byte{0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55},
 		},
-		Tip: common.NewAmount(5),
-		GasLimit: common.NewAmount(1024),
-		GasPrice: common.NewAmount(1),
-		Type: TxTypeNormal,
 	}
-	tx2 := Transaction{
-		ID: []byte{0},
-		Vin: []transactionbase.TXInput{},
-		Vout: []transactionbase.TXOutput{},
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expectedRes, tt.tx.Hash())
+		})
 	}
-	expected1 := []byte{0x4f, 0xda, 0x27, 0xf8, 0x2c, 0xa, 0x49, 0x9d, 0x8c, 0x19, 0x37, 0x46, 0x2c, 0x19, 0x9, 0xc6, 0x96, 0x54, 0x31, 0x99, 0x9f, 0x1f, 0xc6, 0x84, 0xf5, 0xc0, 0xc5, 0x6b, 0xbd, 0xbd, 0xe, 0xc8}
-	expected2 := []byte{0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55}
-	assert.Equal(t, expected1, tx1.Hash())
-	assert.Equal(t, expected2, tx2.Hash())
 }
 
 func TestTransaction_DeepCopy(t *testing.T) {
@@ -401,38 +434,39 @@ func TestTransaction_DeepCopy(t *testing.T) {
 }
 
 func TestTransaction_verifyID(t *testing.T) {
-	tx1 := Transaction{
-		ID: []byte{102},
+	normalTx := Transaction{
+		ID: []byte{0x4f, 0xda, 0x27, 0xf8, 0x2c, 0xa, 0x49, 0x9d, 0x8c, 0x19, 0x37, 0x46, 0x2c, 0x19, 0x9, 0xc6, 0x96, 0x54, 0x31, 0x99, 0x9f, 0x1f, 0xc6, 0x84, 0xf5, 0xc0, 0xc5, 0x6b, 0xbd, 0xbd, 0xe, 0xc8},
 		Vin: []transactionbase.TXInput{
-			{Txid: []byte{199, 77}, Vout: 10, Signature: nil, PubKey: []byte{124, 77}},
-			{Txid: []byte{200, 78}, Vout: 10, Signature: nil, PubKey: []byte{125, 78}},
+			{Txid: []byte{0xc7, 0x4d}, Vout: 10, Signature: nil, PubKey: []byte{0x7c, 0x4d}},
+			{Txid: []byte{0xc8, 0x4e}, Vout: 10, Signature: nil, PubKey: []byte{0x7d, 0x4e}},
 		},
 		Vout: []transactionbase.TXOutput{
-			{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{198, 73}), Contract: "test"},
-			{Value: common.NewAmount(2), PubKeyHash: account.PubKeyHash([]byte{199, 74}), Contract: "test"},
+			{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{0xc6, 0x49}), Contract: "test"},
+			{Value: common.NewAmount(2), PubKeyHash: account.PubKeyHash([]byte{0xc7, 0x4a}), Contract: "test"},
 		},
 		Tip: common.NewAmount(5),
 		GasLimit: common.NewAmount(1024),
 		GasPrice: common.NewAmount(1),
 		Type: TxTypeNormal,
 	}
-	tx2 := Transaction {
+	emptyVinVoutTx := Transaction {
 		ID: []byte{0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55},
 		Vin: []transactionbase.TXInput{},
 		Vout: []transactionbase.TXOutput{},
 	}
-	verified, err := tx1.verifyID()
+
+	verified, err := normalTx.verifyID()
+	assert.True(t, verified)
+	assert.Nil(t, err)
+
+	verified, err = emptyVinVoutTx.verifyID()
+	assert.True(t, verified)
+	assert.Nil(t, err)
+
+	normalTx.ID = []byte{0x0}
+	verified, err = normalTx.verifyID()
 	assert.False(t, verified)
 	assert.Equal(t, errors.New("Transaction: ID is invalid"), err)
-
-	tx1.ID = tx1.Hash()
-	verified, err = tx1.verifyID()
-	assert.True(t, verified)
-	assert.Nil(t, err)
-
-	verified, err = tx2.verifyID()
-	assert.True(t, verified)
-	assert.Nil(t, err)
 }
 
 func TestTransaction_verifyAmount(t *testing.T) {
@@ -474,11 +508,11 @@ func TestTransaction_verifyAmount(t *testing.T) {
 
 func TestTransaction_CalculateTotalVoutValue(t *testing.T) {
 	tx := Transaction{
-		ID: []byte{102},
+		ID: []byte{0x66},
 		Vin: []transactionbase.TXInput{},
 		Vout: []transactionbase.TXOutput{
-			{Value: common.NewAmount(20), PubKeyHash: account.PubKeyHash([]byte{198, 73}), Contract: ""},
-			{Value: common.NewAmount(44), PubKeyHash: account.PubKeyHash([]byte{199, 74}), Contract: ""},
+			{Value: common.NewAmount(20), PubKeyHash: account.PubKeyHash([]byte{0xc6, 0x49}), Contract: "test"},
+			{Value: common.NewAmount(44), PubKeyHash: account.PubKeyHash([]byte{0xc7, 0x4a}), Contract: "test"},
 		},
 	}
 
@@ -503,15 +537,15 @@ func TestTransaction_CalculateTotalVoutValue(t *testing.T) {
 }
 
 func TestTransaction_String(t *testing.T) {
-	tx1 := Transaction{
-		ID: []byte{102},
+	tx := Transaction{
+		ID: []byte{0x66},
 		Vin: []transactionbase.TXInput{
-			{Txid: []byte{199, 77}, Vout: 10, Signature: nil, PubKey: []byte{124, 77}},
-			{Txid: []byte{200, 78}, Vout: 10, Signature: nil, PubKey: []byte{125, 78}},
+			{Txid: []byte{0xc7, 0x4d}, Vout: 10, Signature: nil, PubKey: []byte{0x7c, 0x4d}},
+			{Txid: []byte{0xc8, 0x4e}, Vout: 10, Signature: nil, PubKey: []byte{0x7d, 0x4e}},
 		},
 		Vout: []transactionbase.TXOutput{
-			{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{198, 73}), Contract: "test"},
-			{Value: common.NewAmount(2), PubKeyHash: account.PubKeyHash([]byte{199, 74}), Contract: "test"},
+			{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{0xc6, 0x49}), Contract: "test"},
+			{Value: common.NewAmount(2), PubKeyHash: account.PubKeyHash([]byte{0xc7, 0x4a}), Contract: "test"},
 		},
 		Tip: common.NewAmount(5),
 		GasLimit: common.NewAmount(1024),
@@ -542,7 +576,7 @@ func TestTransaction_String(t *testing.T) {
 		"     GasPrice: 1\n" +
 		"     Type: 1\n\n"
 
-	assert.Equal(t, expectedString, tx1.String())
+	assert.Equal(t, expectedString, tx.String())
 }
 
 func TestTransaction_GetSize(t *testing.T) {
@@ -558,54 +592,57 @@ func TestTransaction_GetSize(t *testing.T) {
 }
 
 func TestTransaction_GetDefaultFromTransactionAccount(t *testing.T) {
-	tx1 := Transaction{
+	// nil Vin
+	tx := Transaction{
 		ID: util.GenerateRandomAoB(1),
 		Vin: nil,
 		Vout: nil,
 	}
+	result := tx.GetDefaultFromTransactionAccount()
+	assert.Equal(t, result.GetPubKeyHash().GenerateAddress(), result.GetAddress())
 
-	result1 := tx1.GetDefaultFromTransactionAccount()
-	assert.Equal(t, result1.GetPubKeyHash().GenerateAddress(), result1.GetAddress())
+	// empty Vin
+	tx.Vin = []transactionbase.TXInput{}
+	result = tx.GetDefaultFromTransactionAccount()
+	assert.Equal(t, result.GetPubKeyHash().GenerateAddress(), result.GetAddress())
 
-	tx1.Vin = []transactionbase.TXInput{}
-	result2 := tx1.GetDefaultFromTransactionAccount()
-	assert.Equal(t, result2.GetPubKeyHash().GenerateAddress(), result2.GetAddress())
-
-	tx1.Vin = []transactionbase.TXInput{
-		{Txid: []byte{199, 77}, Vout: 10, Signature: nil, PubKey: []byte{124, 77}},
-		{Txid: []byte{200, 78}, Vout: 10, Signature: nil, PubKey: []byte{125, 78}},
+	// normal Vin
+	tx.Vin = []transactionbase.TXInput{
+		{Txid: []byte{0xc7, 0x4d}, Vout: 10, Signature: nil, PubKey: []byte{0x7c, 0x4d}},
+		{Txid: []byte{0xc8, 0x4e}, Vout: 10, Signature: nil, PubKey: []byte{0x7d, 0x4e}},
 	}
-	result3 := tx1.GetDefaultFromTransactionAccount()
-	assert.Equal(t, result3.GetPubKeyHash().GenerateAddress(), result3.GetAddress())
+	result = tx.GetDefaultFromTransactionAccount()
+	assert.Equal(t, result.GetPubKeyHash().GenerateAddress(), result.GetAddress())
 
-	tx1.Vin[0].PubKey = []byte{0xff, 0x62, 0x80, 0x2b, 0xec, 0xac, 0x6f, 0x6c, 0x16, 0xda, 0xde, 0x6e, 0xa9, 0x3b, 0x87, 0x8a, 0x17, 0xc7, 0x9c, 0x2e, 0x2e, 0x4c, 0x2f, 0xb9, 0x64, 0xda, 0x12, 0x60, 0x91, 0x82, 0x9a, 0x64, 0x73, 0xd7, 0xd3, 0x4b, 0x51, 0x81, 0x9e, 0xd2, 0x2e, 0xb9, 0x42, 0x1, 0xce, 0xe0, 0x19, 0x97, 0xa0, 0x8e, 0xea, 0x80, 0xb, 0x18, 0x64, 0x8b, 0xf4, 0xd4, 0xd, 0xdc, 0x91, 0x40, 0x37, 0x75}
-	result4 := tx1.GetDefaultFromTransactionAccount()
+	// Vin with valid PubKey
+	tx.Vin[0].PubKey = []byte{0xff, 0x62, 0x80, 0x2b, 0xec, 0xac, 0x6f, 0x6c, 0x16, 0xda, 0xde, 0x6e, 0xa9, 0x3b, 0x87, 0x8a, 0x17, 0xc7, 0x9c, 0x2e, 0x2e, 0x4c, 0x2f, 0xb9, 0x64, 0xda, 0x12, 0x60, 0x91, 0x82, 0x9a, 0x64, 0x73, 0xd7, 0xd3, 0x4b, 0x51, 0x81, 0x9e, 0xd2, 0x2e, 0xb9, 0x42, 0x1, 0xce, 0xe0, 0x19, 0x97, 0xa0, 0x8e, 0xea, 0x80, 0xb, 0x18, 0x64, 0x8b, 0xf4, 0xd4, 0xd, 0xdc, 0x91, 0x40, 0x37, 0x75}
+	result = tx.GetDefaultFromTransactionAccount()
 	expectedAddr := account.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs")
 	expectedPkh := account.PubKeyHash{0x5a, 0x1d, 0x50, 0x8c, 0x96, 0x62, 0x43, 0x85, 0xcd, 0x80, 0x1, 0xd3, 0xc0, 0x29, 0x29, 0xa5, 0x25, 0xad, 0xe, 0xea, 0x47}
 
-	assert.Equal(t, expectedAddr, result4.GetAddress())
-	assert.Equal(t, expectedPkh, result4.GetPubKeyHash())
+	assert.Equal(t, expectedAddr, result.GetAddress())
+	assert.Equal(t, expectedPkh, result.GetPubKeyHash())
 }
 
 func TestTransaction_CheckVinNum(t *testing.T) {
-	tx1 := Transaction{
+	tx := Transaction{
 		ID:         util.GenerateRandomAoB(1),
 		Vin:        []transactionbase.TXInput{},
 		Vout:       nil,
 	}
-	assert.Nil(t, tx1.CheckVinNum())
+	assert.Nil(t, tx.CheckVinNum())
 
 	for i := 0; i < 50; i++ {
-		tx1.Vin = append(tx1.Vin, transactionbase.TXInput{})
+		tx.Vin = append(tx.Vin, transactionbase.TXInput{})
 	}
-	assert.Nil(t, tx1.CheckVinNum())
+	assert.Nil(t, tx.CheckVinNum())
 
-	tx1.Vin = append(tx1.Vin, transactionbase.TXInput{})
-	assert.Equal(t, errors.New("too many vin in a transaction"), tx1.CheckVinNum())
+	tx.Vin = append(tx.Vin, transactionbase.TXInput{})
+	assert.Equal(t, errors.New("too many vin in a transaction"), tx.CheckVinNum())
 }
 
 func TestSendTxParam_TotalCost(t *testing.T) {
-	st1 := SendTxParam{
+	params := SendTxParam{
 		From:          account.Address{},
 		SenderKeyPair: nil,
 		To:            account.Address{},
@@ -613,14 +650,14 @@ func TestSendTxParam_TotalCost(t *testing.T) {
 		Contract:      "",
 	}
 
-	assert.Equal(t, common.NewAmount(20), st1.TotalCost())
+	assert.Equal(t, common.NewAmount(20), params.TotalCost())
 
-	st1.Tip = common.NewAmount(2)
-	assert.Equal(t, common.NewAmount(22), st1.TotalCost())
+	params.Tip = common.NewAmount(2)
+	assert.Equal(t, common.NewAmount(22), params.TotalCost())
 
-	st1.GasLimit = common.NewAmount(3)
-	st1.GasPrice = common.NewAmount(2)
-	assert.Equal(t, common.NewAmount(28), st1.TotalCost())
+	params.GasLimit = common.NewAmount(3)
+	params.GasPrice = common.NewAmount(2)
+	assert.Equal(t, common.NewAmount(28), params.TotalCost())
 }
 
 func TestCalculateUtxoSum(t *testing.T) {
