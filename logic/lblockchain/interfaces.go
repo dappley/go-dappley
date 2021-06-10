@@ -17,7 +17,7 @@ type Consensus interface {
 	Validate(*block.Block) bool
 	SetDynasty(dynasty *consensus.Dynasty)
 	ChangeDynasty(height uint64)
-	AddReplacement(original, new string, height uint64)
+	AddReplacement(original, new string, height uint64, kind int)
 }
 
 type LIBPolicy interface {

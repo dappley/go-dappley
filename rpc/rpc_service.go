@@ -320,11 +320,12 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	}
 
 	rpcService.mutex.Lock()
-	bc.GetTxPool().Push(*tx)
 	if !rpcService.utxoIndex.UpdateUtxo(tx) {
 		rpcService.mutex.Unlock()
 		logger.Error("updateUTXO failed.")
+		return nil, status.Error(codes.InvalidArgument, "updateUTXO failed")
 	}
+	bc.GetTxPool().Push(*tx)
 	rpcService.mutex.Unlock()
 	bc.GetTxPool().BroadcastTx(tx)
 

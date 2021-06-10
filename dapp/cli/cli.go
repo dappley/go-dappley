@@ -75,6 +75,8 @@ const (
 	cliListAddresses     = "listAddresses"
 	clisendFromMiner     = "sendFromMiner"
 	clichangeProducer    = "changeProducer"
+	cliaddProducer       = "addProducer"
+	clideleteProducer    = "deleteProducer"
 	cliEstimateGas       = "estimateGas"
 	cliGasPrice          = "gasPrice"
 	cliContractQuery     = "contractQuery"
@@ -146,6 +148,8 @@ var cmdList = []string{
 	cliListAddresses,
 	clisendFromMiner,
 	clichangeProducer,
+	cliaddProducer,
+	clideleteProducer,
 	cliEstimateGas,
 	cliGasPrice,
 	cliContractQuery,
@@ -191,6 +195,26 @@ var cmdFlagsMap = map[string][]flagPars{
 			valueTypeString,
 			"Producer's address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 		},
+		flagPars{
+			flagBlockHeight,
+			uint64(0),
+			valueTypeUint64,
+			"height. Eg. 1",
+		},
+	}, cliaddProducer: {
+		flagPars{
+			flagProducerAddr,
+			"",
+			valueTypeString,
+			"Producer's address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+		},
+		flagPars{
+			flagBlockHeight,
+			uint64(0),
+			valueTypeUint64,
+			"height. Eg. 1",
+		},
+	}, clideleteProducer: {
 		flagPars{
 			flagBlockHeight,
 			uint64(0),
@@ -368,6 +392,8 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliListAddresses:     {adminRpcService, listAddressesCommandHandler},
 	clisendFromMiner:     {adminRpcService, sendFromMinerCommandHandler},
 	clichangeProducer:    {adminRpcService, clichangeProducerCommandHandler},
+	cliaddProducer:       {adminRpcService, cliaddProducerCommandHandler},
+	clideleteProducer:    {adminRpcService, clideleteProducerCommandHandler},
 	cliEstimateGas:       {rpcService, estimateGasCommandHandler},
 	cliGasPrice:          {rpcService, gasPriceCommandHandler},
 	cliHelp:              {adminRpcService, helpCommandHandler},
@@ -1134,6 +1160,64 @@ func getPeerInfoCommandHandler(ctx context.Context, account interface{}, flags c
 	fmt.Println("00000000")
 }
 
+func clideleteProducerCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
+
+	height := *(flags[flagBlockHeight].(*uint64))
+	if height == 0 {
+		printUsage()
+		fmt.Println("\n Example: cli deleteProducer -height 100")
+		fmt.Println()
+		return
+	}
+	_, err := c.(rpcpb.AdminServiceClient).RpcDeleteProducer(ctx, &rpcpb.DeleteProducerRequest{
+		Height: height,
+	})
+
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error:", status.Convert(err).Message())
+		}
+		return
+	}
+	fmt.Println("Producer will be delete.")
+}
+
+func cliaddProducerCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
+	producerAddress := *(flags[flagProducerAddr].(*string))
+	height := *(flags[flagBlockHeight].(*uint64))
+	if len(producerAddress) == 0 {
+		printUsage()
+		fmt.Println("\n Example: cli addProducer -address 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7 -height 100")
+		fmt.Println()
+		return
+	}
+	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(producerAddress))
+
+	if !addressAccount.IsValid() {
+		fmt.Println("Error: address is invalid")
+		return
+	}
+
+	_, err := c.(rpcpb.AdminServiceClient).RpcAddProducer(ctx, &rpcpb.AddProducerRequest{
+		Addresses: producerAddress,
+		Height:    height,
+	})
+
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error:", status.Convert(err).Message())
+		}
+		return
+	}
+	fmt.Println("Producer will be added.")
+}
+
 func clichangeProducerCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	producerAddress := *(flags[flagProducerAddr].(*string))
 	height := *(flags[flagBlockHeight].(*uint64))
@@ -1164,7 +1248,7 @@ func clichangeProducerCommandHandler(ctx context.Context, c interface{}, flags c
 		}
 		return
 	}
-	fmt.Println("Producer is added.")
+	fmt.Println("Producer will be changed.")
 }
 
 type utxoSlice []*utxo.UTXO

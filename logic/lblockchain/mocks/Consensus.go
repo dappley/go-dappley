@@ -14,9 +14,9 @@ type Consensus struct {
 	mock.Mock
 }
 
-// AddReplacement provides a mock function with given fields: original, new, height
-func (_m *Consensus) AddReplacement(original string, new string, height uint64) {
-	_m.Called(original, new, height)
+// AddReplacement provides a mock function with given fields: original, new, height, kind
+func (_m *Consensus) AddReplacement(original string, new string, height uint64, kind int) {
+	_m.Called(original, new, height, kind)
 }
 
 // ChangeDynasty provides a mock function with given fields: height

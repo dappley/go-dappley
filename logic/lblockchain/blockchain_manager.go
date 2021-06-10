@@ -48,6 +48,7 @@ const (
 type Dynasty struct {
 	Height   uint64 `json:"height"`
 	Producer string `json:"addresses"`
+	Type     int    `json:"type"`
 }
 
 var (
@@ -83,8 +84,8 @@ func NewBlockchainManager(blockchain *Blockchain, blockpool *blockchain.BlockPoo
 func (bm *BlockchainManager) GetDownloadRequestCh() chan chan bool {
 	return bm.downloadRequestCh
 }
-func (bm *BlockchainManager) SetNewDynasty(original, new string, height uint64) {
-	bm.consensus.AddReplacement(original, new, height)
+func (bm *BlockchainManager) SetNewDynasty(original, new string, height uint64, kind int) {
+	bm.consensus.AddReplacement(original, new, height, kind)
 }
 
 func (bm *BlockchainManager) SetNewDynastyByString(info, original string) {
@@ -93,7 +94,8 @@ func (bm *BlockchainManager) SetNewDynastyByString(info, original string) {
 	if err != nil {
 		logger.Warn(err.Error())
 	}
-	bm.consensus.AddReplacement(original, dynasty.Producer, dynasty.Height)
+	bm.consensus.AddReplacement(original, dynasty.Producer, dynasty.Height, dynasty.Type)
+	logger.Info("change", dynasty.Type)
 }
 
 func (bm *BlockchainManager) CheckDynast(height uint64) {
