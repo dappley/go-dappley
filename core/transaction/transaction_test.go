@@ -19,6 +19,9 @@
 package transaction
 
 import (
+	"errors"
+	"github.com/dappley/go-dappley/core/utxo"
+	"math/big"
 	"testing"
 
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
@@ -300,4 +303,359 @@ func TestTransaction_MatchRewards(t *testing.T) {
 			assert.Equal(t, tt.expectedRes, tt.tx.MatchRewards(tt.rewardStorage))
 		})
 	}
+}
+
+func TestTransaction_GetToHashBytes(t *testing.T) {
+	tx1 := Transaction{
+		ID: []byte{88},
+		Vin: []transactionbase.TXInput{
+			{Txid: []byte{24, 48}, Vout: 10, Signature: nil, PubKey: []byte{32, 64}},
+		},
+		Vout: []transactionbase.TXOutput{
+			{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{64, 128}), Contract: "test"},
+		},
+	}
+	tx2 := Transaction{
+		ID: []byte{102},
+		Vin: []transactionbase.TXInput{
+			{Txid: []byte{199, 77}, Vout: 10, Signature: nil, PubKey: []byte{124, 77}},
+			{Txid: []byte{200, 78}, Vout: 10, Signature: nil, PubKey: []byte{125, 78}},
+		},
+		Vout: []transactionbase.TXOutput{
+			{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{198, 73}), Contract: "test"},
+			{Value: common.NewAmount(2), PubKeyHash: account.PubKeyHash([]byte{199, 74}), Contract: "test"},
+		},
+		Tip: common.NewAmount(5),
+		GasLimit: common.NewAmount(1024),
+		GasPrice: common.NewAmount(1),
+		Type: TxTypeNormal,
+	}
+	tx3 := Transaction{
+		ID: []byte{0},
+		Vin: []transactionbase.TXInput{},
+		Vout: []transactionbase.TXOutput{},
+	}
+	expected1 := []byte{0x18, 0x30, 0x0, 0x0, 0x0, 0xa, 0x20, 0x40, 0x1, 0x40, 0x80, 0x74, 0x65, 0x73, 0x74}
+	expected2 := []byte{0xc7, 0x4d, 0x0, 0x0, 0x0, 0xa, 0x7c, 0x4d, 0xc8, 0x4e, 0x0, 0x0, 0x0, 0xa, 0x7d, 0x4e, 0x1, 0xc6, 0x49, 0x74, 0x65, 0x73, 0x74, 0x2, 0xc7, 0x4a, 0x74, 0x65, 0x73, 0x74, 0x5, 0x4, 0x0, 0x1, 0x0, 0x0, 0x0, 0x1}
+	assert.Equal(t, expected1, tx1.GetToHashBytes())
+	assert.Equal(t, expected2, tx2.GetToHashBytes())
+	assert.Equal(t, []byte(nil), tx3.GetToHashBytes())
+}
+
+func TestTransaction_Hash(t *testing.T) {
+	tx1 := Transaction{
+		ID: []byte{102},
+		Vin: []transactionbase.TXInput{
+			{Txid: []byte{199, 77}, Vout: 10, Signature: nil, PubKey: []byte{124, 77}},
+			{Txid: []byte{200, 78}, Vout: 10, Signature: nil, PubKey: []byte{125, 78}},
+		},
+		Vout: []transactionbase.TXOutput{
+			{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{198, 73}), Contract: "test"},
+			{Value: common.NewAmount(2), PubKeyHash: account.PubKeyHash([]byte{199, 74}), Contract: "test"},
+		},
+		Tip: common.NewAmount(5),
+		GasLimit: common.NewAmount(1024),
+		GasPrice: common.NewAmount(1),
+		Type: TxTypeNormal,
+	}
+	tx2 := Transaction{
+		ID: []byte{0},
+		Vin: []transactionbase.TXInput{},
+		Vout: []transactionbase.TXOutput{},
+	}
+	expected1 := []byte{0x4f, 0xda, 0x27, 0xf8, 0x2c, 0xa, 0x49, 0x9d, 0x8c, 0x19, 0x37, 0x46, 0x2c, 0x19, 0x9, 0xc6, 0x96, 0x54, 0x31, 0x99, 0x9f, 0x1f, 0xc6, 0x84, 0xf5, 0xc0, 0xc5, 0x6b, 0xbd, 0xbd, 0xe, 0xc8}
+	expected2 := []byte{0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55}
+	assert.Equal(t, expected1, tx1.Hash())
+	assert.Equal(t, expected2, tx2.Hash())
+}
+
+func TestTransaction_DeepCopy(t *testing.T) {
+	original := &Transaction{
+		ID: util.GenerateRandomAoB(1),
+		Vin: GenerateFakeTxInputs(),
+		Vout: GenerateFakeTxOutputs(),
+		Tip: common.NewAmount(5),
+		GasLimit: common.NewAmount(1024),
+		GasPrice: common.NewAmount(1),
+		CreateTime: 99,
+		Type: TxTypeNormal,
+	}
+	copy := original.DeepCopy()
+	for i, vin := range copy.Vin {
+		assert.Equal(t, original.Vin[i].Txid, vin.Txid)
+		assert.Equal(t, original.Vin[i].Vout, vin.Vout)
+		assert.Equal(t, original.Vin[i].Signature, vin.Signature)
+		assert.Equal(t, original.Vin[i].PubKey, vin.PubKey)
+	}
+	for i, vout := range copy.Vout {
+		assert.Equal(t, original.Vout[i].Value, vout.Value)
+		assert.Equal(t, original.Vout[i].PubKeyHash, vout.PubKeyHash)
+		assert.Equal(t, original.Vout[i].Contract, vout.Contract)
+	}
+	assert.Equal(t, original.ID, copy.ID)
+	assert.Equal(t, original.Tip, copy.Tip)
+	assert.Equal(t, common.NewAmount(1024), copy.GasLimit)
+	assert.Equal(t, common.NewAmount(1), copy.GasPrice)
+	assert.Equal(t, int64(99), copy.CreateTime)
+	assert.Equal(t, TxTypeNormal, copy.Type)
+}
+
+func TestTransaction_verifyID(t *testing.T) {
+	tx1 := Transaction{
+		ID: []byte{102},
+		Vin: []transactionbase.TXInput{
+			{Txid: []byte{199, 77}, Vout: 10, Signature: nil, PubKey: []byte{124, 77}},
+			{Txid: []byte{200, 78}, Vout: 10, Signature: nil, PubKey: []byte{125, 78}},
+		},
+		Vout: []transactionbase.TXOutput{
+			{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{198, 73}), Contract: "test"},
+			{Value: common.NewAmount(2), PubKeyHash: account.PubKeyHash([]byte{199, 74}), Contract: "test"},
+		},
+		Tip: common.NewAmount(5),
+		GasLimit: common.NewAmount(1024),
+		GasPrice: common.NewAmount(1),
+		Type: TxTypeNormal,
+	}
+	tx2 := Transaction {
+		ID: []byte{0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55},
+		Vin: []transactionbase.TXInput{},
+		Vout: []transactionbase.TXOutput{},
+	}
+	verified, err := tx1.verifyID()
+	assert.False(t, verified)
+	assert.Equal(t, errors.New("Transaction: ID is invalid"), err)
+
+	tx1.ID = tx1.Hash()
+	verified, err = tx1.verifyID()
+	assert.True(t, verified)
+	assert.Nil(t, err)
+
+	verified, err = tx2.verifyID()
+	assert.True(t, verified)
+	assert.Nil(t, err)
+}
+
+func TestTransaction_verifyAmount(t *testing.T) {
+	prevUtxosSum := common.NewAmount(24)
+
+	tx := Transaction{
+		ID:       util.GenerateRandomAoB(1),
+		Vin:      GenerateFakeTxInputs(),  //15
+		Vout:     GenerateFakeTxOutputs(), //3
+		Tip:      common.NewAmount(5),
+		GasLimit: common.NewAmount(8),
+		GasPrice: common.NewAmount(2),
+	}
+
+	txTotalVoutValue := common.NewAmount(0)
+	for _, vout := range tx.Vout {
+		txTotalVoutValue = txTotalVoutValue.Add(vout.Value)
+	}
+
+	verified, err := tx.verifyAmount(prevUtxosSum, txTotalVoutValue)
+	assert.True(t, verified)
+	assert.Nil(t, err)
+
+	prevUtxosSum = common.NewAmount(2)
+	verified, err = tx.verifyAmount(prevUtxosSum, txTotalVoutValue)
+	assert.False(t, verified)
+	assert.Equal(t, errors.New("Transaction: amount is invalid"), err)
+
+	prevUtxosSum = common.NewAmount(18)
+	verified, err = tx.verifyAmount(prevUtxosSum, txTotalVoutValue)
+	assert.False(t, verified)
+	assert.Equal(t, errors.New("Transaction: GasLimit is invalid"), err)
+
+	prevUtxosSum = common.NewAmount(23)
+	verified, err = tx.verifyAmount(prevUtxosSum, txTotalVoutValue)
+	assert.False(t, verified)
+	assert.Equal(t, errors.New("Transaction: tip is invalid"), err)
+}
+
+func TestTransaction_CalculateTotalVoutValue(t *testing.T) {
+	tx := Transaction{
+		ID: []byte{102},
+		Vin: []transactionbase.TXInput{},
+		Vout: []transactionbase.TXOutput{
+			{Value: common.NewAmount(20), PubKeyHash: account.PubKeyHash([]byte{198, 73}), Contract: ""},
+			{Value: common.NewAmount(44), PubKeyHash: account.PubKeyHash([]byte{199, 74}), Contract: ""},
+		},
+	}
+
+	amount, success := tx.CalculateTotalVoutValue()
+	assert.Equal(t, common.NewAmount(64), amount)
+	assert.True(t, success)
+
+	tx.Vout[0].Value=nil
+	amount, success = tx.CalculateTotalVoutValue()
+	assert.Nil(t, amount)
+	assert.False(t, success)
+
+	tx.Vout[0].Value=&common.Amount{*new(big.Int).SetInt64(-1)}
+	amount, success = tx.CalculateTotalVoutValue()
+	assert.Nil(t, amount)
+	assert.False(t, success)
+
+	tx.Vout = []transactionbase.TXOutput{}
+	amount, success = tx.CalculateTotalVoutValue()
+	assert.Equal(t, common.NewAmount(0), amount)
+	assert.True(t, success)
+}
+
+func TestTransaction_String(t *testing.T) {
+	tx1 := Transaction{
+		ID: []byte{102},
+		Vin: []transactionbase.TXInput{
+			{Txid: []byte{199, 77}, Vout: 10, Signature: nil, PubKey: []byte{124, 77}},
+			{Txid: []byte{200, 78}, Vout: 10, Signature: nil, PubKey: []byte{125, 78}},
+		},
+		Vout: []transactionbase.TXOutput{
+			{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{198, 73}), Contract: "test"},
+			{Value: common.NewAmount(2), PubKeyHash: account.PubKeyHash([]byte{199, 74}), Contract: "test"},
+		},
+		Tip: common.NewAmount(5),
+		GasLimit: common.NewAmount(1024),
+		GasPrice: common.NewAmount(1),
+		Type: TxTypeNormal,
+	}
+
+	expectedString := "\n--- Transaction: 66\n" +
+		"     Input 0:\n" +
+		"       TXID:      c74d\n" +
+		"       Out:       10\n" +
+		"       Signature: \n" +
+		"       PubKey:    7c4d\n" +
+		"     Input 1:\n" +
+		"       TXID:      c84e\n" +
+		"       Out:       10\n" +
+		"       Signature: \n" +
+		"       PubKey:    7d4e\n" +
+		"     Output: 0\n" +
+		"       Value:  1\n" +
+		"       Script: c649\n" +
+		"       Contract: test\n" +
+		"     Output: 1\n" +
+		"       Value:  2\n" +
+		"       Script: c74a\n" +
+		"       Contract: test\n" +
+		"     GasLimit: 1024\n" +
+		"     GasPrice: 1\n" +
+		"     Type: 1\n\n"
+
+	assert.Equal(t, expectedString, tx1.String())
+}
+
+func TestTransaction_GetSize(t *testing.T) {
+	tx := Transaction{
+		ID:         util.GenerateRandomAoB(1),
+		Vin:        GenerateFakeTxInputs(),
+		Vout:       GenerateFakeTxOutputs(),
+		Tip:        common.NewAmount(2),
+		GasLimit:   common.NewAmount(3),
+		GasPrice:   common.NewAmount(1),
+	}
+	assert.Equal(t, 62, tx.GetSize())
+}
+
+func TestTransaction_GetDefaultFromTransactionAccount(t *testing.T) {
+	tx1 := Transaction{
+		ID: util.GenerateRandomAoB(1),
+		Vin: nil,
+		Vout: nil,
+	}
+
+	result1 := tx1.GetDefaultFromTransactionAccount()
+	assert.Equal(t, result1.GetPubKeyHash().GenerateAddress(), result1.GetAddress())
+
+	tx1.Vin = []transactionbase.TXInput{}
+	result2 := tx1.GetDefaultFromTransactionAccount()
+	assert.Equal(t, result2.GetPubKeyHash().GenerateAddress(), result2.GetAddress())
+
+	tx1.Vin = []transactionbase.TXInput{
+		{Txid: []byte{199, 77}, Vout: 10, Signature: nil, PubKey: []byte{124, 77}},
+		{Txid: []byte{200, 78}, Vout: 10, Signature: nil, PubKey: []byte{125, 78}},
+	}
+	result3 := tx1.GetDefaultFromTransactionAccount()
+	assert.Equal(t, result3.GetPubKeyHash().GenerateAddress(), result3.GetAddress())
+
+	tx1.Vin[0].PubKey = []byte{0xff, 0x62, 0x80, 0x2b, 0xec, 0xac, 0x6f, 0x6c, 0x16, 0xda, 0xde, 0x6e, 0xa9, 0x3b, 0x87, 0x8a, 0x17, 0xc7, 0x9c, 0x2e, 0x2e, 0x4c, 0x2f, 0xb9, 0x64, 0xda, 0x12, 0x60, 0x91, 0x82, 0x9a, 0x64, 0x73, 0xd7, 0xd3, 0x4b, 0x51, 0x81, 0x9e, 0xd2, 0x2e, 0xb9, 0x42, 0x1, 0xce, 0xe0, 0x19, 0x97, 0xa0, 0x8e, 0xea, 0x80, 0xb, 0x18, 0x64, 0x8b, 0xf4, 0xd4, 0xd, 0xdc, 0x91, 0x40, 0x37, 0x75}
+	result4 := tx1.GetDefaultFromTransactionAccount()
+	expectedAddr := account.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs")
+	expectedPkh := account.PubKeyHash{0x5a, 0x1d, 0x50, 0x8c, 0x96, 0x62, 0x43, 0x85, 0xcd, 0x80, 0x1, 0xd3, 0xc0, 0x29, 0x29, 0xa5, 0x25, 0xad, 0xe, 0xea, 0x47}
+
+	assert.Equal(t, expectedAddr, result4.GetAddress())
+	assert.Equal(t, expectedPkh, result4.GetPubKeyHash())
+}
+
+func TestTransaction_CheckVinNum(t *testing.T) {
+	tx1 := Transaction{
+		ID:         util.GenerateRandomAoB(1),
+		Vin:        []transactionbase.TXInput{},
+		Vout:       nil,
+	}
+	assert.Nil(t, tx1.CheckVinNum())
+
+	for i := 0; i < 50; i++ {
+		tx1.Vin = append(tx1.Vin, transactionbase.TXInput{})
+	}
+	assert.Nil(t, tx1.CheckVinNum())
+
+	tx1.Vin = append(tx1.Vin, transactionbase.TXInput{})
+	assert.Equal(t, errors.New("too many vin in a transaction"), tx1.CheckVinNum())
+}
+
+func TestSendTxParam_TotalCost(t *testing.T) {
+	st1 := SendTxParam{
+		From:          account.Address{},
+		SenderKeyPair: nil,
+		To:            account.Address{},
+		Amount:        common.NewAmount(20),
+		Contract:      "",
+	}
+
+	assert.Equal(t, common.NewAmount(20), st1.TotalCost())
+
+	st1.Tip = common.NewAmount(2)
+	assert.Equal(t, common.NewAmount(22), st1.TotalCost())
+
+	st1.GasLimit = common.NewAmount(3)
+	st1.GasPrice = common.NewAmount(2)
+	assert.Equal(t, common.NewAmount(28), st1.TotalCost())
+}
+
+func TestCalculateUtxoSum(t *testing.T) {
+	var utxos []*utxo.UTXO
+	for i := 0; i < 10; i++ {
+		newUTXO := &utxo.UTXO{
+			TXOutput:    transactionbase.TXOutput{
+				Value: common.NewAmount(uint64(i+1)),
+				PubKeyHash: getAoB(2),
+				Contract: "",
+			},
+			Txid:        getAoB(2),
+			TxIndex:     0,
+			UtxoType:    0,
+		}
+		utxos = append(utxos, newUTXO)
+	}
+	assert.Equal(t, common.NewAmount(55), CalculateUtxoSum(utxos))
+}
+
+func TestCalculateChange(t *testing.T) {
+	// successful
+	change, err := CalculateChange(common.NewAmount(100), common.NewAmount(25), common.NewAmount(10), common.NewAmount(3), common.NewAmount(2))
+	assert.Nil(t, err)
+	assert.Equal(t, common.NewAmount(59), change)
+	// not enough for amount
+	change, err = CalculateChange(common.NewAmount(0), common.NewAmount(25), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0))
+	assert.Nil(t, change)
+	assert.Equal(t, ErrInsufficientFund, err)
+	// not enough for tip
+	change, err = CalculateChange(common.NewAmount(10), common.NewAmount(10), common.NewAmount(1), common.NewAmount(0), common.NewAmount(0))
+	assert.Nil(t, change)
+	assert.Equal(t, ErrInsufficientFund, err)
+	// not enough for gas
+	change, err = CalculateChange(common.NewAmount(10), common.NewAmount(5), common.NewAmount(0), common.NewAmount(2), common.NewAmount(3))
+	assert.Nil(t, change)
+	assert.Equal(t, ErrInsufficientFund, err)
 }

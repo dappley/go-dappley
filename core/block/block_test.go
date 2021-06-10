@@ -2,6 +2,7 @@ package block
 
 import (
 	"github.com/dappley/go-dappley/core/transaction"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"testing"
 	"time"
 
@@ -92,23 +93,131 @@ func TestBlockHeader_Proto(t *testing.T) {
 	assert.Equal(t, bh1, bh2)
 }
 
-func TestBlock_Proto(t *testing.T) {
-
+func TestBlock_ToProto(t *testing.T) {
 	b1 := GenerateMockBlock()
 
-	pb := b1.ToProto()
-	var i interface{} = pb
-	_, correct := i.(proto.Message)
-	assert.Equal(t, true, correct)
-	mpb, err := proto.Marshal(pb)
-	assert.Nil(t, err)
+	var txArray []*transactionpb.Transaction
+	for _, tx := range b1.transactions {
+		txArray = append(txArray, tx.ToProto().(*transactionpb.Transaction))
+	}
+	expected := &blockpb.Block{
+		Header: &blockpb.BlockHeader{
+			Hash: b1.header.hash,
+			PreviousHash: b1.header.prevHash,
+			Nonce: b1.header.nonce,
+			Timestamp: b1.header.timestamp,
+			Signature: b1.header.signature,
+			Height: b1.header.height,
+			Producer: b1.header.producer,
+		},
+		Transactions: txArray,
+	}
 
-	newpb := &blockpb.Block{}
-	err = proto.Unmarshal(mpb, newpb)
-	assert.Nil(t, err)
+	assert.Equal(t, expected, b1.ToProto())
+}
 
-	b2 := &Block{}
-	b2.FromProto(newpb)
+func TestBlock_FromProto(t *testing.T) {
+	expected := GenerateMockBlock()
 
-	assert.Equal(t, *b1, *b2)
+	var txArray []*transactionpb.Transaction
+	for _, tx := range expected.transactions {
+		txArray = append(txArray, tx.ToProto().(*transactionpb.Transaction))
+	}
+	blockProto := &blockpb.Block{
+		Header: &blockpb.BlockHeader{
+			Hash: expected.header.hash,
+			PreviousHash: expected.header.prevHash,
+			Nonce: expected.header.nonce,
+			Timestamp: expected.header.timestamp,
+			Signature: expected.header.signature,
+			Height: expected.header.height,
+			Producer: expected.header.producer,
+		},
+		Transactions: txArray,
+	}
+
+	b1 := &Block{}
+	b1.FromProto(blockProto)
+	assert.Equal(t, expected, b1)
+}
+
+func TestBlock_IsSigned(t *testing.T) {
+	block := &Block{
+		header: &BlockHeader{
+			hash:      []byte{},
+			prevHash:  nil,
+			nonce:     0,
+			timestamp: 0,
+			signature: nil,
+			height:    0,
+			producer:  "",
+		},
+		transactions: []*transaction.Transaction{},
+	}
+	assert.False(t, block.IsSigned())
+
+	block.header.signature = hash.Hash{0x88}
+	assert.True(t, block.IsSigned())
+
+	block.header = nil
+	assert.False(t, block.IsSigned())
+}
+
+func TestBlock_Serialize(t *testing.T) {
+	block := &Block{
+		header: &BlockHeader{
+			hash: hash.Hash{104,97,115,104},
+			prevHash: hash.Hash{112,114,101,118,104,97,115,104},
+			nonce: 1,
+			timestamp: 1623087951,
+			signature: hash.Hash{88},
+			height: 0,
+			producer: "producer",
+		},
+		transactions: []*transaction.Transaction{},
+	}
+	expected := []byte{10, 37, 10, 4, 104, 97, 115, 104, 18, 8, 112, 114, 101, 118, 104, 97, 115, 104, 24, 1, 32, 207, 182, 249, 133, 6, 42, 1, 88, 58, 8, 112, 114, 111, 100, 117, 99, 101, 114}
+	assert.Equal(t, expected, block.Serialize())
+}
+
+func TestDeserialize(t *testing.T) {
+	rawBytes := []byte{10, 37, 10, 4, 104, 97, 115, 104, 18, 8, 112, 114, 101, 118, 104, 97, 115, 104, 24, 1, 32, 207, 182, 249, 133, 6, 42, 1, 88, 58, 8, 112, 114, 111, 100, 117, 99, 101, 114}
+	block := Deserialize(rawBytes)
+
+	expectedBlock := &Block{
+		header: &BlockHeader{
+			hash: hash.Hash{104,97,115,104},
+			prevHash: hash.Hash{112,114,101,118,104,97,115,104},
+			nonce: 1,
+			timestamp: 1623087951,
+			signature: hash.Hash{88},
+			height: 0,
+			producer: "producer",
+		},
+		transactions: nil,
+	}
+
+	assert.Equal(t, expectedBlock, block)
+}
+
+func TestBlock_GetCoinbaseTransaction(t *testing.T) {
+	b1 := &Block{
+		header: &BlockHeader{
+			hash:      []byte{},
+			prevHash:  nil,
+			nonce:     0,
+			timestamp: 0,
+			signature: nil,
+			height:    0,
+			producer:  "",
+		},
+		transactions: []*transaction.Transaction{},
+	}
+	assert.Nil(t, b1.GetCoinbaseTransaction())
+
+	b2 := GenerateMockBlock()
+	assert.Nil(t, b2.GetCoinbaseTransaction())
+
+	b2.transactions[1].Type = transaction.TxTypeCoinbase
+	assert.Equal(t, b2.transactions[1], b2.GetCoinbaseTransaction())
 }
