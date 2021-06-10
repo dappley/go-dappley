@@ -88,14 +88,14 @@ func TestScState_Save(t *testing.T) {
 			scState.states = map[string]map[string]string{tt.address: {tt.key: tt.value}}
 			assert.Nil(t, scState.Save(tt.block))
 
-			valBytes, err := db.Get(util.Str2bytes(utxo.ScStateMapKey + tt.address + tt.key))
+			valBytes, err := db.Get(util.Str2bytes("scState" + tt.address + tt.key))
 			if err == nil {
 				assert.Equal(t, tt.expected, util.Bytes2str(valBytes))
 			} else {
 				assert.Equal(t, tt.expected, err)
 			}
 
-			stLogBytes, err := db.Get(util.Str2bytes(utxo.ScStateLogKey + util.Bytes2str(tt.block)))
+			stLogBytes, err := db.Get(util.Str2bytes("scLog" + util.Bytes2str(tt.block)))
 			assert.Nil(t, err)
 			assert.Nil(t, err)
 			assert.Equal(t, tt.statelog, stateLog.DeserializeStateLog(stLogBytes).Log)
@@ -103,11 +103,11 @@ func TestScState_Save(t *testing.T) {
 		})
 	}
 
-	valBytes, err := db.Get(util.Str2bytes(utxo.ScStateMapKey + testState[0].address + testState[0].key))
+	valBytes, err := db.Get(util.Str2bytes("scState" + testState[0].address + testState[0].key))
 	assert.Nil(t, err)
 	assert.Equal(t, testState[1].value, util.Bytes2str(valBytes))
 
-	valBytes, err = db.Get(util.Str2bytes(utxo.ScStateMapKey + testState[2].address + testState[2].key))
+	valBytes, err = db.Get(util.Str2bytes("scState" + testState[2].address + testState[2].key))
 	assert.Nil(t, err)
 	assert.Equal(t, testState[2].value, util.Bytes2str(valBytes))
 
@@ -120,7 +120,7 @@ func TestScState_RevertState(t *testing.T) {
 
 	stLog := stateLog.NewStateLog()
 	stLog.Log = map[string]map[string]string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf": {"Account3": "399"}}
-	assert.Nil(t, db.Put(util.Str2bytes(utxo.ScStateLogKey+"blkHash"), stLog.SerializeStateLog()))
+	assert.Nil(t, db.Put(util.Str2bytes("scLog"+"blkHash"), stLog.SerializeStateLog()))
 
 	scState := NewScState(cache)
 	scState.RevertState(util.Str2bytes("blkHash"))
