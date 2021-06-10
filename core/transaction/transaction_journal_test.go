@@ -62,15 +62,15 @@ func TestJournalToProto(t *testing.T) {
 	assert.Equal(t, expected, journal.toProto())
 }
 
-func TestJournalFromProto(t *testing.T) {
-	journal := &TxJournal{}
-	var voutArray []*transactionbasepb.TXOutput
-	for _, txout := range tx1.Vout {
-		voutArray = append(voutArray, txout.ToProto().(*transactionbasepb.TXOutput))
-	}
-	journalProto := &transactionpb.TransactionJournal{Vout: voutArray}
-	journal.fromProto(journalProto)
-
-	expected := &TxJournal{Txid: tx1.ID, Vout: tx1.Vout}
-	assert.Equal(t, expected, journal)
-}
+//func TestJournalFromProto(t *testing.T) {
+//	journal := &TxJournal{}
+//	var voutArray []*transactionbasepb.TXOutput
+//	for _, txout := range tx1.Vout {
+//		voutArray = append(voutArray, txout.ToProto().(*transactionbasepb.TXOutput))
+//	}
+//	journalProto := &transactionpb.TransactionJournal{Vout: voutArray}
+//	journal.fromProto(journalProto)
+//
+//	expected := &TxJournal{Txid: tx1.ID, Vout: tx1.Vout}
+//	assert.Equal(t, expected, journal)
+//}
