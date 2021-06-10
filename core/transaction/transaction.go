@@ -354,7 +354,7 @@ func (tx *Transaction) MatchRewards(rewardStorage map[string]string) bool {
 func (tx *Transaction) String() string {
 	var lines []string
 
-	lines = append(lines, fmt.Sprintf("\n--- Transaction %x:", tx.ID))
+	lines = append(lines, fmt.Sprintf("\n--- Transaction: %x", tx.ID))
 
 	for i, input := range tx.Vin {
 
@@ -366,14 +366,14 @@ func (tx *Transaction) String() string {
 	}
 
 	for i, output := range tx.Vout {
-		lines = append(lines, fmt.Sprintf("     Output %d:", i))
+		lines = append(lines, fmt.Sprintf("     Output: %d", i))
 		lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
 		lines = append(lines, fmt.Sprintf("       Script: %x", []byte(output.PubKeyHash)))
 		lines = append(lines, fmt.Sprintf("       Contract: %s", output.Contract))
 	}
-	lines = append(lines, fmt.Sprintf("     GasLimit %d:", tx.GasLimit))
-	lines = append(lines, fmt.Sprintf("     GasPrice %d:", tx.GasPrice))
-	lines = append(lines, fmt.Sprintf("     Type %d:", tx.Type))
+	lines = append(lines, fmt.Sprintf("     GasLimit: %d", tx.GasLimit))
+	lines = append(lines, fmt.Sprintf("     GasPrice: %d", tx.GasPrice))
+	lines = append(lines, fmt.Sprintf("     Type: %d", tx.Type))
 	lines = append(lines, "\n")
 
 	return strings.Join(lines, "\n")

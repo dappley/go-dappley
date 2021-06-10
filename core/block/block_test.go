@@ -174,9 +174,7 @@ func TestBlock_Serialize(t *testing.T) {
 			height: 0,
 			producer: "producer",
 		},
-		transactions: []*transaction.Transaction{
-
-		},
+		transactions: []*transaction.Transaction{},
 	}
 	expected := []byte{10, 37, 10, 4, 104, 97, 115, 104, 18, 8, 112, 114, 101, 118, 104, 97, 115, 104, 24, 1, 32, 207, 182, 249, 133, 6, 42, 1, 88, 58, 8, 112, 114, 111, 100, 117, 99, 101, 114}
 	assert.Equal(t, expected, block.Serialize())
@@ -184,7 +182,7 @@ func TestBlock_Serialize(t *testing.T) {
 
 func TestDeserialize(t *testing.T) {
 	rawBytes := []byte{10, 37, 10, 4, 104, 97, 115, 104, 18, 8, 112, 114, 101, 118, 104, 97, 115, 104, 24, 1, 32, 207, 182, 249, 133, 6, 42, 1, 88, 58, 8, 112, 114, 111, 100, 117, 99, 101, 114}
-	b1 := Deserialize(rawBytes)
+	block := Deserialize(rawBytes)
 
 	expectedBlock := &Block{
 		header: &BlockHeader{
@@ -199,8 +197,7 @@ func TestDeserialize(t *testing.T) {
 		transactions: nil,
 	}
 
-	assert.Equal(t, expectedBlock.header, b1.header)
-	assert.Equal(t, expectedBlock.transactions, b1.transactions)
+	assert.Equal(t, expectedBlock, block)
 }
 
 func TestBlock_GetCoinbaseTransaction(t *testing.T) {
