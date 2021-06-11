@@ -21,6 +21,7 @@ package transaction
 import (
 	"errors"
 	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"math/big"
 	"testing"
 
@@ -302,6 +303,49 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.expectedRes, tt.tx.MatchRewards(tt.rewardStorage))
 		})
+	}
+}
+
+func TestTransaction_Sign(t *testing.T) {
+	privKey, _ := secp256k1.NewECDSAPrivateKey()
+	tx := &Transaction{
+		ID: []byte{0x66},
+		Vin: []transactionbase.TXInput{
+			{Txid: []byte{0xc7, 0x4d}, Vout: 10, Signature: nil, PubKey: []byte{0x7c, 0x4d}},
+			{Txid: []byte{0xc8, 0x4e}, Vout: 10, Signature: nil, PubKey: []byte{0x7d, 0x4e}},
+		},
+		Vout: []transactionbase.TXOutput{
+			{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{0xc6, 0x49}), Contract: "test"},
+			{Value: common.NewAmount(2), PubKeyHash: account.PubKeyHash([]byte{0xc7, 0x4a}), Contract: "test"},
+		},
+		Tip: common.NewAmount(5),
+		GasLimit: common.NewAmount(1024),
+		GasPrice: common.NewAmount(1),
+		Type: TxTypeNormal,
+	}
+	utxos := []*utxo.UTXO{
+		{
+			TXOutput: transactionbase.TXOutput{Value: common.NewAmount(10), PubKeyHash: []byte{0xde, 0x4d}, Contract: ""},
+			Txid:        []byte{0x20, 0x21},
+			TxIndex:     0,
+			UtxoType:    0,
+		},
+		{
+			TXOutput: transactionbase.TXOutput{Value: common.NewAmount(5), PubKeyHash: []byte{0xbe, 0xef}, Contract: ""},
+			Txid:        []byte{0x13, 0x30},
+			TxIndex:     1,
+			UtxoType:    0,
+		},
+	}
+	privKeyBytes, _ := secp256k1.FromECDSAPrivateKey(privKey)
+	bytesToSign := [][]byte{
+		[]byte{0xe6, 0xe6, 0xda, 0xc5, 0xf1, 0xc, 0xb, 0xb0, 0x85, 0x44, 0xc2, 0xb1, 0xdc, 0xe2, 0x19, 0x5a, 0x59, 0xf4, 0x4c, 0xad, 0xf8, 0x50, 0x68, 0x93, 0xe0, 0x1f, 0xdb, 0x72, 0x76, 0xdc, 0xa0, 0xa5},
+		[]byte{0xc4, 0x3, 0x9, 0xbb, 0xa6, 0xfa, 0x9e, 0xe6, 0x1, 0xc6, 0xe4, 0x5f, 0x7e, 0x73, 0xc9, 0x3b, 0xc1, 0x2a, 0x8e, 0x35, 0xd2, 0xf, 0x74, 0x99, 0x42, 0x3b, 0x53, 0xb7, 0xac, 0x67, 0xe0, 0x4a},
+	}
+	tx.Sign(*privKey, utxos)
+	for i, vin := range tx.Vin {
+		expectedSignature, _ := secp256k1.Sign(bytesToSign[i], privKeyBytes)
+		assert.Equal(t, expectedSignature, vin.Signature)
 	}
 }
 
