@@ -62,15 +62,97 @@ func TestJournalToProto(t *testing.T) {
 	assert.Equal(t, expected, journal.toProto())
 }
 
-//func TestJournalFromProto(t *testing.T) {
-//	journal := &TxJournal{}
-//	var voutArray []*transactionbasepb.TXOutput
-//	for _, txout := range tx1.Vout {
-//		voutArray = append(voutArray, txout.ToProto().(*transactionbasepb.TXOutput))
-//	}
-//	journalProto := &transactionpb.TransactionJournal{Vout: voutArray}
-//	journal.fromProto(journalProto)
-//
-//	expected := &TxJournal{Txid: tx1.ID, Vout: tx1.Vout}
-//	assert.Equal(t, expected, journal)
-//}
+/* TODO: fix test
+func TestJournalFromProto(t *testing.T) {
+	journal := &TxJournal{}
+	var voutArray []*transactionbasepb.TXOutput
+	for _, txout := range tx1.Vout {
+		voutArray = append(voutArray, txout.ToProto().(*transactionbasepb.TXOutput))
+	}
+	journalProto := &transactionpb.TransactionJournal{Vout: voutArray}
+	journal.fromProto(journalProto)
+
+	assert.Equal(t, tx1.Vout, journal.Vout)
+}
+ */
+
+func TestNewTxJournal(t *testing.T) {
+	journal := NewTxJournal(tx1.ID, tx1.Vout)
+	expected := &TxJournal{Txid: tx1.ID, Vout: tx1.Vout}
+	assert.Equal(t, expected, journal)
+}
+
+func TestGetStorageKey(t *testing.T) {
+	assert.Equal(t, []byte{0x74, 0x78, 0x5f, 0x6a, 0x6f, 0x75, 0x72, 0x6e, 0x61, 0x6c, 0x5f}, getStorageKey(nil))
+	assert.Equal(t, []byte{0x74, 0x78, 0x5f, 0x6a, 0x6f, 0x75, 0x72, 0x6e, 0x61, 0x6c, 0x5f, 0x88, 0x77}, getStorageKey([]byte{0x88, 0x77}))
+}
+
+func TestTxJournal_SerializeJournal(t *testing.T) {
+	journal := &TxJournal{
+		Txid: []byte{0x88},
+		Vout: []transactionbase.TXOutput{
+			{
+				Value: common.NewAmount(10),
+				PubKeyHash: []byte{0xc6, 0x49},
+				Contract: "test1",
+			},
+			{
+				Value: common.NewAmount(5),
+				PubKeyHash: []byte{0xc7, 0x4a},
+				Contract: "test2",
+			},
+		},
+	}
+	expected := []byte{0xa, 0xe, 0xa, 0x1, 0xa, 0x12, 0x2, 0xc6, 0x49, 0x1a, 0x5, 0x74, 0x65, 0x73, 0x74, 0x31, 0xa, 0xe, 0xa, 0x1, 0x5, 0x12, 0x2, 0xc7, 0x4a, 0x1a, 0x5, 0x74, 0x65, 0x73, 0x74, 0x32}
+	result, err := journal.SerializeJournal()
+
+	assert.Nil(t, err)
+	assert.Equal(t, expected, result)
+}
+
+func TestDeserializeJournal(t *testing.T) {
+	serializedBytes := []byte{0xa, 0xe, 0xa, 0x1, 0xa, 0x12, 0x2, 0xc6, 0x49, 0x1a, 0x5, 0x74, 0x65, 0x73, 0x74, 0x31, 0xa, 0xe, 0xa, 0x1, 0x5, 0x12, 0x2, 0xc7, 0x4a, 0x1a, 0x5, 0x74, 0x65, 0x73, 0x74, 0x32}
+	expected := &TxJournal{
+		Txid: []byte{0x88},
+		Vout: []transactionbase.TXOutput{
+			{
+				Value: common.NewAmount(10),
+				PubKeyHash: []byte{0xc6, 0x49},
+				Contract: "test1",
+			},
+			{
+				Value: common.NewAmount(5),
+				PubKeyHash: []byte{0xc7, 0x4a},
+				Contract: "test2",
+			},
+		},
+	}
+	result, err := DeserializeJournal(serializedBytes)
+
+	assert.Nil(t, err)
+	assert.Equal(t, expected, result)
+}
+
+func TestTxJournal_Save(t *testing.T) {
+	db := storage.NewRamStorage()
+	journal := &TxJournal{
+		Txid: []byte{0x88},
+		Vout: []transactionbase.TXOutput{
+			{
+				Value: common.NewAmount(10),
+				PubKeyHash: []byte{0xc6, 0x49},
+				Contract: "test1",
+			},
+			{
+				Value: common.NewAmount(5),
+				PubKeyHash: []byte{0xc7, 0x4a},
+				Contract: "test2",
+			},
+		},
+	}
+	journal.Save(db)
+	result, err := db.Get([]byte{0x74, 0x78, 0x5f, 0x6a, 0x6f, 0x75, 0x72, 0x6e, 0x61, 0x6c, 0x5f, 0x88})
+	expected := []byte{0xa, 0xe, 0xa, 0x1, 0xa, 0x12, 0x2, 0xc6, 0x49, 0x1a, 0x5, 0x74, 0x65, 0x73, 0x74, 0x31, 0xa, 0xe, 0xa, 0x1, 0x5, 0x12, 0x2, 0xc7, 0x4a, 0x1a, 0x5, 0x74, 0x65, 0x73, 0x74, 0x32}
+	assert.Nil(t, err)
+	assert.Equal(t, expected, result)
+}
