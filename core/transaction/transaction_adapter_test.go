@@ -33,7 +33,7 @@ func TestTxAdapter_isVinCoinbase(t *testing.T) {
 			name: "vinCoinbaseTrue",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: nil},
 					},
@@ -46,7 +46,7 @@ func TestTxAdapter_isVinCoinbase(t *testing.T) {
 			name: "nonEmptyVinTxid",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{0x12, 0x34}, Vout: -1, Signature: nil, PubKey: nil},
 					},
@@ -59,7 +59,7 @@ func TestTxAdapter_isVinCoinbase(t *testing.T) {
 			name: "wrongVinVoutValue",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: 0, Signature: nil, PubKey: nil},
 					},
@@ -72,7 +72,7 @@ func TestTxAdapter_isVinCoinbase(t *testing.T) {
 			name: "tooManyVin",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: nil},
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: nil},
@@ -100,7 +100,7 @@ func TestTxAdapter_isCoinbase(t *testing.T) {
 			name: "coinbaseTrue",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: []byte{0x6c}},
 					},
@@ -115,7 +115,7 @@ func TestTxAdapter_isCoinbase(t *testing.T) {
 			name: "vinCoinbaseFalse",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{0x1a}, Vout: 0, Signature: nil, PubKey: []byte{0x6c}},
 					},
@@ -130,7 +130,7 @@ func TestTxAdapter_isCoinbase(t *testing.T) {
 			name: "voutLengthInvalid",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: []byte{0x6c}},
 					},
@@ -143,7 +143,7 @@ func TestTxAdapter_isCoinbase(t *testing.T) {
 			name: "vinPubKeyEmpty",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: []byte{}},
 					},
@@ -158,7 +158,7 @@ func TestTxAdapter_isCoinbase(t *testing.T) {
 			name: "vinPubKeyRewardTxData",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: RewardTxData},
 					},
@@ -173,7 +173,7 @@ func TestTxAdapter_isCoinbase(t *testing.T) {
 			name: "vinPubKeyGasRewardData",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: GasRewardData},
 					},
@@ -188,7 +188,7 @@ func TestTxAdapter_isCoinbase(t *testing.T) {
 			name: "vinPubKeyGasChangeData",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: GasChangeData},
 					},
@@ -217,7 +217,7 @@ func TestTxAdapter_isRewardTx(t *testing.T) {
 			name: "rewardTxTrue",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: RewardTxData},
 					},
@@ -232,7 +232,7 @@ func TestTxAdapter_isRewardTx(t *testing.T) {
 			name: "vinCoinbaseFalse",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{0x1a}, Vout: 0, Signature: nil, PubKey: RewardTxData},
 					},
@@ -247,7 +247,7 @@ func TestTxAdapter_isRewardTx(t *testing.T) {
 			name: "vinPubKeyNotRewardTx",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: GasChangeData},
 					},
@@ -276,7 +276,7 @@ func TestTxAdapter_isGasRewardTx(t *testing.T) {
 			name: "rewardTxTrue",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: GasRewardData},
 					},
@@ -291,7 +291,7 @@ func TestTxAdapter_isGasRewardTx(t *testing.T) {
 			name: "vinCoinbaseFalse",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{0x1a}, Vout: 0, Signature: nil, PubKey: GasRewardData},
 					},
@@ -306,7 +306,7 @@ func TestTxAdapter_isGasRewardTx(t *testing.T) {
 			name: "voutLengthInvalid",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: GasRewardData},
 					},
@@ -319,7 +319,7 @@ func TestTxAdapter_isGasRewardTx(t *testing.T) {
 			name: "vinPubKeyNotGasReward",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: GasChangeData},
 					},
@@ -348,7 +348,7 @@ func TestTxAdapter_isChangeProducter(t *testing.T) {
 			name: "changeProducterTrue",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: []byte{0xde, 0xad, 0xbe, 0xef}},
 					},
@@ -364,7 +364,7 @@ func TestTxAdapter_isChangeProducter(t *testing.T) {
 			name: "emptyVin",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{},
 					Vout:       []transactionbase.TXOutput{
 						{Value: nil, PubKeyHash: nil, Contract: ""},
@@ -377,7 +377,7 @@ func TestTxAdapter_isChangeProducter(t *testing.T) {
 			name: "emptyVout",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: GasRewardData},
 					},
@@ -390,7 +390,7 @@ func TestTxAdapter_isChangeProducter(t *testing.T) {
 			name: "incorrectHashes",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: []byte{0xde, 0xad, 0xbe, 0xef}},
 					},
@@ -420,7 +420,7 @@ func TestTxAdapter_isGasChangeTx(t *testing.T) {
 			name: "gasChangeTxTrue",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: GasChangeData},
 					},
@@ -435,7 +435,7 @@ func TestTxAdapter_isGasChangeTx(t *testing.T) {
 			name: "vinCoinbaseFalse",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{0x1a}, Vout: 0, Signature: nil, PubKey: GasChangeData},
 					},
@@ -450,7 +450,7 @@ func TestTxAdapter_isGasChangeTx(t *testing.T) {
 			name: "voutLengthInvalid",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: GasChangeData},
 					},
@@ -463,7 +463,7 @@ func TestTxAdapter_isGasChangeTx(t *testing.T) {
 			name: "vinPubKeyNotGasChange",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: RewardTxData},
 					},
@@ -492,7 +492,7 @@ func TestTxAdapter_IsContract(t *testing.T) {
 			name: "contractTrue",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID: getAoB(1),
+					ID: []byte{0x67},
 					Vin: []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: nil},
 					},
@@ -511,7 +511,7 @@ func TestTxAdapter_IsContract(t *testing.T) {
 			name: "emptyVout",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID: getAoB(1),
+					ID: []byte{0x67},
 					Vin: []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: nil},
 					},
@@ -524,7 +524,7 @@ func TestTxAdapter_IsContract(t *testing.T) {
 			name: "voutPubKeyHashIsNotContract",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID: getAoB(1),
+					ID: []byte{0x67},
 					Vin: []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: nil},
 					},
@@ -557,7 +557,7 @@ func TestTxAdapter_isContractSendTx(t *testing.T) {
 			name: "contractSendTxTrue",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID: getAoB(1),
+					ID: []byte{0x67},
 					Vin: []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: []byte{0x58, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c}},
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: []byte{0x58, 0x98, 0xb4, 0xc, 0xd1, 0xb5, 0xff, 0xc1, 0xd9, 0x42, 0x61, 0x63, 0xac, 0xbc, 0x8c, 0x58, 0x62, 0xd4, 0xf1, 0x27, 0x5b}},
@@ -571,7 +571,7 @@ func TestTxAdapter_isContractSendTx(t *testing.T) {
 			name: "emptyVin",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID: getAoB(1),
+					ID: []byte{0x67},
 					Vin: []transactionbase.TXInput{},
 					Vout: []transactionbase.TXOutput{},
 				},
@@ -582,7 +582,7 @@ func TestTxAdapter_isContractSendTx(t *testing.T) {
 			name: "pubKeyHashIsNotContract",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID: getAoB(1),
+					ID: []byte{0x67},
 					Vin: []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: []byte{0x58, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c}},
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: []byte{0x5a, 0x98, 0xb4, 0xc, 0xd1, 0xb5, 0xff, 0xc1, 0xd9, 0x42, 0x61, 0x63, 0xac, 0xbc, 0x8c, 0x58, 0x62, 0xd4, 0xf1, 0x27, 0x5b}},
@@ -611,7 +611,7 @@ func TestTxAdapter_fillTypeAndNewTxAdapter(t *testing.T) {
 			name: "preExistingTxType",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{},
 					Vout:       []transactionbase.TXOutput{},
 					Type: TxTypeContract,
@@ -623,7 +623,7 @@ func TestTxAdapter_fillTypeAndNewTxAdapter(t *testing.T) {
 			name: "TxTypeContract",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID: getAoB(1),
+					ID: []byte{0x67},
 					Vin: []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: nil},
 					},
@@ -642,7 +642,7 @@ func TestTxAdapter_fillTypeAndNewTxAdapter(t *testing.T) {
 			name: "TxTypeCoinbase",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: []byte{0x6c}},
 					},
@@ -657,7 +657,7 @@ func TestTxAdapter_fillTypeAndNewTxAdapter(t *testing.T) {
 			name: "TxTypeGasReward",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: GasRewardData},
 					},
@@ -672,7 +672,7 @@ func TestTxAdapter_fillTypeAndNewTxAdapter(t *testing.T) {
 			name: "TxTypeGasChange",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: GasChangeData},
 					},
@@ -687,7 +687,7 @@ func TestTxAdapter_fillTypeAndNewTxAdapter(t *testing.T) {
 			name: "TxTypeReward",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: RewardTxData},
 					},
@@ -702,7 +702,7 @@ func TestTxAdapter_fillTypeAndNewTxAdapter(t *testing.T) {
 			name: "TxTypeContractSend",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID: getAoB(1),
+					ID: []byte{0x67},
 					Vin: []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: []byte{0x58, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c}},
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: []byte{0x58, 0x98, 0xb4, 0xc, 0xd1, 0xb5, 0xff, 0xc1, 0xd9, 0x42, 0x61, 0x63, 0xac, 0xbc, 0x8c, 0x58, 0x62, 0xd4, 0xf1, 0x27, 0x5b}},
@@ -716,7 +716,7 @@ func TestTxAdapter_fillTypeAndNewTxAdapter(t *testing.T) {
 			name: "TxTypeProducerChange",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{
 						{Txid: []byte{}, Vout: -1, Signature: nil, PubKey: []byte{0xde, 0xad, 0xbe, 0xef}},
 					},
@@ -732,7 +732,7 @@ func TestTxAdapter_fillTypeAndNewTxAdapter(t *testing.T) {
 			name: "TxTypeNormal",
 			txAdapter: &TxAdapter{
 				&Transaction{
-					ID:         getAoB(1),
+					ID:         []byte{0x67},
 					Vin:        []transactionbase.TXInput{},
 					Vout:       []transactionbase.TXOutput{},
 				},
