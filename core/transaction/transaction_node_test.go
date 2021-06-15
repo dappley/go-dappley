@@ -50,6 +50,24 @@ func TestNewTransactionNode(t *testing.T) {
 
 	expectedTxNodeEmpty := &TransactionNode{Children: make(map[string]*Transaction)}
 	assert.Equal(t, expectedTxNodeEmpty, NewTransactionNode(nil))
-	// The following line causes a segfault if Tip is not specified. Is this intended? (check Transaction.ToProto)
 	assert.Equal(t, expectedTxNodeEmpty, NewTransactionNode(&Transaction{Tip: common.NewAmount(0)}))
+}
+
+func TestTransactionNode_GetTipsPerByte(t *testing.T) {
+	tx1 := &Transaction{
+		ID: []byte{0x4f, 0xda, 0x27, 0xf8, 0x2c, 0xa, 0x49, 0x9d, 0x8c, 0x19, 0x37, 0x46, 0x2c, 0x19, 0x9, 0xc6, 0x96, 0x54, 0x31, 0x99, 0x9f, 0x1f, 0xc6, 0x84, 0xf5, 0xc0, 0xc5, 0x6b, 0xbd, 0xbd, 0xe, 0xc8},
+		Vin: []transactionbase.TXInput{
+			{Txid: []byte{0xc7, 0x4d}, Vout: 10, Signature: nil, PubKey: []byte{0x7c, 0x4d}},
+		},
+		Vout: []transactionbase.TXOutput{
+			{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{0xc6, 0x49}), Contract: "test"},
+		},
+		Tip: common.NewAmount(5),
+		GasLimit: common.NewAmount(1024),
+		GasPrice: common.NewAmount(1),
+		Type: TxTypeNormal,
+	}
+	txNode := NewTransactionNode(tx1)
+
+	assert.Equal(t, common.NewAmount(6849), txNode.GetTipsPerByte())
 }

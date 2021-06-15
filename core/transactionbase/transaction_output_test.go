@@ -126,5 +126,53 @@ func TestTXOutput_IsFoundInRewardStorage(t *testing.T) {
 			assert.Equal(t, tt.expectedRes, tt.vout.IsFoundInRewardStorage(tt.rewardStorage))
 		})
 	}
+}
 
+func TestNewTxOut(t *testing.T) {
+	pubKeyBytes := account.PubKeyHash([]byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c})
+	transactionAccount := account.NewContractAccountByPubKeyHash(pubKeyBytes)
+
+	expected := &TXOutput{
+		Value:      common.NewAmount(10),
+		PubKeyHash: transactionAccount.GetPubKeyHash(),
+		Contract:   "test",
+	}
+	assert.Equal(t, expected, NewTxOut(common.NewAmount(10), transactionAccount, "test"))
+}
+
+func TestNewTXOutput(t *testing.T) {
+	pubKeyBytes := account.PubKeyHash([]byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c})
+	transactionAccount := account.NewContractAccountByPubKeyHash(pubKeyBytes)
+
+	expected := &TXOutput{
+		Value:      common.NewAmount(13),
+		PubKeyHash: transactionAccount.GetPubKeyHash(),
+		Contract:   "",
+	}
+	assert.Equal(t, expected, NewTXOutput(common.NewAmount(13), transactionAccount))
+}
+
+func TestNewContractTXOutput(t *testing.T) {
+	pubKeyBytes := account.PubKeyHash([]byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c})
+	transactionAccount := account.NewContractAccountByPubKeyHash(pubKeyBytes)
+
+	expected := &TXOutput{
+		Value:      common.NewAmount(0),
+		PubKeyHash: transactionAccount.GetPubKeyHash(),
+		Contract:   "contract",
+	}
+	assert.Equal(t, expected, NewContractTXOutput(transactionAccount, "contract"))
+}
+
+func TestTXOutput_GetAddress(t *testing.T) {
+	pubKeyBytes := account.PubKeyHash([]byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c})
+	transactionAccount := account.NewContractAccountByPubKeyHash(pubKeyBytes)
+
+	txo := &TXOutput{
+		Value:      common.NewAmount(0),
+		PubKeyHash: transactionAccount.GetPubKeyHash(),
+		Contract:   "contract",
+	}
+
+	assert.Equal(t, account.NewAddress("dVaFsQL9He4Xn4CEUh1TCNtfEhHNHKX3hs"), txo.GetAddress())
 }

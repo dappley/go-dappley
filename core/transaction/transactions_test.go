@@ -49,3 +49,27 @@ func TestTransactions_FromProto(t *testing.T) {
 
 	assert.Equal(t, txs, txs2)
 }
+
+func TestTransactions_GetTransactions(t *testing.T) {
+	tx1 := Transaction{
+		ID:       util.GenerateRandomAoB(1),
+		Vin:      GenerateFakeTxInputs(),
+		Vout:     GenerateFakeTxOutputs(),
+		Tip:      common.NewAmount(5),
+		GasLimit: common.NewAmount(0),
+		GasPrice: common.NewAmount(0),
+	}
+
+	tx2 := Transaction{
+		ID:       util.GenerateRandomAoB(1),
+		Vin:      GenerateFakeTxInputs(),
+		Vout:     GenerateFakeTxOutputs(),
+		Tip:      common.NewAmount(5),
+		GasLimit: common.NewAmount(0),
+		GasPrice: common.NewAmount(0),
+	}
+
+	txs := NewTransactions([]Transaction{tx1, tx2})
+
+	assert.Equal(t, []Transaction{tx1, tx2}, txs.GetTransactions())
+}
