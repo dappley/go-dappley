@@ -22,6 +22,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/transactionbase"
+	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -73,4 +74,68 @@ func TestUTXO_GetUTXOKey(t *testing.T) {
 	}
 
 	assert.Equal(t, "test_1", utxo.GetUTXOKey())
+}
+
+func TestUTXO_ToProto(t *testing.T) {
+	pubKeyBytes := account.PubKeyHash([]byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c})
+	transactionAccount := account.NewContractAccountByPubKeyHash(pubKeyBytes)
+
+	txo := transactionbase.TXOutput{
+		Value:      common.NewAmount(10),
+		PubKeyHash: transactionAccount.GetPubKeyHash(),
+		Contract:   "contract",
+	}
+
+	utxo := &UTXO{
+		TXOutput:    txo,
+		Txid:        []byte{0x74, 0x65, 0x73, 0x74},
+		TxIndex:     1,
+		UtxoType:    UtxoNormal,
+		PrevUtxoKey: []byte{},
+		NextUtxoKey: []byte{},
+	}
+
+	expected := &utxopb.Utxo{
+		Amount:        []byte{0xa},
+		PublicKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c},
+		Txid:          []byte{0x74, 0x65, 0x73, 0x74},
+		TxIndex:       uint32(1),
+		UtxoType:      uint32(0),
+		Contract:      "contract",
+		PrevUtxoKey:   []byte{},
+		NextUtxoKey:   []byte{},
+	}
+
+	assert.Equal(t, expected, utxo.ToProto())
+}
+
+func TestUTXO_FromProto(t *testing.T) {
+	utxoProto := &utxopb.Utxo{
+		Amount:        []byte{0xa},
+		PublicKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c},
+		Txid:          []byte{0x74, 0x65, 0x73, 0x74},
+		TxIndex:       uint32(1),
+		UtxoType:      uint32(0),
+		Contract:      "contract",
+		PrevUtxoKey:   []byte{},
+		NextUtxoKey:   []byte{},
+	}
+
+	txo := transactionbase.TXOutput{
+		Value:      common.NewAmount(10),
+		PubKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c},
+		Contract:   "contract",
+	}
+	expected := &UTXO{
+		TXOutput:    txo,
+		Txid:        []byte{0x74, 0x65, 0x73, 0x74},
+		TxIndex:     1,
+		UtxoType:    UtxoNormal,
+		PrevUtxoKey: []byte{},
+		NextUtxoKey: []byte{},
+	}
+
+	utxo := &UTXO{}
+	utxo.FromProto(utxoProto)
+	assert.Equal(t, expected, utxo)
 }

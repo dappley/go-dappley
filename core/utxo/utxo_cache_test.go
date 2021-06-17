@@ -2,9 +2,14 @@ package utxo
 
 import (
 	"errors"
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/stateLog"
+	"github.com/dappley/go-dappley/core/transactionbase"
+	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
+	"github.com/golang/protobuf/proto"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -115,4 +120,109 @@ func TestUTXO_DelScStates(t *testing.T) {
 
 	_, err := cache.db.Get(util.Str2bytes(GetscStateKey(address, key)))
 	assert.Equal(t, errors.New("key is invalid"), err)
+}
+
+func TestNewScStateCache(t *testing.T) {
+	scStateCache := NewScStateCache()
+	expectedMemberCache, _ := lru.New(ScStateCacheLRUCacheLimit)
+
+	assert.Equal(t, expectedMemberCache, scStateCache.stateLogCache)
+	assert.Equal(t, expectedMemberCache, scStateCache.scStateCache)
+}
+
+func TestUTXOCache_putUTXOToDB(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+	cache := NewUTXOCache(db)
+
+	utxo := &UTXO{
+		TXOutput:    transactionbase.TXOutput{
+			Value:      common.NewAmount(10),
+			PubKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c},
+			Contract:   "contract",
+		},
+		Txid:        []byte{0x74, 0x65, 0x73, 0x74},
+		TxIndex:     1,
+		UtxoType:    UtxoNormal,
+	}
+
+	err := cache.putUTXOToDB(utxo)
+	// test results of putUTXOToDB
+	assert.Nil(t, err)
+	cacheUtxo, _ := cache.utxo.Get(utxo.GetUTXOKey())
+	assert.Equal(t, utxo, cacheUtxo)
+	dbUtxoBytes, _ := cache.db.Get(util.Str2bytes(utxo.GetUTXOKey()))
+	expectedUtxoBytes, _ := proto.Marshal(utxo.ToProto().(*utxopb.Utxo))
+	assert.Equal(t, expectedUtxoBytes, dbUtxoBytes)
+}
+
+func TestUTXOCache_getUTXOFromDB(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+	cache := NewUTXOCache(db)
+
+	utxo := &UTXO{
+		TXOutput:    transactionbase.TXOutput{
+			Value:      common.NewAmount(10),
+			PubKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c},
+			Contract:   "contract",
+		},
+		Txid:        []byte{0x74, 0x65, 0x73, 0x74},
+		TxIndex:     1,
+		UtxoType:    UtxoNormal,
+	}
+	utxoBytes, _ := proto.Marshal(utxo.ToProto().(*utxopb.Utxo))
+	cache.db.Put(util.Str2bytes(utxo.GetUTXOKey()), utxoBytes)
+
+	result, err := cache.getUTXOFromDB(utxo.GetUTXOKey())
+	assert.Nil(t, err)
+	assert.Equal(t, utxo, result)
+	cacheUtxo, _ := cache.utxo.Get(utxo.GetUTXOKey())
+	assert.Equal(t, utxo, cacheUtxo)
+
+	result, err = cache.getUTXOFromDB("invalid key")
+	assert.Nil(t, result)
+	assert.Equal(t, errors.New("key is invalid"), err)
+}
+
+func TestUTXOCache_GetUtxo(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+	cache := NewUTXOCache(db)
+
+	utxo1 := &UTXO{
+		TXOutput:    transactionbase.TXOutput{
+			Value:      common.NewAmount(10),
+			PubKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c},
+			Contract:   "contract",
+		},
+		Txid:        []byte{0x74, 0x65, 0x73, 0x74},
+		TxIndex:     0,
+		UtxoType:    UtxoNormal,
+	}
+	utxo2 := &UTXO{
+		TXOutput:    transactionbase.TXOutput{
+			Value:      common.NewAmount(15),
+			PubKeyHash: []byte{0x5a, 0xb2, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c},
+			Contract:   "contract",
+		},
+		Txid:        []byte{0x75, 0x66, 0x74, 0x75},
+		TxIndex:     1,
+		UtxoType:    UtxoNormal,
+	}
+
+	result, err := cache.GetUtxo(utxo1.GetUTXOKey())
+	assert.Nil(t, result)
+	assert.Equal(t, errors.New("key is invalid"), err)
+
+	cache.putUTXOToDB(utxo1)
+	cache.putUTXOToDB(utxo2)
+	result, err = cache.GetUtxo(utxo2.GetUTXOKey())
+	assert.Nil(t, err)
+	assert.Equal(t, utxo2, result)
+
+	cache.utxo.Remove(utxo1.GetUTXOKey())
+	result, err = cache.GetUtxo(utxo1.GetUTXOKey())
+	assert.Nil(t, err)
+	assert.Equal(t, utxo1, result)
 }
