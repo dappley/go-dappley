@@ -52,7 +52,7 @@ func TestTransactions_FromProto(t *testing.T) {
 
 func TestTransactions_GetTransactions(t *testing.T) {
 	tx1 := Transaction{
-		ID:       util.GenerateRandomAoB(1),
+		ID:       []byte{100},
 		Vin:      GenerateFakeTxInputs(),
 		Vout:     GenerateFakeTxOutputs(),
 		Tip:      common.NewAmount(5),
@@ -61,7 +61,7 @@ func TestTransactions_GetTransactions(t *testing.T) {
 	}
 
 	tx2 := Transaction{
-		ID:       util.GenerateRandomAoB(1),
+		ID:       []byte{101},
 		Vin:      GenerateFakeTxInputs(),
 		Vout:     GenerateFakeTxOutputs(),
 		Tip:      common.NewAmount(5),
