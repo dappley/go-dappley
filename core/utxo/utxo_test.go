@@ -91,8 +91,8 @@ func TestUTXO_ToProto(t *testing.T) {
 		Txid:        []byte{0x74, 0x65, 0x73, 0x74},
 		TxIndex:     1,
 		UtxoType:    UtxoNormal,
-		PrevUtxoKey: []byte{},
-		NextUtxoKey: []byte{},
+		PrevUtxoKey: []byte{0x6d, 0x6e, 0x6a, 0x6d},
+		NextUtxoKey: []byte{0x6b, 0x6e, 0x6e, 0x6f},
 	}
 
 	expected := &utxopb.Utxo{
@@ -102,8 +102,8 @@ func TestUTXO_ToProto(t *testing.T) {
 		TxIndex:       uint32(1),
 		UtxoType:      uint32(0),
 		Contract:      "contract",
-		PrevUtxoKey:   []byte{},
-		NextUtxoKey:   []byte{},
+		PrevUtxoKey:   []byte{0x6d, 0x6e, 0x6a, 0x6d},
+		NextUtxoKey:   []byte{0x6b, 0x6e, 0x6e, 0x6f},
 	}
 
 	assert.Equal(t, expected, utxo.ToProto())
@@ -117,8 +117,8 @@ func TestUTXO_FromProto(t *testing.T) {
 		TxIndex:       uint32(1),
 		UtxoType:      uint32(0),
 		Contract:      "contract",
-		PrevUtxoKey:   []byte{},
-		NextUtxoKey:   []byte{},
+		PrevUtxoKey:   []byte{0x6d, 0x6e, 0x6a, 0x6d},
+		NextUtxoKey:   []byte{0x6b, 0x6e, 0x6e, 0x6f},
 	}
 
 	txo := transactionbase.TXOutput{
@@ -131,8 +131,8 @@ func TestUTXO_FromProto(t *testing.T) {
 		Txid:        []byte{0x74, 0x65, 0x73, 0x74},
 		TxIndex:     1,
 		UtxoType:    UtxoNormal,
-		PrevUtxoKey: []byte{},
-		NextUtxoKey: []byte{},
+		PrevUtxoKey: []byte{0x6d, 0x6e, 0x6a, 0x6d},
+		NextUtxoKey: []byte{0x6b, 0x6e, 0x6e, 0x6f},
 	}
 
 	utxo := &UTXO{}
