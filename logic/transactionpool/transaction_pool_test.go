@@ -240,7 +240,7 @@ func TestTransactionPoolLimit(t *testing.T) {
 }
 
 func TestTransactionPool_GetTransactions(t *testing.T) {
-	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa99"
 	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
 	var contractAccount = account.NewContractTransactionAccount()
 
@@ -272,10 +272,12 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 	}
 	executionTx.ID = executionTx.Hash()
 
-	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	db := storage.NewRamStorage()
+	defer db.Close()
+	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
 	index := make(map[string]*utxo.UTXOTx)
 	newUtxos := utxo.NewUTXOTx()
-	index[contractAccount.GetPubKeyHash().String()]=&newUtxos
+	index[contractAccount.GetPubKeyHash().String()] = &newUtxos
 
 	txPool := NewTransactionPool(nil, 100000)
 	txPool.Push(deploymentTx)
@@ -398,7 +400,6 @@ func generateDependentTxs() []*transaction.Transaction {
 	}
 	return []*transaction.Transaction{ttx0, ttx1, ttx2, ttx3, ttx4, ttx5, ttx6, ttx7}
 }
-
 
 func TestNewTransactionNode(t *testing.T) {
 	ttx1 := &transaction.Transaction{

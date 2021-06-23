@@ -113,8 +113,9 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 		Type: transaction.TxTypeNormal,
 	}
 	dependentTx5.ID = dependentTx5.Hash()
-
-	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	db := storage.NewRamStorage()
+	defer db.Close()
+	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
 
 	utxoTx2 := utxo.NewUTXOTx()
 	utxoTx2.PutUtxo(&utxo.UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1, utxo.UtxoNormal, []byte{}, []byte{}})
@@ -183,7 +184,9 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 
 func TestTransactionPool_PopTransactionsWithMostTipsNoDependency(t *testing.T) {
 	txPool := NewTransactionPool(nil, 1280000)
-	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	db := storage.NewRamStorage()
+	defer db.Close()
+	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
 	var prevUTXOs []*utxo.UTXOTx
 	var txs []*transaction.Transaction
 	var accounts []*account.Account
@@ -213,7 +216,9 @@ func TestTransactionPool_PopTransactionsWithMostTipsNoDependency(t *testing.T) {
 
 func TestTransactionPool_PopTransactionsWithMostTipsWithDependency(t *testing.T) {
 	txPool := NewTransactionPool(nil, 1280000)
-	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	db := storage.NewRamStorage()
+	defer db.Close()
+	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
 	var accounts []*account.Account
 	var txs []*transaction.Transaction
 
@@ -229,7 +234,7 @@ func TestTransactionPool_PopTransactionsWithMostTipsWithDependency(t *testing.T)
 	//Create 4 transactions that can pass the transaction verification
 	for i := 0; i < 4; i++ {
 		prevUTXO := tempUtxoIndex.GetAllUTXOsByPubKeyHash(accounts[i].GetPubKeyHash())
-		sendTxParam := transaction.NewSendTxParam(accounts[i].GetAddress(), accounts[i].GetKeyPair(), accounts[i+1].GetAddress(), common.NewAmount(uint64(100-i*4)), common.NewAmount(uint64(i)), common.NewAmount(0), common.NewAmount(0), "")
+		sendTxParam := transaction.NewSendTxParam(accounts[i].GetAddress(), accounts[i].GetKeyPair(), accounts[i+1].GetAddress(), common.NewAmount(uint64(100-i*4)), common.NewAmount(uint64(1)), common.NewAmount(0), common.NewAmount(0), "")
 		tx, err := ltransaction.NewNormalUTXOTransaction(prevUTXO.GetAllUtxos(), sendTxParam)
 		assert.Nil(t, err)
 		tempUtxoIndex.UpdateUtxo(&tx)
