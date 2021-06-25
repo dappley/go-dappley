@@ -288,8 +288,9 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	if engine == nil {
 		return 0, nil, nil
 	}
-	if !isContractDeployed {
-		return 0, nil, nil
+	baseGas, _ := tx.GasCountOfTxBase()
+	if !isContractDeployed { //means this is a contract deploy transaction
+		return (baseGas).Uint64(), nil, nil
 	}
 
 	vout := tx.Vout[transaction.ContractTxouputIndex]
@@ -327,8 +328,6 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	engine.ImportUtxoIndex(utxoIndex)
 	_, err := engine.Execute(function, totalArgs)
 	gasCount := engine.ExecutionInstructions()
-	// record base gas
-	baseGas, _ := tx.GasCountOfTxBase()
 	gasCount += baseGas.Uint64()
 	if err != nil {
 		return gasCount, nil, err
