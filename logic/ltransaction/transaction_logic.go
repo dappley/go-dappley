@@ -27,7 +27,12 @@ var (
 	ErrExecutionFailed       = errors.New("execution failed")
 	ErrUnsupportedSourceType = errors.New("unsupported source type")
 	ErrLoadError             = errors.New("contract load error")
+	gasConsumption           = true
 )
+
+func SetGasConsumption(isOn bool) {
+	gasConsumption = isOn
+}
 
 // VerifyTransaction ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, blockHeight uint64) error {
@@ -73,6 +78,9 @@ func VerifyAndCollectContractOutput(utxoIndex *lutxo.UTXOIndex, tx *TxContract, 
 		logger.Warn(err)
 		//invoke smart contracts before they are completed deploy, will cause an ErrLoadError.
 		//for example: deploy and invoke contracts in the same block
+	}
+	if !gasConsumption {
+		gasCount = 0
 	}
 	return gasCount, generatedTxs, nil
 }
