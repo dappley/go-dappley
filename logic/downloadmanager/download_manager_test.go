@@ -60,7 +60,7 @@ func createTestBlockchains(size int, portStart int) ([]*lblockchain.BlockchainMa
 		rfl := storage.NewRamFileLoader(confDir, "dl"+strconv.Itoa(i)+".conf")
 		node := network.NewNode(rfl.File, nil)
 		node.Start(portStart+i, "")
-		bm := lblockchain.NewBlockchainManager(bc.DeepCopy(), blockchain.NewBlockPool(nil), node, consensus)
+		bm := lblockchain.NewBlockchainManager(bc, blockchain.NewBlockPool(nil), node, consensus)
 		bms[i] = bm
 		nodes[i] = node
 	}
