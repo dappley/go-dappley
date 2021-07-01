@@ -70,6 +70,7 @@ const (
 	cliGetBalance        = "getBalance"
 	cliGetPeerInfo       = "getPeerInfo"
 	cliSend              = "send"
+	cliSendHardCode      = "sendHardCore"
 	cliAddPeer           = "addPeer"
 	clicreateAccount     = "createAccount"
 	cliListAddresses     = "listAddresses"
@@ -143,6 +144,7 @@ var cmdList = []string{
 	cliGetBalance,
 	cliGetPeerInfo,
 	cliSend,
+	cliSendHardCode,
 	cliAddPeer,
 	clicreateAccount,
 	cliListAddresses,
@@ -236,6 +238,56 @@ var cmdFlagsMap = map[string][]flagPars{
 		},
 	},
 	cliSend: {
+		flagPars{
+			flagFromAddress,
+			"",
+			valueTypeString,
+			"Sender's account address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+		},
+		flagPars{
+			flagToAddress,
+			"",
+			valueTypeString,
+			"Receiver's account address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+		},
+		flagPars{
+			flagAmount,
+			0,
+			valueTypeInt,
+			"The amount to send from the sender to the receiver.",
+		},
+		flagPars{
+			flagTip,
+			uint64(0),
+			valueTypeUint64,
+			"Tip to miner.",
+		},
+		flagPars{
+			flagData,
+			"",
+			valueTypeString,
+			"Smart contract in JavaScript. Eg. helloworld!",
+		},
+		flagPars{
+			flagFilePath,
+			"",
+			valueTypeString,
+			"Smart contract file path. Eg. contract/smart_contract.js",
+		},
+		flagPars{
+			flagGasLimit,
+			uint64(0),
+			valueTypeUint64,
+			"Gas limit count of smart contract execution.",
+		},
+		flagPars{
+			flagGasPrice,
+			uint64(0),
+			valueTypeUint64,
+			"Gas price of smart contract execution.",
+		},
+	},
+	cliSendHardCode: {
 		flagPars{
 			flagFromAddress,
 			"",
@@ -387,6 +439,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGetBalance:        {rpcService, getBalanceCommandHandler},
 	cliGetPeerInfo:       {adminRpcService, getPeerInfoCommandHandler},
 	cliSend:              {rpcService, sendCommandHandler},
+	cliSendHardCode:      {rpcService, cliSendHardCodeCommandHandler},
 	cliAddPeer:           {adminRpcService, addPeerCommandHandler},
 	clicreateAccount:     {adminRpcService, createAccountCommandHandler},
 	cliListAddresses:     {adminRpcService, listAddressesCommandHandler},
@@ -1349,6 +1402,107 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
 		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
 	tx, err := ltransaction.NewNormalUTXOTransaction(tx_utxos, sendTxParam)
+	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
+	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
+
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error:", status.Convert(err).Message())
+		}
+		return
+	}
+
+	if *(flags[flagToAddress].(*string)) == "" {
+		fmt.Println("Contract address:", tx.Vout[0].GetAddress().String())
+	}
+
+	fmt.Println("Transaction is sent! Pending approval from network.")
+}
+
+func cliSendHardCodeCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
+	var data string
+	fromAddress := *(flags[flagFromAddress].(*string))
+	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(fromAddress))
+	path := *(flags[flagFilePath].(*string))
+	if path == "" {
+		data = *(flags[flagData].(*string))
+	} else {
+		script, err := ioutil.ReadFile(path)
+		if err != nil {
+			fmt.Printf("Error: smart contract path \"%s\" is invalid.\n", path)
+			return
+		}
+		data = string(script)
+	}
+
+	if !addressAccount.IsValid() {
+		fmt.Println("Error: 'from' address is not valid!")
+		return
+	}
+
+	//Contract deployment transaction does not need to validate to address
+	if data == "" && !addressAccount.IsValid() {
+		fmt.Println("Error: 'to' address is not valid!")
+		return
+	}
+
+	response, err := logic.GetUtxoStream(c.(rpcpb.RpcServiceClient), &rpcpb.GetUTXORequest{
+		Address: account.NewAddress(*(flags[flagFromAddress].(*string))).String(),
+	})
+
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error:", status.Convert(err).Message())
+		}
+		return
+	}
+	utxos := response.GetUtxos()
+	var inputUtxos []*utxo.UTXO
+	for _, u := range utxos {
+		utxo := utxo.UTXO{}
+		utxo.FromProto(u)
+		inputUtxos = append(inputUtxos, &utxo)
+	}
+	sort.Sort(utxoSlice(inputUtxos))
+	tip := common.NewAmount(0)
+	gasLimit := common.NewAmount(0)
+	gasPrice := common.NewAmount(0)
+	if flags[flagTip] != nil {
+		tip = common.NewAmount(*(flags[flagTip].(*uint64)))
+	}
+	if flags[flagGasLimit] != nil {
+		gasLimit = common.NewAmount(*(flags[flagGasLimit].(*uint64)))
+	}
+	if flags[flagGasPrice] != nil {
+		gasPrice = common.NewAmount(*(flags[flagGasPrice].(*uint64)))
+	}
+	tx_utxos, err := GetUTXOsfromAmount(inputUtxos, common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice)
+	if err != nil {
+		fmt.Println("Error:", err.Error())
+		return
+	}
+
+	am, err := logic.GetAccountManager(wallet.GetAccountFilePath())
+	if err != nil {
+		fmt.Println("Error:", err.Error())
+		return
+	}
+	senderAccount := am.GetAccountByAddress(account.NewAddress(*(flags[flagFromAddress].(*string))))
+
+	if senderAccount == nil {
+		fmt.Println("Error: invalid account address.")
+		return
+	}
+	fmt.Println("contract:",data)
+	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
+		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
+	tx, err := ltransaction.NewHardCoreTransaction(transaction.TxTypeNormal,tx_utxos, sendTxParam)
 	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
