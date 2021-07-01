@@ -20,6 +20,7 @@ package utxo
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/common/hash"
@@ -106,6 +107,15 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkeyHash string) error {
 				return err
 			}
 		}
+
+		pkh,_:=hex.DecodeString(pubkeyHash)
+		address:=account.PubKeyHash(pkh).GenerateAddress().String()
+		scStateKey:=GetscStateKey(address, "Ron")
+		err = utxoCache.db.Put(util.Str2bytes(scStateKey), util.Str2bytes(utxo.Contract))
+		if err != nil {
+			return err
+		}
+
 	}
 	err := utxoCache.putLastUTXOKey(pubkeyHash, lastestUtxoKey)
 	if err != nil {

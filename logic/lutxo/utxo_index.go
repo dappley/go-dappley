@@ -336,12 +336,12 @@ func (utxos *UTXOIndex) AddUTXO(txout transactionbase.TXOutput, txid []byte, vou
 	if isContract, _ := txout.PubKeyHash.IsContract(); isContract {
 		if !utxos.IsIndexAddExist(txout.PubKeyHash) &&
 			!utxos.IsLastUtxoKeyExist(txout.PubKeyHash) {
-			u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoCreateContract)
+			u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoCreateContract,"")
 		} else {
-			u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoInvokeContract)
+			u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoInvokeContract,"")
 		}
 	} else {
-		u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoNormal)
+		u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoNormal,txout.Contract)
 	}
 
 	utxoTx, ok := utxos.indexAdd[txout.PubKeyHash.String()]
