@@ -142,7 +142,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 					newUtxos := utxo.NewUTXOTx()
 					utxos = &newUtxos
 				}
-				utxos.PutUtxo(utxo.NewUTXO(vout, tx.ID, i, utxo.UtxoNormal))
+				utxos.PutUtxo(utxo.NewUTXO(vout, tx.ID, i, utxo.UtxoNormal,""))
 				utxosMap[vout.PubKeyHash.String()] = utxos
 			}
 		}
@@ -159,7 +159,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 					newUtxos := utxo.NewUTXOTx()
 					utxos = &newUtxos
 				}
-				utxos.PutUtxo(utxo.NewUTXO(vout, tx.ID, i, utxo.UtxoNormal))
+				utxos.PutUtxo(utxo.NewUTXO(vout, tx.ID, i, utxo.UtxoNormal,""))
 				utxosMap[vout.PubKeyHash.String()] = utxos
 			}
 		}

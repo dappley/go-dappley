@@ -46,7 +46,7 @@ func TestNewUTXO(t *testing.T) {
 		NextUtxoKey: []byte{},
 	}
 
-	assert.Equal(t, expected, NewUTXO(txo, []byte{0x67}, 1, UtxoNormal))
+	assert.Equal(t, expected, NewUTXO(txo, []byte{0x67}, 1, UtxoNormal,""))
 }
 
 func TestGetUTXOKey(t *testing.T) {
