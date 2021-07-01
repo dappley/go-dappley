@@ -32,6 +32,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	lru "github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
+	"strings"
 )
 
 const (
@@ -108,14 +109,10 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkeyHash string) error {
 			}
 		}
 
-		pkh,_:=hex.DecodeString(pubkeyHash)
-		address:=account.PubKeyHash(pkh).GenerateAddress().String()
-		scStateKey:=GetscStateKey(address, "Ron")
-		err = utxoCache.db.Put(util.Str2bytes(scStateKey), util.Str2bytes(utxo.Contract))
+		err = utxoCache.saveHardCore(utxo.Contract, pubkeyHash)
 		if err != nil {
 			return err
 		}
-
 	}
 	err := utxoCache.putLastUTXOKey(pubkeyHash, lastestUtxoKey)
 	if err != nil {
@@ -474,3 +471,18 @@ func GetscStateLogKey(blockHash hash.Hash) string {
 	return "scLog" + util.Bytes2str(blockHash)
 }
 
+func (utxoCache *UTXOCache) saveHardCore(data, pubkeyHash string) error {
+	if data != "" {
+		pkh, _ := hex.DecodeString(pubkeyHash)
+		address := account.PubKeyHash(pkh).GenerateAddress().String()
+		separator := strings.Index(data, ";")
+		key := data[0:separator]
+		value := data[separator+1:]
+		scStateKey := GetscStateKey(address, key)
+		err := utxoCache.db.Put(util.Str2bytes(scStateKey), util.Str2bytes(value))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

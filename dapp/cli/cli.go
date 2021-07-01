@@ -1499,7 +1499,6 @@ func cliSendHardCodeCommandHandler(ctx context.Context, c interface{}, flags cmd
 		fmt.Println("Error: invalid account address.")
 		return
 	}
-	fmt.Println("contract:",data)
 	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
 		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
 	tx, err := ltransaction.NewHardCoreTransaction(transaction.TxTypeNormal,tx_utxos, sendTxParam)
