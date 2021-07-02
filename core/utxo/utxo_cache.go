@@ -20,7 +20,6 @@ package utxo
 
 import (
 	"bytes"
-	"encoding/hex"
 	"errors"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/common/hash"
@@ -108,8 +107,7 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkeyHash string) error {
 				return err
 			}
 		}
-
-		err = utxoCache.saveHardCore(utxo.Contract, pubkeyHash)
+		err = utxoCache.saveHardCore(utxo)
 		if err != nil {
 			return err
 		}
@@ -176,7 +174,7 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkeyHash string) error
 		if err != nil {
 			return err
 		}
-		err = utxoCache.deleteHardCore(utxo.Contract, pubkeyHash);
+		err = utxoCache.deleteHardCore(utxo);
 		if err != nil {
 			return err
 		}
@@ -475,29 +473,39 @@ func GetscStateLogKey(blockHash hash.Hash) string {
 	return "scLog" + util.Bytes2str(blockHash)
 }
 
-func (utxoCache *UTXOCache) saveHardCore(data, pubkeyHash string) error {
-	if data != "" {
-		scStateKey,value:=getScKeyValue(data, pubkeyHash)
-		if err := utxoCache.db.Put(scStateKey, value); err != nil {
-			return err
-		}
+func (utxoCache *UTXOCache) saveHardCore(utxo *UTXO) error {
+	isContract, err := utxo.PubKeyHash.IsContract()
+	if err != nil {
+		return err
+	}
+	if isContract || utxo.Contract == "" {
+		return nil
+	}
+	scStateKey, value := getScKeyValue(utxo.Contract, utxo.PubKeyHash)
+	if err := utxoCache.db.Put(scStateKey, value); err != nil {
+		return err
 	}
 	return nil
 }
 
-func (utxoCache *UTXOCache) deleteHardCore(data, pubkeyHash string) error {
-	if data != "" {
-		scStateKey,_:=getScKeyValue(data, pubkeyHash)
-		if err := utxoCache.db.Del(scStateKey); err != nil {
-			return err
-		}
+func (utxoCache *UTXOCache) deleteHardCore(utxo *UTXO) error {
+	isContract, err := utxo.PubKeyHash.IsContract()
+	if err != nil {
+		return err
+	}
+	if isContract || utxo.Contract == "" {
+		return nil
+	}
+
+	scStateKey, _ := getScKeyValue(utxo.Contract, utxo.PubKeyHash)
+	if err := utxoCache.db.Del(scStateKey); err != nil {
+		return err
 	}
 	return nil
 }
 
-func getScKeyValue(data, pubkeyHash string) ([]byte, []byte){
-	pkh, _ := hex.DecodeString(pubkeyHash)
-	address := account.PubKeyHash(pkh).GenerateAddress().String()
+func getScKeyValue(data string, pubkeyHash account.PubKeyHash) ([]byte, []byte){
+	address := pubkeyHash.GenerateAddress().String()
 	separator := strings.Index(data, ":")
 	key := data[0:separator]
 	value := data[separator+1:]
