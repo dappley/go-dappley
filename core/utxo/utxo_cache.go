@@ -176,6 +176,10 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkeyHash string) error
 		if err != nil {
 			return err
 		}
+		err = utxoCache.deleteHardCore(utxo.Contract, pubkeyHash);
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -473,16 +477,31 @@ func GetscStateLogKey(blockHash hash.Hash) string {
 
 func (utxoCache *UTXOCache) saveHardCore(data, pubkeyHash string) error {
 	if data != "" {
-		pkh, _ := hex.DecodeString(pubkeyHash)
-		address := account.PubKeyHash(pkh).GenerateAddress().String()
-		separator := strings.Index(data, ";")
-		key := data[0:separator]
-		value := data[separator+1:]
-		scStateKey := GetscStateKey(address, key)
-		err := utxoCache.db.Put(util.Str2bytes(scStateKey), util.Str2bytes(value))
-		if err != nil {
+		scStateKey,value:=getScKeyValue(data, pubkeyHash)
+		if err := utxoCache.db.Put(scStateKey, value); err != nil {
 			return err
 		}
 	}
 	return nil
 }
+
+func (utxoCache *UTXOCache) deleteHardCore(data, pubkeyHash string) error {
+	if data != "" {
+		scStateKey,_:=getScKeyValue(data, pubkeyHash)
+		if err := utxoCache.db.Del(scStateKey); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func getScKeyValue(data, pubkeyHash string) ([]byte, []byte){
+	pkh, _ := hex.DecodeString(pubkeyHash)
+	address := account.PubKeyHash(pkh).GenerateAddress().String()
+	separator := strings.Index(data, ":")
+	key := data[0:separator]
+	value := data[separator+1:]
+	scStateKey := GetscStateKey(address, key)
+	return util.Str2bytes(scStateKey), util.Str2bytes(value)
+}
+
