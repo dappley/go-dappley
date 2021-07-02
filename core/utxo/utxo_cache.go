@@ -475,10 +475,7 @@ func GetscStateLogKey(blockHash hash.Hash) string {
 
 func (utxoCache *UTXOCache) saveHardCore(utxo *UTXO) error {
 	isContract, err := utxo.PubKeyHash.IsContract()
-	if err != nil {
-		return err
-	}
-	if isContract || utxo.Contract == "" {
+	if err != nil ||isContract || utxo.Contract == "" {
 		return nil
 	}
 	scStateKey, value := getScKeyValue(utxo.Contract, utxo.PubKeyHash)
@@ -490,10 +487,7 @@ func (utxoCache *UTXOCache) saveHardCore(utxo *UTXO) error {
 
 func (utxoCache *UTXOCache) deleteHardCore(utxo *UTXO) error {
 	isContract, err := utxo.PubKeyHash.IsContract()
-	if err != nil {
-		return err
-	}
-	if isContract || utxo.Contract == "" {
+	if err != nil ||isContract || utxo.Contract == "" {
 		return nil
 	}
 
