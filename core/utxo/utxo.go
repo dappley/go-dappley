@@ -42,12 +42,11 @@ type UTXO struct {
 	UtxoType    UtxoType
 	PrevUtxoKey []byte
 	NextUtxoKey []byte
-	Contract    string
 }
 
 // NewUTXO returns an UTXO instance constructed from a TXOutput.
-func NewUTXO(txout transactionbase.TXOutput, txid []byte, vout int, utxoType UtxoType,contract string) *UTXO {
-	return &UTXO{txout, txid, vout, utxoType, []byte{}, []byte{},contract}
+func NewUTXO(txout transactionbase.TXOutput, txid []byte, vout int, utxoType UtxoType) *UTXO {
+	return &UTXO{txout, txid, vout, utxoType, []byte{}, []byte{}}
 }
 
 func (utxo *UTXO) ToProto() proto.Message {

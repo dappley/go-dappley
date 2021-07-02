@@ -247,7 +247,7 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *transaction.Transaction) bool {
 				pubKeyHash = ta.GetPubKeyHash()
 			}
 
-			err := utxos.removeUTXO("",pubKeyHash, txin.Txid, txin.Vout)
+			err := utxos.removeUTXO(pubKeyHash, txin.Txid, txin.Vout)
 			if err != nil {
 				logger.WithError(err).Warn("UTXOIndex: removeUTXO error, discard update in utxo.")
 				return false
@@ -298,7 +298,7 @@ func (utxos *UTXOIndex) UndoTxsInBlock(blk *block.Block, db storage.Storage) err
 // excludeVoutsInTx removes the UTXOs generated in a transaction from the UTXOIndex.
 func (utxos *UTXOIndex) excludeVoutsInTx(tx *transaction.Transaction, db storage.Storage) error {
 	for i, vout := range tx.Vout {
-		err := utxos.removeUTXO(vout.Contract,vout.PubKeyHash, tx.ID, i)
+		err := utxos.removeUTXO(vout.PubKeyHash, tx.ID, i)
 		if err != nil {
 			logger.Warn("excludeVoutsInTx error")
 			return err
@@ -336,12 +336,12 @@ func (utxos *UTXOIndex) AddUTXO(txout transactionbase.TXOutput, txid []byte, vou
 	if isContract, _ := txout.PubKeyHash.IsContract(); isContract {
 		if !utxos.IsIndexAddExist(txout.PubKeyHash) &&
 			!utxos.IsLastUtxoKeyExist(txout.PubKeyHash) {
-			u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoCreateContract,"")
+			u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoCreateContract)
 		} else {
-			u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoInvokeContract,"")
+			u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoInvokeContract)
 		}
 	} else {
-		u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoNormal,txout.Contract)
+		u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoNormal)
 	}
 
 	utxoTx, ok := utxos.indexAdd[txout.PubKeyHash.String()]
@@ -357,7 +357,7 @@ func (utxos *UTXOIndex) AddUTXO(txout transactionbase.TXOutput, txid []byte, vou
 }
 
 // removeUTXO finds and removes a UTXO from UTXOIndex
-func (utxos *UTXOIndex) removeUTXO(data string,pkh account.PubKeyHash, txid []byte, vout int) error {
+func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int) error {
 	utxoKey := utxo.GetUTXOKey(txid, vout)
 	//update indexRemove
 	ok := false
@@ -374,7 +374,6 @@ func (utxos *UTXOIndex) removeUTXO(data string,pkh account.PubKeyHash, txid []by
 			logger.Error("removeUTXO err")
 			return ErrUTXONotFound
 		}
-		u.Contract=data
 		utxoTx, ok := utxos.indexRemove[pkh.String()]
 		if !ok {
 			utxoTx := utxo.NewUTXOTx()
