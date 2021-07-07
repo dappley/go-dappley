@@ -378,33 +378,42 @@ func (tx *TxGasReward) GetRewardValue() *common.Amount {
 }
 
 // NewGasRewardTx returns a reward to miner, earned for contract execution gas fee
-func NewGasRewardTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasPrice *common.Amount, uniqueNum int) (transaction.Transaction, error) {
-	fee := actualGasCount.Mul(gasPrice)
+func NewGasRewardTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasPrice *common.Amount, uniqueNum int) (transaction.Transaction, bool) {
+	if actualGasCount.Cmp(common.NewAmount(0)) <= 0 {
+		return transaction.Transaction{}, false
+	}
+		fee := actualGasCount.Mul(gasPrice)
+	if fee.IsZero() {
+		return transaction.Transaction{}, false
+	}
 	txin := transactionbase.TXInput{nil, -1, getUniqueByte(blockHeight, uniqueNum), transaction.GasRewardData}
 	txout := transactionbase.NewTXOutput(fee, to)
 	tx := transaction.Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeGasReward}
 	tx.ID = tx.Hash()
-	return tx, nil
+	return tx, true
 }
 
 // NewGasChangeTx returns a change to contract invoker, pay for the change of unused gas
-func NewGasChangeTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, uniqueNum int) (transaction.Transaction, error) {
+func NewGasChangeTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, uniqueNum int) (transaction.Transaction, bool) {
 	if gasLimit.Cmp(actualGasCount) <= 0 {
-		return transaction.Transaction{}, transaction.ErrNoGasChange
+		logger.Warn(transaction.ErrNoGasChange)
+		return transaction.Transaction{}, false
 	}
 	change, err := gasLimit.Sub(actualGasCount)
-
 	if err != nil {
-		return transaction.Transaction{}, err
+		logger.Warn(err)
+		return transaction.Transaction{}, false
 	}
 	changeValue := change.Mul(gasPrice)
-
+	if changeValue.IsZero() {
+		return transaction.Transaction{}, false
+	}
 	txin := transactionbase.TXInput{nil, -1, getUniqueByte(blockHeight, uniqueNum), transaction.GasChangeData}
 	txout := transactionbase.NewTXOutput(changeValue, to)
 	tx := transaction.Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeGasChange}
 
 	tx.ID = tx.Hash()
-	return tx, nil
+	return tx, true
 }
 
 // NewCoinbaseTX creates a new coinbase transaction

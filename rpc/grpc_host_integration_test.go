@@ -681,10 +681,11 @@ func TestRpcVerifyTransaction(t *testing.T) {
 		panic(err)
 	}
 	//
-	gctx, err := ltransaction.NewGasChangeTx(account.NewTransactionAccountByAddress(fromAcc.GetAddress()), 0, common.NewAmount(uint64(0)), common.NewAmount(uint64(3000)), common.NewAmount(uint64(1)), 1)
 	utxoIndex := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache())
-	utxoIndex.UpdateUtxo(&gctx)
-	utxoIndex.Save()
+	if gctx, exists := ltransaction.NewGasChangeTx(account.NewTransactionAccountByAddress(fromAcc.GetAddress()), 0, common.NewAmount(uint64(0)), common.NewAmount(uint64(3000)), common.NewAmount(uint64(1)), 1);exists{
+		utxoIndex.UpdateUtxo(&gctx)
+		utxoIndex.Save()
+	}
 	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
@@ -729,10 +730,11 @@ func TestRpcVerifyTransaction(t *testing.T) {
 		return !rpcContext.bp.IsProducingBlock()
 	}, 20)
 	//send second transaction
-	gctx2, err := ltransaction.NewGasChangeTx(account.NewTransactionAccountByAddress(fromAcc.GetAddress()), 0, common.NewAmount(uint64(0)), common.NewAmount(uint64(1000)), common.NewAmount(uint64(1)), 1)
 	utxoIndex = lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache())
-	utxoIndex.UpdateUtxo(&gctx2)
-	utxoIndex.Save()
+	if gctx2, exists := ltransaction.NewGasChangeTx(account.NewTransactionAccountByAddress(fromAcc.GetAddress()), 0, common.NewAmount(uint64(0)), common.NewAmount(uint64(1000)), common.NewAmount(uint64(1)), 1); exists {
+		utxoIndex.UpdateUtxo(&gctx2)
+		utxoIndex.Save()
+	}
 	rpcContext.bm.Getblockchain()
 	senderResponse2, err := logic.GetUtxoStream(c, &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
 	assert.Nil(t, err)
