@@ -3,6 +3,7 @@ package utxo
 import (
 	"errors"
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/stateLog"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
@@ -558,4 +559,124 @@ func TestUTXOCache_UpdateNextUTXO(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, utxo, result)
 	assert.Equal(t, []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x30}, utxo.PrevUtxoKey)
+}
+
+func TestUTXOCache_GetUTXOsByAmountWithOutRemovedUTXOs(t *testing.T) {
+	utxo1 := &UTXO{
+		TXOutput: transactionbase.TXOutput{
+			Value:      common.NewAmount(10),
+			PubKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c},
+			Contract:   "contract",
+		},
+		Txid:        []byte{0x74, 0x65, 0x73, 0x74},
+		TxIndex:     0,
+		UtxoType:    UtxoNormal,
+		PrevUtxoKey: nil,
+		NextUtxoKey: []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x31},
+	}
+	utxo2 := &UTXO{
+		TXOutput: transactionbase.TXOutput{
+			Value:      common.NewAmount(10),
+			PubKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6d},
+			Contract:   "contract",
+		},
+		Txid:        []byte{0x74, 0x65, 0x73, 0x74},
+		TxIndex:     1,
+		UtxoType:    UtxoNormal,
+		PrevUtxoKey: []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x30},
+		NextUtxoKey: []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x32},
+	}
+	utxo3 := &UTXO{
+		TXOutput: transactionbase.TXOutput{
+			Value:      common.NewAmount(10),
+			PubKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6e},
+			Contract:   "contract",
+		},
+		Txid:        []byte{0x74, 0x65, 0x73, 0x74},
+		TxIndex:     2,
+		UtxoType:    UtxoCreateContract,
+		PrevUtxoKey: []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x31},
+		NextUtxoKey: nil,
+	}
+
+	tests := []struct {
+		name           string
+		utxosInCache   []*UTXO
+		pubKeyHash     account.PubKeyHash
+		amount         *common.Amount
+		utxoTxRemove   *UTXOTx
+		expectedResult []*UTXO
+		expectedErr    error
+	}{
+		{
+			name:           "successful operation (simple)",
+			utxosInCache:   []*UTXO{utxo1, utxo2},
+			pubKeyHash:     utxo1.PubKeyHash,
+			amount:         common.NewAmount(20),
+			utxoTxRemove:   nil,
+			expectedResult: []*UTXO{utxo2, utxo1},
+			expectedErr:    nil,
+		},
+		{
+			name:           "successful operation (complex)",
+			utxosInCache:   []*UTXO{utxo1, utxo2, utxo3},
+			pubKeyHash:     utxo1.PubKeyHash,
+			amount:         common.NewAmount(10),
+			utxoTxRemove:   nil, //&UTXOTx{map[string]*UTXO{"test_0": utxo1}},
+			expectedResult: []*UTXO{utxo1},
+			expectedErr:    nil,
+		},
+		{
+			name:           "amount too high",
+			utxosInCache:   []*UTXO{utxo1, utxo2},
+			pubKeyHash:     utxo1.PubKeyHash,
+			amount:         common.NewAmount(21),
+			utxoTxRemove:   nil,
+			expectedResult: nil,
+			expectedErr:    errors.New("transaction: insufficient balance"),
+		},
+		{
+			name:           "has utxo with UtxoType UtxoCreateContract",
+			utxosInCache:   []*UTXO{utxo2, utxo3},
+			pubKeyHash:     utxo2.PubKeyHash,
+			amount:         common.NewAmount(20),
+			utxoTxRemove:   nil,
+			expectedResult: nil,
+			expectedErr:    errors.New("transaction: insufficient balance"),
+		},
+		{
+			name:           "insufficient balance after removing UTXOs",
+			utxosInCache:   []*UTXO{utxo1, utxo2},
+			pubKeyHash:     utxo2.PubKeyHash,
+			amount:         common.NewAmount(20),
+			utxoTxRemove:   &UTXOTx{map[string]*UTXO{"test_1": utxo2}},
+			expectedResult: nil,
+			expectedErr:    errors.New("transaction: insufficient balance"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := storage.NewRamStorage()
+			cache := NewUTXOCache(db)
+
+			utxosToAdd := &UTXOTx{map[string]*UTXO{}}
+			for _, utxo := range tt.utxosInCache {
+				utxosToAdd.Indices[utxo.GetUTXOKey()] = utxo
+			}
+			err := cache.AddUtxos(utxosToAdd, tt.pubKeyHash.String())
+			assert.Nil(t, err)
+
+			result, err := cache.GetUTXOsByAmountWithOutRemovedUTXOs(tt.pubKeyHash, tt.amount, tt.utxoTxRemove)
+			if tt.expectedErr != nil {
+				assert.Nil(t, result)
+				assert.Equal(t, tt.expectedErr, err)
+			} else {
+				assert.Equal(t, tt.expectedResult, result)
+				assert.Nil(t, err)
+			}
+
+			db.Close()
+		})
+	}
 }
