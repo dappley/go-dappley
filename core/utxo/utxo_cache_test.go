@@ -307,15 +307,16 @@ func TestUTXOCache_getUTXOInfo(t *testing.T) {
 		lastUTXOKey:           []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x30},
 		createContractUTXOKey: []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x31},
 	}
+	pubKeyHash := "5ab1344c17674c18d1a2dcea9f1716e049f4a05e6c"
 
 	utxoInfoBytes, _ := proto.Marshal(utxoInfo.ToProto().(*utxopb.UtxoInfo))
-	err := cache.db.Put(util.Str2bytes("5ab1344c17674c18d1a2dcea9f1716e049f4a05e6c"), utxoInfoBytes)
+	err := cache.db.Put(util.Str2bytes(pubKeyHash), utxoInfoBytes)
 	assert.Nil(t, err)
 
-	result, err := cache.getUTXOInfo("5ab1344c17674c18d1a2dcea9f1716e049f4a05e6c")
+	result, err := cache.getUTXOInfo(pubKeyHash)
 	assert.Nil(t, err)
 	assert.Equal(t, utxoInfo, result)
-	cacheUtxo, _ := cache.utxoInfo.Get("5ab1344c17674c18d1a2dcea9f1716e049f4a05e6c")
+	cacheUtxo, _ := cache.utxoInfo.Get(pubKeyHash)
 	assert.Equal(t, utxoInfo, cacheUtxo)
 
 	result, err = cache.getUTXOInfo("invalid key")
@@ -332,14 +333,15 @@ func TestUTXOCache_deleteUTXOInfo(t *testing.T) {
 		lastUTXOKey:           []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x30},
 		createContractUTXOKey: []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x31},
 	}
+	pubKeyHash := "5ab1344c17674c18d1a2dcea9f1716e049f4a05e6c"
 
-	cache.putUTXOInfo("5ab1344c17674c18d1a2dcea9f1716e049f4a05e6c", utxoInfo)
-	result, err := cache.getUTXOInfo("5ab1344c17674c18d1a2dcea9f1716e049f4a05e6c")
+	cache.putUTXOInfo(pubKeyHash, utxoInfo)
+	result, err := cache.getUTXOInfo(pubKeyHash)
 	assert.Equal(t, utxoInfo, result)
 	assert.Nil(t, err)
-	err = cache.deleteUTXOInfo("5ab1344c17674c18d1a2dcea9f1716e049f4a05e6c")
+	err = cache.deleteUTXOInfo(pubKeyHash)
 	assert.Nil(t, err)
-	result, err = cache.getUTXOInfo("5ab1344c17674c18d1a2dcea9f1716e049f4a05e6c")
+	result, err = cache.getUTXOInfo(pubKeyHash)
 	assert.Equal(t, &UTXOInfo{lastUTXOKey: []uint8{}, createContractUTXOKey: []uint8{}}, result)
 	assert.Equal(t, errors.New("key is invalid"), err)
 }
@@ -369,4 +371,191 @@ func TestUTXOCache_deleteUTXOFromDB(t *testing.T) {
 	result, err = cache.getUTXOFromDB(utxo.GetUTXOKey())
 	assert.Nil(t, result)
 	assert.Equal(t, errors.New("key is invalid"), err)
+}
+
+func TestUTXOCache_putLastUTXOKey(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+	cache := NewUTXOCache(db)
+
+	pubKeyHash := "5ab1344c17674c18d1a2dcea9f1716e049f4a05e6c"
+
+	expected1 := &UTXOInfo{
+		lastUTXOKey:           []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x30},
+		createContractUTXOKey: []byte{},
+	}
+	expected2 := &UTXOInfo{
+		lastUTXOKey:           []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x31},
+		createContractUTXOKey: []byte{},
+	}
+
+	// use putLastUTXOKey on UTXOInfo that isn't in cache yet
+	err := cache.putLastUTXOKey(pubKeyHash, []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x30})
+	assert.Nil(t, err)
+	result, ok := cache.utxoInfo.Get(pubKeyHash)
+	assert.True(t, ok)
+	assert.Equal(t, expected1, result)
+	// update the existing UTXOInfo
+	err = cache.putLastUTXOKey(pubKeyHash, []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x31})
+	assert.Nil(t, err)
+	result, ok = cache.utxoInfo.Get(pubKeyHash)
+	assert.True(t, ok)
+	assert.Equal(t, expected2, result)
+}
+
+func TestUTXOCache_getLastUTXOKey(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+	cache := NewUTXOCache(db)
+
+	pubKeyHash := "5ab1344c17674c18d1a2dcea9f1716e049f4a05e6c"
+
+	result := cache.getLastUTXOKey(pubKeyHash)
+	assert.Equal(t, []byte{}, result)
+
+	err := cache.putLastUTXOKey(pubKeyHash, []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x31})
+	assert.Nil(t, err)
+	result = cache.getLastUTXOKey(pubKeyHash)
+	assert.Equal(t, []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x31}, result)
+}
+
+func TestUTXOCache_IsLastUtxoKeyExist(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+	cache := NewUTXOCache(db)
+
+	pubKeyHash := "5ab1344c17674c18d1a2dcea9f1716e049f4a05e6c"
+	// lastUTXOKey not set yet
+	assert.False(t, cache.IsLastUtxoKeyExist(pubKeyHash))
+	// set lastUTXOKey
+	err := cache.putLastUTXOKey(pubKeyHash, []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x30})
+	assert.Nil(t, err)
+	assert.True(t, cache.IsLastUtxoKeyExist(pubKeyHash))
+	// reset lastUTXOKey to empty
+	err = cache.putLastUTXOKey(pubKeyHash, []byte{})
+	assert.Nil(t, err)
+	assert.False(t, cache.IsLastUtxoKeyExist(pubKeyHash))
+}
+
+func TestUTXOCache_putCreateContractUTXOKey(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+	cache := NewUTXOCache(db)
+
+	pubKeyHash := "5ab1344c17674c18d1a2dcea9f1716e049f4a05e6c"
+	err := cache.putCreateContractUTXOKey(pubKeyHash, []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x31})
+	assert.Nil(t, err)
+
+	// attempt to put to existing UTXOInfo
+	err = cache.putCreateContractUTXOKey(pubKeyHash, []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x32})
+	assert.Equal(t, errors.New("this utxoInfo already exists"), err)
+}
+
+func TestUTXOCache_GetUtxoCreateContract(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+	cache := NewUTXOCache(db)
+
+	pubKeyHash := "5ab1344c17674c18d1a2dcea9f1716e049f4a05e6c"
+	utxo := &UTXO{
+		TXOutput: transactionbase.TXOutput{
+			Value:      common.NewAmount(10),
+			PubKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c},
+			Contract:   "contract",
+		},
+		Txid:     []byte{0x74, 0x65, 0x73, 0x74},
+		TxIndex:  1,
+		UtxoType: UtxoNormal,
+	}
+
+	// utxoInfo and utxo are not in cache
+	result := cache.GetUtxoCreateContract(pubKeyHash)
+	assert.Nil(t, result)
+	// utxoInfo in cache, but utxo is not
+	err := cache.putCreateContractUTXOKey(pubKeyHash, []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x31})
+	assert.Nil(t, err)
+	assert.Nil(t, cache.GetUtxoCreateContract(pubKeyHash))
+
+	// utxoInfo and utxo in cache
+	err = cache.putUTXOToDB(utxo)
+	assert.Nil(t, err)
+	assert.Equal(t, utxo, cache.GetUtxoCreateContract(pubKeyHash))
+}
+
+func TestUTXOCache_GetUTXOTx(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+	cache := NewUTXOCache(db)
+
+	pubKeyHash := "5ab1344c17674c18d1a2dcea9f1716e049f4a05e6c"
+	utxo1 := &UTXO{
+		TXOutput: transactionbase.TXOutput{
+			Value:      common.NewAmount(10),
+			PubKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c},
+			Contract:   "contract",
+		},
+		Txid:        []byte{0x74, 0x65, 0x73, 0x74},
+		TxIndex:     0,
+		UtxoType:    UtxoNormal,
+		PrevUtxoKey: nil,
+		NextUtxoKey: []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x31},
+	}
+	utxo2 := &UTXO{
+		TXOutput: transactionbase.TXOutput{
+			Value:      common.NewAmount(10),
+			PubKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6d},
+			Contract:   "contract",
+		},
+		Txid:        []byte{0x74, 0x65, 0x73, 0x74},
+		TxIndex:     1,
+		UtxoType:    UtxoNormal,
+		PrevUtxoKey: []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x30},
+		NextUtxoKey: nil,
+	}
+	expected := &UTXOTx{map[string]*UTXO{"test_0": utxo1, "test_1": utxo2}}
+
+	// no stored LastUTXOKey for pubKeyHash
+	result := cache.GetUTXOTx(utxo1.PubKeyHash)
+	assert.Equal(t, &UTXOTx{map[string]*UTXO{}}, result)
+
+	// no utxo in db corresponding to utxo key
+	err := cache.putLastUTXOKey(pubKeyHash, []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x30})
+	assert.Nil(t, err)
+	result = cache.GetUTXOTx(utxo1.PubKeyHash)
+	assert.Equal(t, &UTXOTx{map[string]*UTXO{}}, result)
+
+	cache.putUTXOToDB(utxo1)
+	cache.putUTXOToDB(utxo2)
+	result = cache.GetUTXOTx(utxo1.PubKeyHash)
+	assert.Equal(t, expected, result)
+}
+
+func TestUTXOCache_UpdateNextUTXO(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+	cache := NewUTXOCache(db)
+
+	utxo := &UTXO{
+		TXOutput: transactionbase.TXOutput{
+			Value:      common.NewAmount(10),
+			PubKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c},
+			Contract:   "contract",
+		},
+		Txid:     []byte{0x74, 0x65, 0x73, 0x74},
+		TxIndex:  1,
+		UtxoType: UtxoNormal,
+	}
+
+	// utxo not in db
+	result, err := cache.UpdateNextUTXO(util.Str2bytes(utxo.GetUTXOKey()), "test_0")
+	assert.Nil(t, result)
+	assert.Equal(t, errors.New("key is invalid"), err)
+
+	// successful update
+	err = cache.putUTXOToDB(utxo)
+	assert.Nil(t, err)
+	result, err = cache.UpdateNextUTXO(util.Str2bytes(utxo.GetUTXOKey()), "test_0")
+	assert.Nil(t, err)
+	assert.Equal(t, utxo, result)
+	assert.Equal(t, []byte{0x74, 0x65, 0x73, 0x74, 0x5f, 0x30}, utxo.PrevUtxoKey)
 }
