@@ -48,7 +48,7 @@ const (
 type Dynasty struct {
 	Height   uint64 `json:"height"`
 	Producer string `json:"addresses"`
-	Type     int    `json:"type"`
+	Kind     int    `json:"kind"`
 }
 
 var (
@@ -94,8 +94,8 @@ func (bm *BlockchainManager) SetNewDynastyByString(info, original string) {
 	if err != nil {
 		logger.Warn(err.Error())
 	}
-	bm.consensus.AddReplacement(original, dynasty.Producer, dynasty.Height, dynasty.Type)
-	logger.Info("change", dynasty.Type)
+	bm.consensus.AddReplacement(original, dynasty.Producer, dynasty.Height, dynasty.Kind)
+	logger.Info("change", dynasty.Kind)
 }
 
 func (bm *BlockchainManager) CheckDynast(height uint64) {
