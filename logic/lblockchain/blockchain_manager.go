@@ -310,12 +310,14 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		}
 
 		ctx := BlockContext{forkBlks[i], utxo, contractStates}
+
+		err = bm.blockchain.AddBlockContextToTail(&ctx)
+
 		for _, tx := range ctx.Block.GetTransactions() {
 			if tx.IsChangeProducter() {
 				bm.SetNewDynastyByString(tx.Vout[0].Contract, tx.Vout[0].PubKeyHash.GenerateAddress().String())
 			}
 		}
-		err = bm.blockchain.AddBlockContextToTail(&ctx)
 		bm.CheckDynast(ctx.Block.GetHeight())
 		if err != nil {
 			logger.WithFields(logger.Fields{
