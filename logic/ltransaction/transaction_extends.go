@@ -468,7 +468,7 @@ func NewUTXOTransaction(txType transaction.TxType, utxos []*utxo.UTXO, sendTxPar
 	return tx, nil
 }
 
-func NewHardCoreTransaction(txType transaction.TxType, utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam) (transaction.Transaction, error) {
+func NewHardCodeTransaction(txType transaction.TxType, utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam) (transaction.Transaction, error) {
 	fromAccount := account.NewTransactionAccountByAddress(sendTxParam.From)
 	toAccount := account.NewTransactionAccountByAddress(sendTxParam.To)
 	sum := transaction.CalculateUtxoSum(utxos)
@@ -480,7 +480,7 @@ func NewHardCoreTransaction(txType transaction.TxType, utxos []*utxo.UTXO, sendT
 	tx := transaction.Transaction{
 		nil,
 		prepareInputLists(utxos, sendTxParam.SenderKeyPair.GetPublicKey(), nil),
-		prepareOutputListsForHardcore(fromAccount, toAccount, sendTxParam.Amount, change, sendTxParam.Contract),
+		prepareOutputListsForHardcode(fromAccount, toAccount, sendTxParam.Amount, change, sendTxParam.Contract),
 		sendTxParam.Tip,
 		sendTxParam.GasLimit,
 		sendTxParam.GasPrice,
@@ -572,7 +572,7 @@ func prepareOutputLists(from, to *account.TransactionAccount, amount *common.Amo
 	return outputs
 }
 
-func prepareOutputListsForHardcore(from, to *account.TransactionAccount, amount *common.Amount, change *common.Amount, contract string) []transactionbase.TXOutput {
+func prepareOutputListsForHardcode(from, to *account.TransactionAccount, amount *common.Amount, change *common.Amount, contract string) []transactionbase.TXOutput {
 	var outputs []transactionbase.TXOutput
 	toAddr := to
 

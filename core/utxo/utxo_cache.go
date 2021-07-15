@@ -107,7 +107,7 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkeyHash string) error {
 				return err
 			}
 		}
-		err = utxoCache.saveHardCore(utxo)
+		err = utxoCache.saveHardCode(utxo)
 		if err != nil {
 			return err
 		}
@@ -174,7 +174,7 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkeyHash string) error
 		if err != nil {
 			return err
 		}
-		err = utxoCache.deleteHardCore(utxo);
+		err = utxoCache.deleteHardCode(utxo);
 		if err != nil {
 			return err
 		}
@@ -473,7 +473,7 @@ func GetscStateLogKey(blockHash hash.Hash) string {
 	return "scLog" + util.Bytes2str(blockHash)
 }
 
-func (utxoCache *UTXOCache) saveHardCore(utxo *UTXO) error {
+func (utxoCache *UTXOCache) saveHardCode(utxo *UTXO) error {
 	isContract, err := utxo.PubKeyHash.IsContract()
 	if err != nil ||isContract || utxo.Contract == "" {
 		return nil
@@ -485,7 +485,7 @@ func (utxoCache *UTXOCache) saveHardCore(utxo *UTXO) error {
 	return nil
 }
 
-func (utxoCache *UTXOCache) deleteHardCore(utxo *UTXO) error {
+func (utxoCache *UTXOCache) deleteHardCode(utxo *UTXO) error {
 	isContract, err := utxo.PubKeyHash.IsContract()
 	if err != nil ||isContract || utxo.Contract == "" {
 		return nil

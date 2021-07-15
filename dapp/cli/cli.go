@@ -70,7 +70,7 @@ const (
 	cliGetBalance        = "getBalance"
 	cliGetPeerInfo       = "getPeerInfo"
 	cliSend              = "send"
-	cliSendHardCode      = "sendHardCore"
+	cliSendHardCode      = "sendHardcode"
 	cliAddPeer           = "addPeer"
 	clicreateAccount     = "createAccount"
 	cliListAddresses     = "listAddresses"
@@ -1501,7 +1501,7 @@ func cliSendHardCodeCommandHandler(ctx context.Context, c interface{}, flags cmd
 	}
 	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
 		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
-	tx, err := ltransaction.NewHardCoreTransaction(transaction.TxTypeNormal,tx_utxos, sendTxParam)
+	tx, err := ltransaction.NewHardCodeTransaction(transaction.TxTypeNormal,tx_utxos, sendTxParam)
 	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
