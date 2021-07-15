@@ -307,35 +307,18 @@ var cmdFlagsMap = map[string][]flagPars{
 			"The amount to send from the sender to the receiver.",
 		},
 		flagPars{
-			flagTip,
-			uint64(0),
-			valueTypeUint64,
-			"Tip to miner.",
-		},
-		flagPars{
-			flagData,
+			flagKey,
 			"",
 			valueTypeString,
-			"Smart contract in JavaScript. Eg. helloworld!",
+			"The data key.",
 		},
 		flagPars{
-			flagFilePath,
+			flagValue,
 			"",
 			valueTypeString,
-			"Smart contract file path. Eg. contract/smart_contract.js",
+			"The data value.",
 		},
-		flagPars{
-			flagGasLimit,
-			uint64(0),
-			valueTypeUint64,
-			"Gas limit count of smart contract execution.",
-		},
-		flagPars{
-			flagGasPrice,
-			uint64(0),
-			valueTypeUint64,
-			"Gas price of smart contract execution.",
-		},
+
 	},
 	cliAddPeer: {flagPars{
 		flagPeerFullAddr,
@@ -1423,29 +1406,19 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 }
 
 func cliSendHardCodeCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
-	var data string
 	fromAddress := *(flags[flagFromAddress].(*string))
 	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(fromAddress))
-	path := *(flags[flagFilePath].(*string))
-	if path == "" {
-		data = *(flags[flagData].(*string))
-	} else {
-		script, err := ioutil.ReadFile(path)
-		if err != nil {
-			fmt.Printf("Error: smart contract path \"%s\" is invalid.\n", path)
-			return
-		}
-		data = string(script)
+	key := *(flags[flagKey].(*string))
+	value := *(flags[flagValue].(*string))
+
+	if key == "" || value == "" {
+		fmt.Println("Error:  key and value cannot be null!")
+		return
 	}
+	data:=key+":"+value
 
 	if !addressAccount.IsValid() {
 		fmt.Println("Error: 'from' address is not valid!")
-		return
-	}
-
-	//Contract deployment transaction does not need to validate to address
-	if data == "" && !addressAccount.IsValid() {
-		fmt.Println("Error: 'to' address is not valid!")
 		return
 	}
 
@@ -1473,15 +1446,7 @@ func cliSendHardCodeCommandHandler(ctx context.Context, c interface{}, flags cmd
 	tip := common.NewAmount(0)
 	gasLimit := common.NewAmount(0)
 	gasPrice := common.NewAmount(0)
-	if flags[flagTip] != nil {
-		tip = common.NewAmount(*(flags[flagTip].(*uint64)))
-	}
-	if flags[flagGasLimit] != nil {
-		gasLimit = common.NewAmount(*(flags[flagGasLimit].(*uint64)))
-	}
-	if flags[flagGasPrice] != nil {
-		gasPrice = common.NewAmount(*(flags[flagGasPrice].(*uint64)))
-	}
+
 	tx_utxos, err := GetUTXOsfromAmount(inputUtxos, common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice)
 	if err != nil {
 		fmt.Println("Error:", err.Error())

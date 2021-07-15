@@ -107,10 +107,8 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkeyHash string) error {
 				return err
 			}
 		}
-		err = utxoCache.saveHardCode(utxo)
-		if err != nil {
-			return err
-		}
+
+		utxoCache.saveHardCodeData(utxo)
 	}
 	err := utxoCache.putLastUTXOKey(pubkeyHash, lastestUtxoKey)
 	if err != nil {
@@ -174,10 +172,9 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkeyHash string) error
 		if err != nil {
 			return err
 		}
-		err = utxoCache.deleteHardCode(utxo);
-		if err != nil {
-			return err
-		}
+
+		utxoCache.delHardCodeData(utxo)
+
 	}
 	return nil
 }
@@ -473,29 +470,28 @@ func GetscStateLogKey(blockHash hash.Hash) string {
 	return "scLog" + util.Bytes2str(blockHash)
 }
 
-func (utxoCache *UTXOCache) saveHardCode(utxo *UTXO) error {
+func (utxoCache *UTXOCache) saveHardCodeData(utxo *UTXO)  {
 	isContract, err := utxo.PubKeyHash.IsContract()
 	if err != nil ||isContract || utxo.Contract == "" {
-		return nil
+		return
 	}
+
 	scStateKey, value := getScKeyValue(utxo.Contract, utxo.PubKeyHash)
 	if err := utxoCache.db.Put(scStateKey, value); err != nil {
-		return err
+		logger.Warn("save hard code data failed: ", err)
 	}
-	return nil
 }
 
-func (utxoCache *UTXOCache) deleteHardCode(utxo *UTXO) error {
+func (utxoCache *UTXOCache) delHardCodeData(utxo *UTXO)  {
 	isContract, err := utxo.PubKeyHash.IsContract()
 	if err != nil ||isContract || utxo.Contract == "" {
-		return nil
+		return
 	}
 
 	scStateKey, _ := getScKeyValue(utxo.Contract, utxo.PubKeyHash)
 	if err := utxoCache.db.Del(scStateKey); err != nil {
-		return err
+		logger.Warn("delete hard code data failed: ", err)
 	}
-	return nil
 }
 
 func getScKeyValue(data string, pubkeyHash account.PubKeyHash) ([]byte, []byte){
