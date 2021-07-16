@@ -289,7 +289,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 
 	var generatedContractAddress string
 	if adaptedTx.IsContract(){
-		if adaptedTx.GasPrice.Cmp(common.NewAmount(0)) < 0 {
+		if adaptedTx.GasPrice.Cmp(common.NewAmount(0)) < 0 || tx.GasPrice.Cmp(common.NewAmount(0)) == ltransaction.GasConsumption{
 			return nil, status.Error(codes.InvalidArgument, "gas price error, must be a positive number")
 		}
 
