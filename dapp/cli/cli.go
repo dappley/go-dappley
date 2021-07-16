@@ -1415,7 +1415,7 @@ func cliSendHardCodeCommandHandler(ctx context.Context, c interface{}, flags cmd
 		fmt.Println("Error:  key and value cannot be null!")
 		return
 	}
-	data:=key+":"+value
+	data:=`{"data":{"key":"`+key+`","value":"`+value+`"}}`
 
 	if !addressAccount.IsValid() {
 		fmt.Println("Error: 'from' address is not valid!")
