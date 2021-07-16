@@ -70,7 +70,7 @@ const (
 	cliGetBalance        = "getBalance"
 	cliGetPeerInfo       = "getPeerInfo"
 	cliSend              = "send"
-	cliSendHardCode      = "sendHardcode"
+	cliSendData          = "sendData"
 	cliAddPeer           = "addPeer"
 	clicreateAccount     = "createAccount"
 	cliListAddresses     = "listAddresses"
@@ -144,7 +144,7 @@ var cmdList = []string{
 	cliGetBalance,
 	cliGetPeerInfo,
 	cliSend,
-	cliSendHardCode,
+	cliSendData,
 	cliAddPeer,
 	clicreateAccount,
 	cliListAddresses,
@@ -287,7 +287,7 @@ var cmdFlagsMap = map[string][]flagPars{
 			"Gas price of smart contract execution.",
 		},
 	},
-	cliSendHardCode: {
+	cliSendData: {
 		flagPars{
 			flagFromAddress,
 			"",
@@ -422,7 +422,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGetBalance:        {rpcService, getBalanceCommandHandler},
 	cliGetPeerInfo:       {adminRpcService, getPeerInfoCommandHandler},
 	cliSend:              {rpcService, sendCommandHandler},
-	cliSendHardCode:      {rpcService, cliSendHardCodeCommandHandler},
+	cliSendData:          {rpcService, cliSendDataCommandHandler},
 	cliAddPeer:           {adminRpcService, addPeerCommandHandler},
 	clicreateAccount:     {adminRpcService, createAccountCommandHandler},
 	cliListAddresses:     {adminRpcService, listAddressesCommandHandler},
@@ -1405,7 +1405,7 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	fmt.Println("Transaction is sent! Pending approval from network.")
 }
 
-func cliSendHardCodeCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
+func cliSendDataCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	fromAddress := *(flags[flagFromAddress].(*string))
 	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(fromAddress))
 	key := *(flags[flagKey].(*string))
