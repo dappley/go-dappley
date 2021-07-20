@@ -19,6 +19,7 @@
 package downloadmanager
 
 import (
+	blockpb "github.com/dappley/go-dappley/core/block/pb"
 	"io/ioutil"
 	"os"
 	"path"
@@ -218,6 +219,89 @@ func TestValidateReturnBlocks(t *testing.T) {
 	_, err = downloadManager.validateReturnBlocks(fakeReturnMsg, peerNode.GetHostPeerInfo().PeerId)
 	assert.Equal(t, ErrEmptyBlocks, err)
 }
+
+func TestDownloadManager_DisconnectPeer(t *testing.T) {
+	bms, nodes := createTestBlockchains(5, multiPortEqualStart)
+	defer deleteConfFolderFiles()
+	//setup download manager for the first node
+	bm := bms[0]
+	bm.Getblockchain().SetState(blockchain.BlockchainInit)
+	node := nodes[0]
+
+	downloadManager := NewDownloadManager(node, bm, 0, nil)
+	downloadManager.Start()
+
+	//Connect all other nodes to the first node
+	for i := 1; i < len(nodes); i++ {
+		node.GetNetwork().ConnectToSeed(nodes[i].GetHostPeerInfo())
+	}
+
+	finishCh := make(chan bool, 1)
+	bm.Getblockchain().SetState(blockchain.BlockchainDownloading)
+	downloadManager.StartDownloadBlockchain(finishCh)
+	<-finishCh
+
+	downloadManager.status = DownloadStatusInit
+	assert.Equal(t, 4, len(downloadManager.peersInfo))
+	downloadManager.DisconnectPeer(nodes[3].GetHostPeerInfo().PeerId)
+	assert.Equal(t, 3, len(downloadManager.peersInfo))
+	downloadManager.DisconnectPeer(nodes[2].GetHostPeerInfo().PeerId)
+	assert.Equal(t, 2, len(downloadManager.peersInfo))
+}
+
+func TestDownloadManager_FindCommonBlock(t *testing.T) {
+	bms, nodes := createTestBlockchains(5, multiPortEqualStart)
+	defer deleteConfFolderFiles()
+	//setup download manager for the first node
+	bm := bms[0]
+	bm.Getblockchain().SetState(blockchain.BlockchainInit)
+	node := nodes[0]
+
+	downloadManager := NewDownloadManager(node, bm, 0, nil)
+	downloadManager.Start()
+
+	maxHeight := downloadManager.bm.Getblockchain().GetMaxHeight()
+	blockHeaders := downloadManager.GetCommonBlockCheckPoint(0, maxHeight)
+
+	var blockHeaderPbs []*blockpb.BlockHeader
+	for _, blockHeader := range blockHeaders {
+		blockHeaderPbs = append(blockHeaderPbs,
+			&blockpb.BlockHeader{Hash: blockHeader.hash, Height: blockHeader.height})
+	}
+
+	// first block is common block
+	index, block := downloadManager.FindCommonBlock(blockHeaderPbs)
+	expectedIndex := 0
+	expectedBlock, _ := downloadManager.bm.Getblockchain().GetBlockByHeight(blockHeaders[0].height)
+	assert.Equal(t, expectedIndex, index)
+	assert.Equal(t, expectedBlock, block)
+
+	// first block has incorrect hash, second block is common block
+	originalHash := blockHeaderPbs[0].Hash
+	blockHeaderPbs[0].Hash = []byte{}
+	index, block = downloadManager.FindCommonBlock(blockHeaderPbs)
+	expectedIndex = 1
+	expectedBlock, _ = downloadManager.bm.Getblockchain().GetBlockByHeight(blockHeaders[1].height)
+	assert.Equal(t, expectedIndex, index)
+	assert.Equal(t, expectedBlock, block)
+	blockHeaderPbs[0].Hash = originalHash
+
+	// first block at height 0
+	blockHeaderPbs[0].Height = 0
+	index, block = downloadManager.FindCommonBlock(blockHeaderPbs)
+	expectedIndex = -1
+	expectedBlock = nil
+	assert.Equal(t, expectedIndex, index)
+	assert.Equal(t, expectedBlock, block)
+
+	// all blocks at non-existent height
+	for _, bh := range blockHeaderPbs {
+		bh.Height = 9999
+	}
+	assert.Equal(t, expectedIndex, index)
+	assert.Equal(t, expectedBlock, block)
+}
+
 func deleteConfFolderFiles() error {
 	dir, err := ioutil.ReadDir(confDir)
 	if err != nil {
