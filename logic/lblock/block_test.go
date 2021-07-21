@@ -301,8 +301,6 @@ func TestSignBlock(t *testing.T) {
 	ok = SignBlock(b1, key)
 	assert.True(t, ok)
 	assert.Equal(t, expectedSign, b1.GetSign())
-
-	fmt.Printf("%#v\n", b1Hash)
 }
 
 func TestVerifyGasTxs(t *testing.T) {

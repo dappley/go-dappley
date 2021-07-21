@@ -94,67 +94,21 @@ func TestUTXOTx_GetAllUtxos(t *testing.T) {
 	assert.Equal(t, utxoTx1.Indices, utxoTx2.Indices)
 }
 
-func TestUTXOTx_PrepareUtxos(t *testing.T) {
-	tests := []struct {
-		name           string
-		utxoTx         UTXOTx
-		amount         *common.Amount
-		expectedResult []*UTXO
-		expectedOk     bool
-	}{
-		{
-			name:           "empty utxoTx",
-			utxoTx:         UTXOTx{map[string]*UTXO{}},
-			amount:         common.NewAmount(0),
-			expectedResult: nil,
-			expectedOk:     false,
-		},
-		{
-			name:           "success",
-			utxoTx:         UTXOTx{map[string]*UTXO{"test_0": utxo1, "test_1": utxo2}},
-			amount:         common.NewAmount(15),
-			expectedResult: []*UTXO{utxo1, utxo2},
-			expectedOk:     true,
-		},
-		{
-			name:           "amount too high",
-			utxoTx:         UTXOTx{map[string]*UTXO{"test_0": utxo1, "test_1": utxo2}},
-			amount:         common.NewAmount(16),
-			expectedResult: nil,
-			expectedOk:     false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, ok := tt.utxoTx.PrepareUtxos(tt.amount)
-			if tt.expectedOk {
-				assert.True(t, ok)
-				// output of PrepareUtxos is in random order so I compare using maps
-				expectedUtxoMap := map[string]*UTXO{}
-				for _, utxo := range tt.expectedResult {
-					expectedUtxoMap[utxo.GetUTXOKey()] = utxo
-				}
-				resultUtxoMap := map[string]*UTXO{}
-				for _, utxo := range result {
-					resultUtxoMap[utxo.GetUTXOKey()] = utxo
-				}
-				assert.Equal(t, expectedUtxoMap, resultUtxoMap)
-			} else {
-				assert.Nil(t, result)
-				assert.False(t, ok)
-			}
-		})
-	}
-}
-
 func TestUTXOTx_DeepCopy(t *testing.T) {
+	expectedUtxoTxIndices := map[string]*UTXO{"test_0": utxo1, "test_1": utxo2}
 	utxoTx := NewUTXOTx()
+	// copy empty utxoTx
 	newUtxoTx := utxoTx.DeepCopy()
 	assert.Equal(t, map[string]*UTXO{}, newUtxoTx.Indices)
+	// copy utxoTx containing utxo1 and utxo2
 	utxoTx.PutUtxo(utxo1)
 	utxoTx.PutUtxo(utxo2)
+	assert.Equal(t, expectedUtxoTxIndices, utxoTx.Indices)
 	newUtxoTx = utxoTx.DeepCopy()
-	assert.Equal(t, utxoTx.Indices, newUtxoTx.Indices)
+	assert.Equal(t, expectedUtxoTxIndices, newUtxoTx.Indices)
+	// removing from original utxoTx should not change the copy
+	utxoTx.RemoveUtxo(utxo1.Txid, 0)
+	assert.Equal(t, expectedUtxoTxIndices, newUtxoTx.Indices)
 }
 
 func TestStringEntry_Hash(t *testing.T) {

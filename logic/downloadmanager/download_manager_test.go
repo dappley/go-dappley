@@ -39,12 +39,13 @@ import (
 )
 
 const (
-	genesisAddr                  = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 	multiPortEqualStart      int = 10301
 	multiPortSuccessStart    int = 10310
 	multiPortDisconnectStart int = 10320
 	multiPortNotEqualStart   int = 10330
 	multiPortReturnBlocks    int = 10340
+	multiPortDisconnectPeer  int = 10350
+	multiPortCommonBlocks    int = 10360
 	confDir                      = "../../storage/fakeFileLoaders/"
 )
 
@@ -221,7 +222,7 @@ func TestValidateReturnBlocks(t *testing.T) {
 }
 
 func TestDownloadManager_DisconnectPeer(t *testing.T) {
-	bms, nodes := createTestBlockchains(5, multiPortEqualStart)
+	bms, nodes := createTestBlockchains(5, multiPortDisconnectPeer)
 	defer deleteConfFolderFiles()
 	//setup download manager for the first node
 	bm := bms[0]
@@ -250,7 +251,7 @@ func TestDownloadManager_DisconnectPeer(t *testing.T) {
 }
 
 func TestDownloadManager_FindCommonBlock(t *testing.T) {
-	bms, nodes := createTestBlockchains(5, multiPortEqualStart)
+	bms, nodes := createTestBlockchains(5, multiPortCommonBlocks)
 	defer deleteConfFolderFiles()
 	//setup download manager for the first node
 	bm := bms[0]
@@ -277,7 +278,7 @@ func TestDownloadManager_FindCommonBlock(t *testing.T) {
 	assert.Equal(t, expectedBlock, block)
 
 	// first block has incorrect hash, second block is common block
-	originalHash := blockHeaderPbs[0].Hash
+	originalHash := blockHeaderPbs[0].GetHash()
 	blockHeaderPbs[0].Hash = []byte{}
 	index, block = downloadManager.FindCommonBlock(blockHeaderPbs)
 	expectedIndex = 1
@@ -298,6 +299,7 @@ func TestDownloadManager_FindCommonBlock(t *testing.T) {
 	for _, bh := range blockHeaderPbs {
 		bh.Height = 9999
 	}
+	index, block = downloadManager.FindCommonBlock(blockHeaderPbs)
 	assert.Equal(t, expectedIndex, index)
 	assert.Equal(t, expectedBlock, block)
 }
