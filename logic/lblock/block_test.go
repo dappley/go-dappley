@@ -3,6 +3,7 @@ package lblock
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	"testing"
 	"time"
@@ -213,7 +214,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 				index[key] = &utxoTx
 			}
 
-			cache:=utxo.NewUTXOCache(db)
+			cache := utxo.NewUTXOCache(db)
 			utxoIndex := lutxo.NewUTXOIndex(cache)
 			utxoIndex.SetIndexAdd(index)
 			//{index, utxo.NewUTXOCache(db), &sync.RWMutex{}}
@@ -235,6 +236,198 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			tt.txs = append(tt.txs, &coninbaseTx)
 			blk := block.NewBlock(tt.txs, parentBlk, "")
 			assert.Equal(t, tt.ok, VerifyTransactions(blk, utxoIndex, scState, parentBlk, db))
+		})
+	}
+}
+
+func TestGenerateSignature(t *testing.T) {
+	tests := []struct {
+		name        string
+		key         string
+		data        hash.Hash
+		expectedRes hash.Hash
+		expectedErr interface{}
+	}{
+		{
+			name:        "successful",
+			key:         "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71",
+			data:        hash.Hash{0x57, 0x78, 0xcb, 0xa8, 0x30, 0x31, 0x26, 0x57, 0xba, 0x94, 0x85, 0x62, 0x78, 0xf, 0x25, 0xbc, 0x84, 0x2b, 0x1a, 0x38, 0xbc, 0x58, 0xdf, 0x2, 0xa1, 0xbe, 0x3b, 0x92, 0x9f, 0x81, 0x99, 0xa6},
+			expectedRes: hash.Hash{0xe9, 0x4d, 0x87, 0x72, 0xd6, 0xfd, 0x65, 0x7a, 0xf, 0xef, 0xe7, 0xd, 0x9f, 0xae, 0x2b, 0xc7, 0x95, 0xa2, 0xe6, 0xd, 0xd4, 0xd5, 0x6d, 0xc2, 0x62, 0xa, 0x58, 0x88, 0xd3, 0x13, 0xfc, 0xec, 0x22, 0x58, 0x86, 0xd3, 0xef, 0x97, 0x1c, 0x62, 0x9e, 0x80, 0x25, 0x2c, 0x10, 0x1f, 0x98, 0xa6, 0x4f, 0x9e, 0xdf, 0x8e, 0xce, 0x83, 0x14, 0xb8, 0xa5, 0xe2, 0x1, 0x88, 0x68, 0x6a, 0x14, 0xea, 0x1},
+			expectedErr: nil,
+		},
+		{
+			name:        "invalid key",
+			key:         "invalid",
+			data:        hash.Hash{0x57, 0x78, 0xcb, 0xa8, 0x30, 0x31, 0x26, 0x57, 0xba, 0x94, 0x85, 0x62, 0x78, 0xf, 0x25, 0xbc, 0x84, 0x2b, 0x1a, 0x38, 0xbc, 0x58, 0xdf, 0x2, 0xa1, 0xbe, 0x3b, 0x92, 0x9f, 0x81, 0x99, 0xa6},
+			expectedRes: hash.Hash{},
+			expectedErr: hex.InvalidByteError(0x69),
+		},
+		{
+			name:        "invalid input hash length",
+			key:         "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71",
+			data:        hash.Hash{0xde, 0xad, 0xbe, 0xef},
+			expectedRes: hash.Hash{},
+			expectedErr: secp256k1.ErrInvalidMsgLen,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := generateSignature(tt.key, tt.data)
+			assert.Equal(t, tt.expectedRes, result)
+			if tt.expectedErr != nil {
+				assert.Equal(t, tt.expectedErr, err)
+			} else {
+				assert.Nil(t, err)
+			}
+		})
+	}
+}
+
+func TestSignBlock(t *testing.T) {
+	b1 := block.GenerateMockBlock()
+	b1Hash := CalculateHash(b1)
+	b1.SetHash(b1Hash)
+	key := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	expectedSign, _ := generateSignature(key, b1Hash)
+
+	ok := SignBlock(b1, "")
+	assert.False(t, ok)
+	assert.Nil(t, b1.GetSign())
+
+	ok = SignBlock(b1, "invalid")
+	assert.False(t, ok)
+	assert.Nil(t, b1.GetSign())
+
+	ok = SignBlock(b1, key)
+	assert.True(t, ok)
+	assert.Equal(t, expectedSign, b1.GetSign())
+
+	fmt.Printf("%#v\n", b1Hash)
+}
+
+func TestVerifyGasTxs(t *testing.T) {
+	gasRewardTx1 := &transaction.Transaction{
+		ID:  util.GenerateRandomAoB(1),
+		Vin: transactionbase.GenerateFakeTxInputs(),
+		Vout: []transactionbase.TXOutput{
+			{Value: common.NewAmount(10), PubKeyHash: account.PubKeyHash([]byte{0xc6, 0x49}), Contract: "test"},
+		},
+		Type: transaction.TxTypeGasReward,
+	}
+	gasRewardTx2 := &transaction.Transaction{
+		ID:  util.GenerateRandomAoB(1),
+		Vin: transactionbase.GenerateFakeTxInputs(),
+		Vout: []transactionbase.TXOutput{
+			{Value: common.NewAmount(5), PubKeyHash: account.PubKeyHash([]byte{0xc7, 0x48}), Contract: "test"},
+		},
+		Type: transaction.TxTypeGasReward,
+	}
+	gasChangeTx1 := &transaction.Transaction{
+		ID:  util.GenerateRandomAoB(1),
+		Vin: transactionbase.GenerateFakeTxInputs(),
+		Vout: []transactionbase.TXOutput{
+			{Value: common.NewAmount(2), PubKeyHash: account.PubKeyHash([]byte{0xc8, 0x47}), Contract: "test"},
+		},
+		Type: transaction.TxTypeGasChange,
+	}
+	gasChangeTx2 := &transaction.Transaction{
+		ID:  util.GenerateRandomAoB(1),
+		Vin: transactionbase.GenerateFakeTxInputs(),
+		Vout: []transactionbase.TXOutput{
+			{Value: common.NewAmount(3), PubKeyHash: account.PubKeyHash([]byte{0xc9, 0x46}), Contract: "test"},
+		},
+		Type: transaction.TxTypeGasChange,
+	}
+
+	tests := []struct {
+		name          string
+		blockTxs      []*transaction.Transaction
+		totalGasFee   *common.Amount
+		actualGasList []uint64
+		expectedRes   bool
+	}{
+		{
+			name:          "valid GasReward only",
+			blockTxs:      []*transaction.Transaction{gasRewardTx1, gasRewardTx2},
+			totalGasFee:   common.NewAmount(15),
+			actualGasList: []uint64{10, 5},
+			expectedRes:   true,
+		},
+		{
+			name:          "valid GasChange only",
+			blockTxs:      []*transaction.Transaction{gasChangeTx1, gasChangeTx2},
+			totalGasFee:   common.NewAmount(5),
+			actualGasList: []uint64{},
+			expectedRes:   true,
+		},
+		{
+			name:          "valid GasReward and GasChange",
+			blockTxs:      []*transaction.Transaction{gasRewardTx1, gasChangeTx1, gasRewardTx2, gasChangeTx2},
+			totalGasFee:   common.NewAmount(20),
+			actualGasList: []uint64{10, 5},
+			expectedRes:   true,
+		},
+		{
+			name:          "zero totalGasFee and empty actualGasList",
+			blockTxs:      []*transaction.Transaction{gasRewardTx1, gasRewardTx2},
+			totalGasFee:   common.NewAmount(0),
+			actualGasList: []uint64{},
+			expectedRes:   true,
+		},
+		{
+			name:          "gasReward amount not found in actualGasList",
+			blockTxs:      []*transaction.Transaction{gasRewardTx1, gasRewardTx2},
+			totalGasFee:   common.NewAmount(15),
+			actualGasList: []uint64{10},
+			expectedRes:   false,
+		},
+		{
+			name:          "totalGasFee too high",
+			blockTxs:      []*transaction.Transaction{gasChangeTx1, gasChangeTx2},
+			totalGasFee:   common.NewAmount(100),
+			actualGasList: []uint64{},
+			expectedRes:   false,
+		},
+		{
+			name:          "totalGasFee too low",
+			blockTxs:      []*transaction.Transaction{gasRewardTx1, gasRewardTx2},
+			totalGasFee:   common.NewAmount(1),
+			actualGasList: []uint64{10, 5},
+			expectedRes:   false,
+		},
+		{
+			name: "GetRewardValue failed",
+			blockTxs: []*transaction.Transaction{
+				{
+					ID:   util.GenerateRandomAoB(1),
+					Vin:  transactionbase.GenerateFakeTxInputs(),
+					Vout: []transactionbase.TXOutput{},
+					Type: transaction.TxTypeGasReward,
+				},
+			},
+			totalGasFee:   common.NewAmount(10),
+			actualGasList: []uint64{10},
+			expectedRes:   false,
+		},
+		{
+			name: "GetChangeValue failed",
+			blockTxs: []*transaction.Transaction{
+				{
+					ID:   util.GenerateRandomAoB(1),
+					Vin:  transactionbase.GenerateFakeTxInputs(),
+					Vout: []transactionbase.TXOutput{},
+					Type: transaction.TxTypeGasChange,
+				},
+			},
+			totalGasFee:   common.NewAmount(10),
+			actualGasList: []uint64{10},
+			expectedRes:   false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := verifyGasTxs(tt.blockTxs, tt.totalGasFee, tt.actualGasList)
+			assert.Equal(t, tt.expectedRes, result)
 		})
 	}
 }
