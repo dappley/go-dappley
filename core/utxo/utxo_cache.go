@@ -427,7 +427,7 @@ func (utxoCache *UTXOCache) DelStateLog(scStateLogKey string) error {
 	return nil
 }
 
-//Get utxos from db, it will not be count and return  if the utxo already in utxoTxRemove
+//get UTXOS from db, if the utxo already exist in UTXOIndex remove list, then the utxo will not be included.
 func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash account.PubKeyHash, amount *common.Amount, utxoTxRemove *UTXOTx) ([]*UTXO, error) {
 	lastUtxokey := utxoCache.getLastUTXOKey(pubKeyHash.String())
 	var utxoSlice []*UTXO
@@ -444,6 +444,7 @@ func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash accou
 		}
 		if utxoTxRemove != nil {
 			if _, ok := utxoTxRemove.Indices[utxo.GetUTXOKey()]; ok {
+				utxoKey = util.Bytes2str(utxo.NextUtxoKey)
 				continue
 			}
 		}
