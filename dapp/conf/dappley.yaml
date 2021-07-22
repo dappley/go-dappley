@@ -4,6 +4,7 @@ log:
   count:  180
   rotateTime:  86400
   minerSubsidy:  10000000000
+  gasConsumption: true
   stdout:  true
 metrics:
   open: false

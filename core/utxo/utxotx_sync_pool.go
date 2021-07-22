@@ -10,15 +10,6 @@ var DEFAULT_SYNC_POOL *SyncPool = NewSyncPool(
 	2,
 )
 
-func NewPool() *SyncPool {
-	DEFAULT_SYNC_POOL = NewSyncPool(
-		5,
-		30000,
-		2,
-	)
-	return DEFAULT_SYNC_POOL
-}
-
 func Alloc(size int) *UTXOTx {
 	return DEFAULT_SYNC_POOL.Alloc(size)
 }

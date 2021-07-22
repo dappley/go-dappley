@@ -38,7 +38,6 @@ import (
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
-	"github.com/jinzhu/copier"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -435,12 +434,6 @@ func (bc *Blockchain) savedHash(bytes []byte) {
 	if err != nil {
 		logger.Warn(err)
 	}
-}
-
-func (bc *Blockchain) DeepCopy() *Blockchain {
-	newCopy := &Blockchain{}
-	copier.Copy(newCopy, bc)
-	return newCopy
 }
 
 func (bc *Blockchain) SetLIBHash(hash hash.Hash)  {

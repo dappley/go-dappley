@@ -542,7 +542,7 @@ func (tx *Transaction) VerifyPublicKeyHash(prevUtxos []*utxo.UTXO) (bool, error)
 		ta := account.NewTransactionAccountByPubKey(vin.PubKey)
 
 		if !bytes.Equal([]byte(ta.GetPubKeyHash()), []byte(prevUtxos[i].PubKeyHash)) {
-			return false, errors.New("Transaction: ID is invalid")
+			return false, errors.New("the pubic key hash does not match")
 		}
 	}
 	return true, nil

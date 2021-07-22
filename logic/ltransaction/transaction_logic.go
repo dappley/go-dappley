@@ -27,7 +27,14 @@ var (
 	ErrExecutionFailed       = errors.New("execution failed")
 	ErrUnsupportedSourceType = errors.New("unsupported source type")
 	ErrLoadError             = errors.New("contract load error")
+	GasConsumption           = 0
 )
+
+func SetGasConsumption(isOn bool) {
+	if !isOn{
+		GasConsumption = -1
+	}
+}
 
 // VerifyTransaction ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, blockHeight uint64) error {
@@ -48,7 +55,7 @@ func VerifyAndCollectContractOutput(utxoIndex *lutxo.UTXOIndex, tx *TxContract, 
 	if scEngine == nil {
 		return 0, nil, errors.New("VerifyAndCollectContractOutput: is missing SCEngineManager when verifying transactions.")
 	}
-	if tx.GasPrice.Cmp(common.NewAmount(0)) < 0 {
+	if tx.GasPrice.Cmp(common.NewAmount(0)) < 0 || tx.GasPrice.Cmp(common.NewAmount(0)) == GasConsumption{
 		err := errors.New("CollectContractOutput: gas price must be a positive number")
 		logger.WithError(err).Error("CollectContractOutput: executeSmartContract error")
 		return 0, nil, err

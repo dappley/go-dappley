@@ -150,8 +150,20 @@ func TestSend(t *testing.T) {
 			if err != nil {
 				panic(err)
 			}
+			baseGas := common.NewAmount(0)
+			if tc.contract != "" {
+				ctx := &ltransaction.TxContract{
+					Transaction: &transaction.Transaction{
+						Vout: []transactionbase.TXOutput{{}},
+					},
+				}
+				ctx.Vout[transaction.ContractTxouputIndex].Contract = tc.contract
+				baseGas, _ = ctx.GasCountOfTxBase()
+			}
+
 			expectedBalance, _ := mineReward.Sub(tc.expectedTransfer)
 			expectedBalance, _ = expectedBalance.Sub(tc.expectedTip)
+			expectedBalance, _ = expectedBalance.Sub(baseGas)
 			assert.Equal(t, expectedBalance, senderBalance)
 
 			// Balance of the miner's account should be the amount tipped + mineReward
@@ -159,8 +171,8 @@ func TestSend(t *testing.T) {
 			if err != nil {
 				panic(err)
 			}
-			assert.Equal(t, mineReward.Times(bm.Getblockchain().GetMaxHeight()).Add(tc.expectedTip), minerBalance)
 
+			assert.Equal(t, mineReward.Times(bm.Getblockchain().GetMaxHeight()).Add(tc.expectedTip).Add(baseGas), minerBalance)
 			//check smart contract deployment
 			res := string("")
 			contractAddr := account.NewAddress("")
@@ -569,11 +581,11 @@ func TestAddBalance(t *testing.T) {
 
 			uHash, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
 			assert.Nil(t, err)
-			for  {
+			for {
 				uHashNew, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
 				assert.Nil(t, err)
 				if !bytes.Equal(uHash, uHashNew) {
-					uHash=uHashNew
+					uHash = uHashNew
 					break
 				}
 			}
@@ -1211,11 +1223,11 @@ func TestSmartContractOfContractTransfer(t *testing.T) {
 	uHash, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
 	assert.Nil(t, err)
 	bps.Start()
-	for  {
+	for {
 		uHashNew, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
 		assert.Nil(t, err)
 		if !bytes.Equal(uHash, uHashNew) {
-			uHash=uHashNew
+			uHash = uHashNew
 			break
 		}
 	}
@@ -1233,11 +1245,11 @@ func TestSmartContractOfContractTransfer(t *testing.T) {
 	assert.Nil(t, err)
 
 	bps.Start()
-	for  {
+	for {
 		uHashNew, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
 		assert.Nil(t, err)
 		if !bytes.Equal(uHash, uHashNew) {
-			uHash=uHashNew
+			uHash = uHashNew
 			break
 		}
 	}
@@ -1302,11 +1314,11 @@ func TestSmartContractOfContractDelete(t *testing.T) {
 	uHash, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
 	assert.Nil(t, err)
 	bps.Start()
-	for  {
+	for {
 		uHashNew, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
 		assert.Nil(t, err)
 		if !bytes.Equal(uHash, uHashNew) {
-			uHash=uHashNew
+			uHash = uHashNew
 			break
 		}
 	}
@@ -1327,11 +1339,11 @@ func TestSmartContractOfContractDelete(t *testing.T) {
 	assert.Nil(t, err)
 
 	bps.Start()
-	for  {
+	for {
 		uHashNew, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
 		assert.Nil(t, err)
 		if !bytes.Equal(uHash, uHashNew) {
-			uHash=uHashNew
+			uHash = uHashNew
 			break
 		}
 	}

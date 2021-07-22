@@ -279,9 +279,7 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 
 // RpcSendTransaction Send transaction to blockchain created by account account
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
-
 	tx := &transaction.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeDefault}
-
 	tx.FromProto(in.GetTransaction())
 
 	adaptedTx := transaction.NewTxAdapter(tx)
@@ -289,8 +287,21 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		return nil, status.Error(codes.InvalidArgument, "transaction type error, must be normal or contract")
 	}
 
-	if adaptedTx.IsContract() && adaptedTx.GasPrice.Cmp(common.NewAmount(0)) < 0 {
-		return nil, status.Error(codes.InvalidArgument, "gas price error, must be a positive number")
+	var generatedContractAddress string
+	if adaptedTx.IsContract(){
+		if adaptedTx.GasPrice.Cmp(common.NewAmount(0)) < 0 || tx.GasPrice.Cmp(common.NewAmount(0)) == ltransaction.GasConsumption{
+			return nil, status.Error(codes.InvalidArgument, "gas price error, must be a positive number")
+		}
+
+		engine := vm.NewV8Engine()
+		defer engine.DestroyEngine()
+		if err := ltransaction.CheckContractSyntaxTransaction(engine, tx); err != nil {
+			logger.WithFields(logger.Fields{
+				"error": err,
+			}).Error("Smart Contract Deployed Failed!")
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		generatedContractAddress = ltransaction.NewTxContract(tx).GetContractAddress().String()
 	}
 
 	bc := rpcService.GetBlockchain()
@@ -309,16 +320,6 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		return nil, status.Error(codes.FailedPrecondition, lblockchain.ErrTransactionVerifyFailed.Error())
 	}
 
-	engine := vm.NewV8Engine()
-	defer engine.DestroyEngine()
-
-	if err := ltransaction.CheckContractSyntaxTransaction(engine, tx); err != nil {
-		logger.WithFields(logger.Fields{
-			"error": err,
-		}).Error("Smart Contract Deployed Failed!")
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
 	rpcService.mutex.Lock()
 	if !rpcService.utxoIndex.UpdateUtxo(tx) {
 		rpcService.mutex.Unlock()
@@ -329,13 +330,8 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	rpcService.mutex.Unlock()
 	bc.GetTxPool().BroadcastTx(tx)
 
-	var generatedContractAddress = ""
-	if adaptedTx.IsContract() {
-		ctx := ltransaction.NewTxContract(tx)
-		contractAddr := ctx.GetContractAddress()
-		generatedContractAddress = contractAddr.String()
-		logger.WithFields(logger.Fields{
-			"Contract Address": generatedContractAddress,
+	if generatedContractAddress!="" {
+		logger.WithFields(logger.Fields{"Contract Address": generatedContractAddress,
 		}).Info("Smart Contract has been received.")
 	}
 

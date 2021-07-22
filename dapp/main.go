@@ -26,6 +26,7 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockproducer"
 	"github.com/dappley/go-dappley/logic/lblockchain"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/common/log"
@@ -128,10 +129,7 @@ func main() {
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
 	txPool := transactionpool.NewTransactionPool(node, txPoolLimit)
 	//utxo.NewPool()
-	minerSubsidy := viper.GetInt("log.minerSubsidy")
-	if minerSubsidy != 0 {
-		transaction.SetSubsidy(minerSubsidy)
-	}
+	initYaml()
 
 	var LIBBlk *block.Block = nil
 	var bc *lblockchain.Blockchain
@@ -219,4 +217,12 @@ func initNode(conf *configpb.Config, peerinfoConf *storage.FileLoader) (*network
 
 func printVersion() {
 	println(version)
+}
+
+func initYaml() {
+	minerSubsidy := viper.GetInt("log.minerSubsidy")
+	if minerSubsidy != 0 {
+		transaction.SetSubsidy(minerSubsidy)
+	}
+	ltransaction.SetGasConsumption(viper.GetBool("log.gasConsumption"))
 }

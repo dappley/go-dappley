@@ -1271,8 +1271,6 @@ func (u utxoSlice) Swap(i, j int) {
 
 func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	var data string
-	fromAddress := *(flags[flagFromAddress].(*string))
-	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(fromAddress))
 	path := *(flags[flagFilePath].(*string))
 	if path == "" {
 		data = *(flags[flagData].(*string))
@@ -1285,13 +1283,24 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		data = string(script)
 	}
 
+	fromAddress := *(flags[flagFromAddress].(*string))
+	if fromAddress == "" {
+		fmt.Println("Error: from address is missing!")
+		return
+	}
+	toAddress := *(flags[flagToAddress].(*string))
+	if toAddress == "" && data == "" {
+		fmt.Println("Error: to address is missing!")
+		return
+	}
+
+	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(fromAddress))
 	if !addressAccount.IsValid() {
 		fmt.Println("Error: 'from' address is not valid!")
 		return
 	}
-
-	//Contract deployment transaction does not need to validate to address
-	if data == "" && !addressAccount.IsValid() {
+	addressAccount = account.NewTransactionAccountByAddress(account.NewAddress(toAddress))
+	if !addressAccount.IsValid() && data == "" {
 		fmt.Println("Error: 'to' address is not valid!")
 		return
 	}

@@ -74,7 +74,7 @@ func (adminRpcService *AdminRpcService) RpcChangeProducer(ctx context.Context, i
 		}
 	}
 
-	logic.ChangeProducers(addresses, height, adminRpcService.bm)
+	logic.ChangeProducers(addresses, height, adminRpcService.bm, 1)
 	return &rpcpb.ChangeProducerResponse{}, nil
 }
 
@@ -96,7 +96,7 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 		}
 	}
 
-	logic.ChangeProducers(addresses, height, adminRpcService.bm)
+	logic.ChangeProducers(addresses, height, adminRpcService.bm, 2)
 	return &rpcpb.AddProducerResponse{}, nil
 }
 
@@ -115,7 +115,7 @@ func (adminRpcService *AdminRpcService) RpcDeleteProducer(ctx context.Context, i
 			return nil, status.Error(codes.Unknown, err.Error())
 		}
 	}
-	logic.ChangeProducers("", height, adminRpcService.bm)
+	logic.ChangeProducers("", height, adminRpcService.bm, 3)
 	return &rpcpb.DeleteProducerResponse{}, nil
 }
 
