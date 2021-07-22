@@ -3,6 +3,7 @@ package utxo
 import (
 	"errors"
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/stateLog"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
@@ -540,7 +541,7 @@ func TestUTXOCache_GetUTXOTx(t *testing.T) {
 	assert.Equal(t, expected, result)
 }
 
-func TestUTXOCache_UpdateNextUTXO(t *testing.T) {
+func TestUTXOCache_SetPrevUtxoKey(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	cache := NewUTXOCache(db)
@@ -557,20 +558,19 @@ func TestUTXOCache_UpdateNextUTXO(t *testing.T) {
 	}
 
 	// utxo not in db
-	result, err := cache.UpdateNextUTXO(util.Str2bytes(utxo.GetUTXOKey()), "test_0")
+	result, err := cache.SetPrevUtxoKey(util.Str2bytes(utxo.GetUTXOKey()), "test_0")
 	assert.Nil(t, result)
 	assert.Equal(t, errors.New("key is invalid"), err)
 
 	// successful update
 	err = cache.putUTXOToDB(utxo)
 	assert.Nil(t, err)
-	result, err = cache.UpdateNextUTXO(util.Str2bytes(utxo.GetUTXOKey()), "test_0")
+	result, err = cache.SetPrevUtxoKey(util.Str2bytes(utxo.GetUTXOKey()), "test_0")
 	assert.Nil(t, err)
 	assert.Equal(t, utxo, result)
 	assert.Equal(t, []byte("test_0"), utxo.PrevUtxoKey)
 }
 
-/*
 func TestUTXOCache_GetUTXOsByAmountWithOutRemovedUTXOs(t *testing.T) {
 	utxo1 := &UTXO{
 		TXOutput: transactionbase.TXOutput{
@@ -578,9 +578,11 @@ func TestUTXOCache_GetUTXOsByAmountWithOutRemovedUTXOs(t *testing.T) {
 			PubKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c},
 			Contract:   "contract",
 		},
-		Txid:     []byte("test"),
-		TxIndex:  0,
-		UtxoType: UtxoNormal,
+		Txid:        []byte("test"),
+		TxIndex:     0,
+		UtxoType:    UtxoNormal,
+		PrevUtxoKey: []byte{},
+		NextUtxoKey: []byte("test_1"),
 	}
 	utxo2 := &UTXO{
 		TXOutput: transactionbase.TXOutput{
@@ -588,9 +590,11 @@ func TestUTXOCache_GetUTXOsByAmountWithOutRemovedUTXOs(t *testing.T) {
 			PubKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6d},
 			Contract:   "contract",
 		},
-		Txid:     []byte("test"),
-		TxIndex:  1,
-		UtxoType: UtxoNormal,
+		Txid:        []byte("test"),
+		TxIndex:     1,
+		UtxoType:    UtxoNormal,
+		PrevUtxoKey: []byte("test_0"),
+		NextUtxoKey: []byte("test_2"),
 	}
 	utxo3 := &UTXO{
 		TXOutput: transactionbase.TXOutput{
@@ -598,9 +602,11 @@ func TestUTXOCache_GetUTXOsByAmountWithOutRemovedUTXOs(t *testing.T) {
 			PubKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6e},
 			Contract:   "contract",
 		},
-		Txid:     []byte("test"),
-		TxIndex:  2,
-		UtxoType: UtxoNormal,
+		Txid:        []byte("test"),
+		TxIndex:     2,
+		UtxoType:    UtxoNormal,
+		PrevUtxoKey: []byte("test_1"),
+		NextUtxoKey: []byte("test_3"),
 	}
 	utxo4 := &UTXO{
 		TXOutput: transactionbase.TXOutput{
@@ -608,9 +614,11 @@ func TestUTXOCache_GetUTXOsByAmountWithOutRemovedUTXOs(t *testing.T) {
 			PubKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6f},
 			Contract:   "contract",
 		},
-		Txid:     []byte("test"),
-		TxIndex:  3,
-		UtxoType: UtxoNormal,
+		Txid:        []byte("test"),
+		TxIndex:     3,
+		UtxoType:    UtxoNormal,
+		PrevUtxoKey: []byte("test_2"),
+		NextUtxoKey: []byte("test_4"),
 	}
 	utxo5 := &UTXO{
 		TXOutput: transactionbase.TXOutput{
@@ -618,9 +626,11 @@ func TestUTXOCache_GetUTXOsByAmountWithOutRemovedUTXOs(t *testing.T) {
 			PubKeyHash: []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x70},
 			Contract:   "contract",
 		},
-		Txid:     []byte("test"),
-		TxIndex:  4,
-		UtxoType: UtxoNormal,
+		Txid:        []byte("test"),
+		TxIndex:     4,
+		UtxoType:    UtxoNormal,
+		PrevUtxoKey: []byte("test_3"),
+		NextUtxoKey: []byte{},
 	}
 
 	tests := []struct {
@@ -669,8 +679,12 @@ func TestUTXOCache_GetUTXOsByAmountWithOutRemovedUTXOs(t *testing.T) {
 	defer db.Close()
 	cache := NewUTXOCache(db)
 
-	utxosToAdd := &UTXOTx{map[string]*UTXO{"test_0": utxo1, "test_1": utxo2, "test_2": utxo3, "test_3": utxo4, "test_4": utxo5}}
-	err := cache.AddUtxos(utxosToAdd, utxo1.PubKeyHash.String())
+	utxosToAdd := []*UTXO{utxo1, utxo2, utxo3, utxo4, utxo5}
+	for _, utxo := range utxosToAdd {
+		err := cache.putUTXOToDB(utxo)
+		assert.Nil(t, err)
+	}
+	err := cache.putLastUTXOKey(utxo1.PubKeyHash.String(), util.Str2bytes(utxo1.GetUTXOKey()))
 	assert.Nil(t, err)
 
 	for _, tt := range tests {
@@ -686,4 +700,3 @@ func TestUTXOCache_GetUTXOsByAmountWithOutRemovedUTXOs(t *testing.T) {
 		})
 	}
 }
-*/
