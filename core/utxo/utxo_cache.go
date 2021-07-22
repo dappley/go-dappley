@@ -87,7 +87,7 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkeyHash string) error {
 		}
 
 		if !bytes.Equal([]byte{}, lastestUtxoKey) { //this pubkeyHash already has a UTXO
-			_, err := utxoCache.UpdateNextUTXO(lastestUtxoKey, key)
+			_, err := utxoCache.SetPrevUtxoKey(lastestUtxoKey, key)
 			if err != nil {
 				return err
 			}
@@ -132,7 +132,7 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkeyHash string) error
 					return err
 				}
 
-				nextUTXO, err := utxoCache.UpdateNextUTXO(utxo.NextUtxoKey, "")
+				nextUTXO, err := utxoCache.SetPrevUtxoKey(utxo.NextUtxoKey, "")
 				if err != nil {
 					return err
 				}
@@ -155,7 +155,7 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkeyHash string) error
 			}
 
 			if !bytes.Equal(utxo.NextUtxoKey, []byte{}) {
-				nextUTXO, err := utxoCache.UpdateNextUTXO(utxo.NextUtxoKey, preUTXO.GetUTXOKey())
+				nextUTXO, err := utxoCache.SetPrevUtxoKey(utxo.NextUtxoKey, preUTXO.GetUTXOKey())
 				if err != nil {
 					return err
 				}
@@ -352,7 +352,7 @@ func (utxoCache *UTXOCache) GetUtxoCreateContract(pubKeyHash string) *UTXO {
 	return utxo
 }
 
-func (utxoCache *UTXOCache) UpdateNextUTXO(nextUTXOKey []byte, preUTXOKey string) (*UTXO, error) {
+func (utxoCache *UTXOCache) SetPrevUtxoKey(nextUTXOKey []byte, preUTXOKey string) (*UTXO, error) {
 	nextUTXO, err := utxoCache.GetUtxo(util.Bytes2str(nextUTXOKey))
 	if err != nil {
 		return nil, err
@@ -427,7 +427,8 @@ func (utxoCache *UTXOCache) DelStateLog(scStateLogKey string) error {
 	return nil
 }
 
-func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash account.PubKeyHash,amount *common.Amount, utxoTxRemove *UTXOTx) ([]*UTXO,error) {
+//Get utxos from db, it will not be count and return  if the utxo already in utxoTxRemove
+func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash account.PubKeyHash, amount *common.Amount, utxoTxRemove *UTXOTx) ([]*UTXO, error) {
 	lastUtxokey := utxoCache.getLastUTXOKey(pubKeyHash.String())
 	var utxoSlice []*UTXO
 	utxoAmount := common.NewAmount(0)
@@ -436,7 +437,7 @@ func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash accou
 	for utxoKey != "" {
 		utxo, err := utxoCache.GetUtxo(utxoKey)
 		if err != nil {
-			logger.Warn( err)
+			logger.Warn(err)
 		}
 		if utxo.UtxoType == UtxoCreateContract {
 			continue
@@ -463,4 +464,3 @@ func GetscStateKey(address, key string) string {
 func GetscStateLogKey(blockHash hash.Hash) string {
 	return "scLog" + util.Bytes2str(blockHash)
 }
-
