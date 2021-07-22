@@ -318,7 +318,6 @@ var cmdFlagsMap = map[string][]flagPars{
 			valueTypeString,
 			"The data value.",
 		},
-
 	},
 	cliAddPeer: {flagPars{
 		flagPeerFullAddr,
@@ -1307,8 +1306,6 @@ func (u utxoSlice) Swap(i, j int) {
 
 func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	var data string
-	fromAddress := *(flags[flagFromAddress].(*string))
-	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(fromAddress))
 	path := *(flags[flagFilePath].(*string))
 	if path == "" {
 		data = *(flags[flagData].(*string))
@@ -1321,13 +1318,24 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		data = string(script)
 	}
 
+	fromAddress := *(flags[flagFromAddress].(*string))
+	if fromAddress == "" {
+		fmt.Println("Error: from address is missing!")
+		return
+	}
+	toAddress := *(flags[flagToAddress].(*string))
+	if toAddress == "" && data == "" {
+		fmt.Println("Error: to address is missing!")
+		return
+	}
+
+	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(fromAddress))
 	if !addressAccount.IsValid() {
 		fmt.Println("Error: 'from' address is not valid!")
 		return
 	}
-
-	//Contract deployment transaction does not need to validate to address
-	if data == "" && !addressAccount.IsValid() {
+	addressAccount = account.NewTransactionAccountByAddress(account.NewAddress(toAddress))
+	if !addressAccount.IsValid() && data == "" {
 		fmt.Println("Error: 'to' address is not valid!")
 		return
 	}
@@ -1407,20 +1415,34 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 
 func cliSendDataCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	fromAddress := *(flags[flagFromAddress].(*string))
-	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(fromAddress))
-	key := *(flags[flagKey].(*string))
-	value := *(flags[flagValue].(*string))
-
-	if key == "" || value == "" {
-		fmt.Println("Error:  key and value cannot be null!")
+	if fromAddress == "" {
+		fmt.Println("Error: from address is missing!")
 		return
 	}
-	data:=`{"data":{"key":"`+key+`","value":"`+value+`"}}`
+	toAddress := *(flags[flagToAddress].(*string))
+	if toAddress == "" {
+		fmt.Println("Error: to address is missing!")
+		return
+	}
 
+	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(fromAddress))
 	if !addressAccount.IsValid() {
 		fmt.Println("Error: 'from' address is not valid!")
 		return
 	}
+	addressAccount = account.NewTransactionAccountByAddress(account.NewAddress(toAddress))
+	if !addressAccount.IsValid() {
+		fmt.Println("Error: 'to' address is not valid!")
+		return
+	}
+
+	key := *(flags[flagKey].(*string))
+	value := *(flags[flagValue].(*string))
+	if key == "" || value == "" {
+		fmt.Println("Error:  key and value cannot be null!")
+		return
+	}
+	data := `{"data":{"key":"` + key + `","value":"` + value + `"}}`
 
 	response, err := logic.GetUtxoStream(c.(rpcpb.RpcServiceClient), &rpcpb.GetUTXORequest{
 		Address: account.NewAddress(*(flags[flagFromAddress].(*string))).String(),
@@ -1466,7 +1488,7 @@ func cliSendDataCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 	}
 	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
 		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
-	tx, err := ltransaction.NewHardCodeTransaction(transaction.TxTypeNormal,tx_utxos, sendTxParam)
+	tx, err := ltransaction.NewHardCodeTransaction(transaction.TxTypeNormal, tx_utxos, sendTxParam)
 	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
@@ -1478,10 +1500,6 @@ func cliSendDataCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 			fmt.Println("Error:", status.Convert(err).Message())
 		}
 		return
-	}
-
-	if *(flags[flagToAddress].(*string)) == "" {
-		fmt.Println("Contract address:", tx.Vout[0].GetAddress().String())
 	}
 
 	fmt.Println("Transaction is sent! Pending approval from network.")
