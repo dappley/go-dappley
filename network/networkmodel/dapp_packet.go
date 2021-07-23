@@ -1,9 +1,10 @@
 package networkmodel
 
 import (
-	"errors"
 	"math/big"
 	"reflect"
+
+	errorValues "github.com/dappley/go-dappley/errors"
 )
 
 const (
@@ -25,12 +26,6 @@ var (
 	startBytes    = []byte{0x7E, 0x7E}
 	broadcastByte = byte(1)
 	unitcastByte  = byte(0)
-)
-
-var (
-	ErrLengthTooShort       = errors.New("message length is too short")
-	ErrInvalidMessageFormat = errors.New("invalid message format")
-	ErrCheckSumIncorrect    = errors.New("incorrect checksum")
 )
 
 type DappPacket struct {
@@ -57,7 +52,7 @@ func DeserializeIntoDappPacket(bytes []byte) (*DappPacket, error) {
 	packet := &DappPacket{}
 
 	if len(bytes) <= headerLength {
-		return nil, ErrLengthTooShort
+		return nil, errorValues.ErrLengthTooShort
 	}
 
 	packet.header = bytes[:headerLength]
@@ -68,7 +63,7 @@ func DeserializeIntoDappPacket(bytes []byte) (*DappPacket, error) {
 	}
 
 	if len(bytes) < headerLength+packet.GetPacketDataLength() {
-		return nil, ErrLengthTooShort
+		return nil, errorValues.ErrLengthTooShort
 	}
 
 	packet.data = bytes[headerLength : headerLength+packet.GetPacketDataLength()]
@@ -133,16 +128,16 @@ func (packet *DappPacket) GetRawBytes() []byte {
 //verifyHeader verifies if the header bytes are correct
 func (packet *DappPacket) verifyHeader() error {
 	if len(packet.header) != headerLength {
-		return ErrLengthTooShort
+		return errorValues.ErrLengthTooShort
 	}
 
 	if !packet.containStartingBytes() {
-		return ErrInvalidMessageFormat
+		return errorValues.ErrInvalidMessageFormat
 	}
 
 	headerCheckSum := checkSum(packet.header[:headerLength-1])
 	if headerCheckSum != packet.GetHeaderCheckSum() {
-		return ErrCheckSumIncorrect
+		return errorValues.ErrCheckSumIncorrect
 	}
 
 	return nil
@@ -153,7 +148,7 @@ func (packet *DappPacket) verifyDataChecksum() error {
 	dataCheckSum := checkSum(packet.data)
 
 	if dataCheckSum != packet.GetCheckSum() {
-		return ErrCheckSumIncorrect
+		return errorValues.ErrCheckSumIncorrect
 	}
 
 	return nil

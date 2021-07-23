@@ -23,6 +23,7 @@ import (
 	"fmt"
 
 	"github.com/dappley/go-dappley/core/account"
+	errorValues "github.com/dappley/go-dappley/errors"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -137,7 +138,7 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 func (dynasty *Dynasty) isAddingProducerAllowed(producer string) error {
 	for _, producerNow := range dynasty.producers {
 		if producerNow == producer {
-			return errors.New("already a producer")
+			return errorValues.ErrAlreadyProducer
 		}
 	}
 	producerAccount := account.NewTransactionAccountByAddress(account.NewAddress(producer))
@@ -147,9 +148,9 @@ func (dynasty *Dynasty) isAddingProducerAllowed(producer string) error {
 	}
 
 	if !producerAccount.IsValid() {
-		return errors.New("invalid producer address")
+		return errorValues.ErrInvalidAddress
 	}
-	return errors.New("maximum number of producers reached")
+	return errorValues.ErrMaxProducer
 }
 
 //GetProducers returns all producers
@@ -213,7 +214,7 @@ func (dynasty *Dynasty) IsSettingProducersAllowed(producers []string, maxProduce
 	}
 
 	if len(producers) > maxProd {
-		return errors.New("can not exceed maximum number of producers")
+		return errorValues.ErrMaxProducer
 	}
 
 	seen := make(map[string]bool)

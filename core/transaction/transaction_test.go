@@ -19,11 +19,12 @@
 package transaction
 
 import (
-	"errors"
-	"github.com/dappley/go-dappley/core/utxo"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"math/big"
 	"testing"
+
+	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	errorValues "github.com/dappley/go-dappley/errors"
 
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/core/transactionbase"
@@ -510,7 +511,7 @@ func TestTransaction_verifyID(t *testing.T) {
 	normalTx.ID = []byte{0x0}
 	verified, err = normalTx.verifyID()
 	assert.False(t, verified)
-	assert.Equal(t, errors.New("Transaction: ID is invalid"), err)
+	assert.Equal(t, errorValues.ErrTransactionIDInvalid, err)
 }
 
 func TestTransaction_verifyAmount(t *testing.T) {
@@ -537,17 +538,17 @@ func TestTransaction_verifyAmount(t *testing.T) {
 	prevUtxosSum = common.NewAmount(2)
 	verified, err = tx.verifyAmount(prevUtxosSum, txTotalVoutValue)
 	assert.False(t, verified)
-	assert.Equal(t, errors.New("Transaction: amount is invalid"), err)
+	assert.Equal(t, errorValues.ErrTransactionAmountInvalid, err)
 
 	prevUtxosSum = common.NewAmount(18)
 	verified, err = tx.verifyAmount(prevUtxosSum, txTotalVoutValue)
 	assert.False(t, verified)
-	assert.Equal(t, errors.New("Transaction: GasLimit is invalid"), err)
+	assert.Equal(t, errorValues.ErrTransactionGasLimitInvalid, err)
 
 	prevUtxosSum = common.NewAmount(23)
 	verified, err = tx.verifyAmount(prevUtxosSum, txTotalVoutValue)
 	assert.False(t, verified)
-	assert.Equal(t, errors.New("Transaction: tip is invalid"), err)
+	assert.Equal(t, errorValues.ErrTransactionTipInvalid, err)
 }
 
 func TestTransaction_CalculateTotalVoutValue(t *testing.T) {
@@ -682,7 +683,7 @@ func TestTransaction_CheckVinNum(t *testing.T) {
 	assert.Nil(t, tx.CheckVinNum())
 
 	tx.Vin = append(tx.Vin, transactionbase.TXInput{})
-	assert.Equal(t, errors.New("too many vin in a transaction"), tx.CheckVinNum())
+	assert.Equal(t, errorValues.ErrTransactionTooManyVin, tx.CheckVinNum())
 }
 
 func TestSendTxParam_TotalCost(t *testing.T) {
@@ -751,7 +752,7 @@ func TestCalculateChange(t *testing.T) {
 			gasLimit:       common.NewAmount(0),
 			gasPrice:       common.NewAmount(0),
 			expectedChange: nil,
-			expectedErr:    ErrInsufficientFund,
+			expectedErr:    errorValues.ErrInsufficientFund,
 		},
 		{
 			name:           "insufficient input for tip",
@@ -761,7 +762,7 @@ func TestCalculateChange(t *testing.T) {
 			gasLimit:       common.NewAmount(0),
 			gasPrice:       common.NewAmount(0),
 			expectedChange: nil,
-			expectedErr:    ErrInsufficientFund,
+			expectedErr:    errorValues.ErrInsufficientFund,
 		},
 		{
 			name:           "insufficient input for gas",
@@ -771,7 +772,7 @@ func TestCalculateChange(t *testing.T) {
 			gasLimit:       common.NewAmount(3),
 			gasPrice:       common.NewAmount(2),
 			expectedChange: nil,
-			expectedErr:    ErrInsufficientFund,
+			expectedErr:    errorValues.ErrInsufficientFund,
 		},
 	}
 	for _, tt := range tests {

@@ -19,19 +19,10 @@
 package keystore
 
 import (
-	"errors"
-
 	"sync"
 
 	"github.com/dappley/go-dappley/crypto/cipher"
-)
-
-var (
-	// ErrNeedAlias need alias
-	ErrNeedAlias = errors.New("need alias")
-
-	// ErrNotFound not find key
-	ErrNotFound = errors.New("key not found")
+	errorValues "github.com/dappley/go-dappley/errors"
 )
 
 // Entry keeps in memory
@@ -80,10 +71,10 @@ func (p *MemoryProvider) Aliases() []string {
 // SetKey assigns the given key (that has already been protected) to the given alias.
 func (p *MemoryProvider) SetKey(a string, key Key, passphrase []byte) error {
 	if len(a) == 0 {
-		return ErrNeedAlias
+		return errorValues.ErrNeedAlias
 	}
 	if len(passphrase) == 0 {
-		return ErrInvalidPassphrase
+		return errorValues.ErrInvalidPassphrase
 	}
 
 	encoded, err := key.Encoded()
@@ -107,10 +98,10 @@ func (p *MemoryProvider) SetKey(a string, key Key, passphrase []byte) error {
 // password to recover it.
 func (p *MemoryProvider) GetKey(a string, passphrase []byte) (Key, error) {
 	if len(a) == 0 {
-		return nil, ErrNeedAlias
+		return nil, errorValues.ErrNeedAlias
 	}
 	if len(passphrase) == 0 {
-		return nil, ErrInvalidPassphrase
+		return nil, errorValues.ErrInvalidPassphrase
 	}
 
 	p.mu.RLock()
@@ -118,7 +109,7 @@ func (p *MemoryProvider) GetKey(a string, passphrase []byte) (Key, error) {
 
 	entry, ok := p.entries[a]
 	if !ok {
-		return nil, ErrNotFound
+		return nil, errorValues.ErrNotFound
 	}
 	data, err := p.cipher.Decrypt(entry.data, passphrase)
 	if err != nil {
@@ -137,7 +128,7 @@ func (p *MemoryProvider) Delete(a string) error {
 	defer p.mu.Unlock()
 
 	if &a == nil {
-		return ErrNeedAlias
+		return errorValues.ErrNeedAlias
 	}
 	delete(p.entries, a)
 	return nil
@@ -149,13 +140,13 @@ func (p *MemoryProvider) ContainsAlias(a string) (bool, error) {
 	defer p.mu.RUnlock()
 
 	if &a == nil {
-		return false, ErrNeedAlias
+		return false, errorValues.ErrNeedAlias
 	}
 
 	if _, ok := p.entries[a]; ok {
 		return true, nil
 	}
-	return false, ErrNotFound
+	return false, errorValues.ErrNotFound
 }
 
 // Clear clear all entries in provider
@@ -164,7 +155,7 @@ func (p *MemoryProvider) Clear() error {
 	defer p.mu.Unlock()
 
 	if p.entries == nil {
-		return errors.New("need entries map")
+		return errorValues.ErrNeedEntriesMap
 	}
 	p.entries = make(map[string]Entry)
 	return nil

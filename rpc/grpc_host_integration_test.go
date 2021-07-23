@@ -176,8 +176,7 @@ func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 	}
 
 	if sum.Cmp(amount) < 0 {
-		//return nil, "ErrInsufficientFund"
-		return nil, errors.New("cli: the balance is insufficient")
+		return nil, errorValues.ErrInsufficientFund
 	}
 
 	return retUtxos, nil

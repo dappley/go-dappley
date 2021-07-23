@@ -20,6 +20,8 @@ package storage
 
 import (
 	"sync"
+
+	errorValues "github.com/dappley/go-dappley/errors"
 )
 
 type RamStorage struct {
@@ -42,7 +44,7 @@ func (rs *RamStorage) Get(key []byte) ([]byte, error) {
 	if ok {
 		return value.([]byte), nil
 	}
-	return nil, ErrKeyInvalid
+	return nil, errorValues.ErrInvalidKey
 }
 
 func (rs *RamStorage) Put(key []byte, val []byte) error {

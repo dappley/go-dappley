@@ -22,11 +22,11 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/dappley/go-dappley/core/utxo"
+	errorValues "github.com/dappley/go-dappley/errors"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
@@ -55,14 +55,7 @@ var (
 	// MinGasCountPerTransaction default gas for normal transaction
 	MinGasCountPerTransaction = common.NewAmount(20000)
 	// GasCountPerByte per byte of data attached to a transaction gas cost
-	GasCountPerByte        = common.NewAmount(1)
-	ErrOutOfGasLimit       = errors.New("out of gas limit")
-	ErrInsufficientFund    = errors.New("transaction: insufficient balance")
-	ErrInvalidAmount       = errors.New("transaction: invalid amount (must be > 0)")
-	ErrTXInputNotFound     = errors.New("transaction: transaction input not found")
-	ErrNewUserPubKeyHash   = errors.New("transaction: create pubkeyhash error")
-	ErrNoGasChange         = errors.New("transaction: all of Gas have been consumed")
-	ErrInsufficientBalance = errors.New("Transaction: insufficient balance, cannot pay for GasLimit")
+	GasCountPerByte = common.NewAmount(1)
 )
 
 type TxType int
@@ -291,7 +284,7 @@ func (tx *Transaction) verifyID() (bool, error) {
 	if bytes.Equal(tx.ID, (&txCopy).Hash()) {
 		return true, nil
 	} else {
-		return false, errors.New("Transaction: ID is invalid")
+		return false, errorValues.ErrTransactionIDInvalid
 	}
 }
 
@@ -299,7 +292,7 @@ func (tx *Transaction) verifyID() (bool, error) {
 func (tx *Transaction) verifyAmount(totalPrev *common.Amount, totalVoutValue *common.Amount) (bool, error) {
 	//TotalVin amount must equal or greater than total vout
 	if totalPrev.Cmp(totalVoutValue) < 0 {
-		return false, errors.New("Transaction: amount is invalid")
+		return false, errorValues.ErrTransactionAmountInvalid
 	}
 	sub, err := totalPrev.Sub(totalVoutValue)
 	if err != nil {
@@ -308,11 +301,11 @@ func (tx *Transaction) verifyAmount(totalPrev *common.Amount, totalVoutValue *co
 	if tx.GasLimit != nil {
 		sub, err = sub.Sub(tx.GasLimit.Mul(tx.GasPrice))
 		if err != nil {
-			return false, errors.New("Transaction: GasLimit is invalid")
+			return false, errorValues.ErrTransactionGasLimitInvalid
 		}
 	}
 	if tx.Tip.Cmp(sub) != 0 {
-		return false, errors.New("Transaction: tip is invalid")
+		return false, errorValues.ErrTransactionTipInvalid
 	}
 	return true, nil
 }
@@ -470,19 +463,19 @@ func CalculateUtxoSum(utxos []*utxo.UTXO) *common.Amount {
 func CalculateChange(input, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) (*common.Amount, error) {
 	change, err := input.Sub(amount)
 	if err != nil {
-		return nil, ErrInsufficientFund
+		return nil, errorValues.ErrInsufficientFund
 	}
 
 	change, err = change.Sub(tip)
 	if err != nil {
-		return nil, ErrInsufficientFund
+		return nil, errorValues.ErrInsufficientFund
 	}
 	change, err = change.Sub(gasLimit.Mul(gasPrice))
 	if err != nil {
-		return nil, ErrInsufficientFund
+		return nil, errorValues.ErrInsufficientFund
 	}
 	if change.Cmp(common.NewAmount(0)) < 0 {
-		return nil, ErrInsufficientFund
+		return nil, errorValues.ErrInsufficientFund
 	}
 	return change, nil
 }
@@ -502,13 +495,13 @@ func (tx *Transaction) VerifySignatures(prevUtxos []*utxo.UTXO) (bool, error) {
 		copy(originPub[1:], vin.PubKey)
 
 		if vin.Signature == nil || len(vin.Signature) == 0 {
-			return false, errors.New("Transaction: Signatures is empty")
+			return false, errorValues.ErrSignaturesEmpty
 		}
 
 		verifyResult, err := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
 
 		if err != nil || verifyResult == false {
-			return false, errors.New("Transaction: Signatures is invalid")
+			return false, errorValues.ErrSignaturesInvalid
 		}
 	}
 
@@ -522,7 +515,7 @@ func (tx *Transaction) VerifyPublicKeyHash(prevUtxos []*utxo.UTXO) (bool, error)
 	for i, vin := range tx.Vin {
 		if prevUtxos[i].PubKeyHash == nil {
 			logger.Error("Transaction: previous transaction is not correct.")
-			return false, errors.New("Transaction: prevUtxos not found")
+			return false, errorValues.ErrPrevUtxosMissing
 		}
 
 		isContract, err := prevUtxos[i].PubKeyHash.IsContract()
@@ -542,7 +535,7 @@ func (tx *Transaction) VerifyPublicKeyHash(prevUtxos []*utxo.UTXO) (bool, error)
 		ta := account.NewTransactionAccountByPubKey(vin.PubKey)
 
 		if !bytes.Equal([]byte(ta.GetPubKeyHash()), []byte(prevUtxos[i].PubKeyHash)) {
-			return false, errors.New("the pubic key hash does not match")
+			return false, errorValues.ErrPublicKeyHashDoesNotMatch
 		}
 	}
 	return true, nil
@@ -550,7 +543,7 @@ func (tx *Transaction) VerifyPublicKeyHash(prevUtxos []*utxo.UTXO) (bool, error)
 
 func (tx *Transaction) Verify(prevUtxos []*utxo.UTXO) error {
 	if prevUtxos == nil {
-		return errors.New("Transaction: prevUtxos not found")
+		return errorValues.ErrPrevUtxosMissing
 	}
 	result, err := tx.verifyID()
 	if !result {
@@ -565,7 +558,7 @@ func (tx *Transaction) Verify(prevUtxos []*utxo.UTXO) error {
 	totalPrev := CalculateUtxoSum(prevUtxos)
 	totalVoutValue, ok := tx.CalculateTotalVoutValue()
 	if !ok {
-		return errors.New("Transaction: vout is invalid")
+		return errorValues.ErrVoutInvalid
 	}
 	result, err = tx.verifyAmount(totalPrev, totalVoutValue)
 	if !result {
@@ -581,7 +574,7 @@ func (tx *Transaction) Verify(prevUtxos []*utxo.UTXO) error {
 
 func (tx *Transaction) CheckVinNum() error {
 	if len(tx.Vin) > maxVinNumber {
-		return errors.New("too many vin in a transaction")
+		return errorValues.ErrTransactionTooManyVin
 	}
 	return nil
 }

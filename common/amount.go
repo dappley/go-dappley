@@ -19,16 +19,9 @@
 package common
 
 import (
-	"errors"
 	"math/big"
-)
 
-var (
-	// ErrAmountUnderflow indicates the value is negative, which is not allowed.
-	ErrAmountUnderflow = errors.New("amount: underflow (value is negative)")
-
-	// ErrAmountInvalidString indicates the string is not valid when converted to amount.
-	ErrAmountInvalidString = errors.New("amount: invalid string when converting to amount")
+	errorValues "github.com/dappley/go-dappley/errors"
 )
 
 // Amount implements an unsigned integer type with arbitrary/no upper bound. It is based on big.Int.
@@ -39,7 +32,7 @@ type Amount struct {
 // Validate returns error if a is not a valid amount, otherwise returns nil.
 func (a Amount) Validate() error {
 	if a.Sign() < 0 {
-		return ErrAmountUnderflow
+		return errorValues.ErrAmountUnderflow
 	}
 	return nil
 }
@@ -68,7 +61,7 @@ func NewAmountFromString(s string) (*Amount, error) {
 		_, success = i.SetString(s, 10)
 	}
 	if !success {
-		return nil, ErrAmountInvalidString
+		return nil, errorValues.ErrAmountInvalidString
 	}
 	if err := (&Amount{*i}).Validate(); nil != err {
 		return nil, err
@@ -110,12 +103,12 @@ func (a Amount) Times(b uint64) *Amount {
 }
 
 // Times returns the quotient of a/b where b is uint64
-func (a Amount) Div(b uint64) *Amount{
+func (a Amount) Div(b uint64) *Amount {
 	return a.div(NewAmount(b))
 }
 
 // Times returns the quotient of a/b
-func (a Amount) div(b *Amount) *Amount{
+func (a Amount) div(b *Amount) *Amount {
 	return &Amount{*new(big.Int).Div(a.BigInt(), b.BigInt())}
 }
 

@@ -22,7 +22,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/binary"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"time"
 
@@ -33,6 +32,7 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
+	errorValues "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
@@ -149,11 +149,11 @@ func (tx *TxCoinbase) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) err
 func (tx *TxCoinbase) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error {
 	//TODO coinbase vout check need add tip
 	if tx.Vout[0].Value.Cmp(transaction.Subsidy) < 0 {
-		return errors.New("Transaction: subsidy check failed")
+		return errorValues.ErrSubsidyCheckFail
 	}
 	bh := binary.BigEndian.Uint64(tx.Vin[0].Signature)
 	if blockHeight != bh {
-		return fmt.Errorf("Transaction: block height check failed expected=%v actual=%v", blockHeight, bh)
+		return fmt.Errorf("transaction: block height check failed expected=%v actual=%v", blockHeight, bh)
 	}
 	return nil
 }
@@ -241,13 +241,13 @@ func (ctx *TxContract) VerifyGas(totalBalance *common.Amount) error {
 				"acceptedGas": baseGas,
 			}).Warn("Failed to check GasLimit >= txBaseGas.")
 			// GasLimit is smaller than based tx gas, won't giveback the tx
-			return transaction.ErrOutOfGasLimit
+			return errorValues.ErrOutOfGasLimit
 		}
 	}
 
 	limitedFee := ctx.GasLimit.Mul(ctx.GasPrice)
 	if totalBalance.Cmp(limitedFee) < 0 {
-		return transaction.ErrInsufficientBalance
+		return errorValues.ErrInsufficientBalance
 	}
 	return nil
 }
@@ -297,10 +297,10 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 
 	function, args := util.DecodeScInput(vout.Contract)
 	if function == "" {
-		return 0, nil, ErrUnsupportedSourceType
+		return 0, nil, errorValues.ErrUnsupportedSourceType
 	}
 	if err := engine.SetExecutionLimits(tx.GasLimit.Uint64(), 0); err != nil {
-		return 0, nil, ErrInvalidGasLimit
+		return 0, nil, errorValues.ErrInvalidGasLimit
 	}
 
 	totalArgs := util.PrepareArgs(args)
@@ -313,7 +313,7 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 
 	createContractUtxo := utxoIndex.GetContractCreateUTXOByPubKeyHash([]byte(vout.PubKeyHash))
 	if createContractUtxo == nil {
-		return 0, nil, ErrLoadError
+		return 0, nil, errorValues.ErrLoadError
 	}
 	engine.ImportSourceCode(createContractUtxo.Contract)
 	engine.ImportLocalStorage(ctState)
@@ -390,7 +390,7 @@ func NewGasRewardTx(to *account.TransactionAccount, blockHeight uint64, actualGa
 // NewGasChangeTx returns a change to contract invoker, pay for the change of unused gas
 func NewGasChangeTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, uniqueNum int) (transaction.Transaction, error) {
 	if gasLimit.Cmp(actualGasCount) <= 0 {
-		return transaction.Transaction{}, transaction.ErrNoGasChange
+		return transaction.Transaction{}, errorValues.ErrNoGasChange
 	}
 	change, err := gasLimit.Sub(actualGasCount)
 
@@ -482,7 +482,7 @@ func NewContractTransferTX(utxos []*utxo.UTXO, contractAddr, toAddr account.Addr
 	contractAccount := account.NewTransactionAccountByAddress(contractAddr)
 	toAccount := account.NewTransactionAccountByAddress(toAddr)
 	if !contractAccount.IsValid() {
-		return transaction.Transaction{}, account.ErrInvalidAddress
+		return transaction.Transaction{}, errorValues.ErrInvalidAddress
 	}
 	if isContract, err := contractAccount.GetPubKeyHash().IsContract(); !isContract {
 		return transaction.Transaction{}, err
@@ -548,7 +548,7 @@ func (tx *TxContract) GetTotalBalance(prevUtxos []*utxo.UTXO) (*common.Amount, e
 	totalVoutValue, _ := tx.CalculateTotalVoutValue()
 	totalBalance, err := totalPrev.Sub(totalVoutValue)
 	if err != nil {
-		return nil, transaction.ErrInsufficientBalance
+		return nil, errorValues.ErrInsufficientBalance
 	}
 	totalBalance, _ = totalBalance.Sub(tx.Tip)
 	return totalBalance, nil

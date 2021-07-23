@@ -25,7 +25,6 @@ import (
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -36,6 +35,7 @@ import (
 	"strings"
 	"time"
 
+	errorValues "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	crypto "github.com/libp2p/go-libp2p-crypto"
 
@@ -159,11 +159,6 @@ var cmdList = []string{
 	cliGenerateSeed,
 	cliConfigGenerator,
 }
-
-var (
-	ErrInsufficientFund = errors.New("cli: the balance is insufficient")
-	ErrTooManyUtxoFund  = errors.New("cli: utxo is too many should to merge")
-)
 
 //configure input parameters/flags for each command
 var cmdFlagsMap = map[string][]flagPars{
@@ -1393,9 +1388,9 @@ func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 		return retUtxos, nil
 	}
 	if sum.Cmp(amount) > 0 {
-		return nil, ErrTooManyUtxoFund
+		return nil, errorValues.ErrTooManyUtxoFund
 	}
-	return nil, ErrInsufficientFund
+	return nil, errorValues.ErrInsufficientFund
 }
 
 func vinRules(utxoSum, amount *common.Amount, utxoNum, remainUtxoNum int) bool {

@@ -21,12 +21,13 @@ package downloadmanager
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
-	"github.com/dappley/go-dappley/common/log"
-	"github.com/dappley/go-dappley/logic/blockproducer"
 	"math"
 	"sync"
 	"time"
+
+	"github.com/dappley/go-dappley/common/log"
+	errorValues "github.com/dappley/go-dappley/errors"
+	"github.com/dappley/go-dappley/logic/blockproducer"
 
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/common/pubsub"
@@ -65,12 +66,6 @@ const (
 	GetCommonBlocksResponse = "GetCommonBlocksResponse"
 
 	maxGetBlocksNum = 10
-)
-
-var (
-	ErrEmptyBlocks      = errors.New("received no block")
-	ErrPeerNotFound     = errors.New("peerId not in checklist")
-	ErrMismatchResponse = errors.New("response is not for waiting command")
 )
 
 var (
@@ -292,12 +287,12 @@ func (downloadManager *DownloadManager) validateReturnBlocks(blocksPb *networkpb
 
 	if downloadManager.downloadingPeer == nil || downloadManager.downloadingPeer.peerid != peerId {
 		returnBlocksLogger.Info("validateReturnBlocks: downloadingPeer is empty or peerId is not match.")
-		return nil, ErrPeerNotFound
+		return nil, errorValues.ErrPeerNotFound
 	}
 
 	if blocksPb.GetBlocks() == nil || len(blocksPb.GetBlocks()) == 0 {
 		returnBlocksLogger.Error("DownloadManager: received no block.")
-		return nil, ErrEmptyBlocks
+		return nil, errorValues.ErrEmptyBlocks
 	}
 
 	hashes := make([]hash.Hash, len(blocksPb.GetStartBlockHashes()))
@@ -307,7 +302,7 @@ func (downloadManager *DownloadManager) validateReturnBlocks(blocksPb *networkpb
 
 	if downloadManager.isDownloadCommandFinished(hashes) {
 		returnBlocksLogger.Info("DownloadManager: response is not for waiting command.")
-		return nil, ErrMismatchResponse
+		return nil, errorValues.ErrMismatchResponse
 	}
 
 	return downloadManager.downloadingPeer, nil

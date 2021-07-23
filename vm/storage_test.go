@@ -21,6 +21,7 @@ package vm
 import (
 	"testing"
 
+	errorValues "github.com/dappley/go-dappley/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,18 +32,18 @@ func TestStorageKeyPattern(t *testing.T) {
 		domainKey string
 		itemKey   string
 	}{
-		{"", ErrInvalidStorageKey, "", ""},
-		{"string", ErrInvalidStorageKey, "", ""},
-		{"_map[key]", ErrInvalidStorageKey, "", ""},
-		{"@map[key", ErrInvalidStorageKey, "", ""},
-		{"@mapkey]", ErrInvalidStorageKey, "", ""},
-		{"@123[key]", ErrInvalidStorageKey, "", ""},
-		{"@|abc[key]", ErrInvalidStorageKey, "", ""},
-		{"@abc123-[key]", ErrInvalidStorageKey, "", ""},
-		{"@abc$[key]", ErrInvalidStorageKey, "", ""},
-		{"@a[key]", ErrInvalidStorageKey, "", ""},
-		{"@$[key]", ErrInvalidStorageKey, "", ""},
-		{"@_[key]", ErrInvalidStorageKey, "", ""},
+		{"", errorValues.ErrInvalidStorageKey, "", ""},
+		{"string", errorValues.ErrInvalidStorageKey, "", ""},
+		{"_map[key]", errorValues.ErrInvalidStorageKey, "", ""},
+		{"@map[key", errorValues.ErrInvalidStorageKey, "", ""},
+		{"@mapkey]", errorValues.ErrInvalidStorageKey, "", ""},
+		{"@123[key]", errorValues.ErrInvalidStorageKey, "", ""},
+		{"@|abc[key]", errorValues.ErrInvalidStorageKey, "", ""},
+		{"@abc123-[key]", errorValues.ErrInvalidStorageKey, "", ""},
+		{"@abc$[key]", errorValues.ErrInvalidStorageKey, "", ""},
+		{"@a[key]", errorValues.ErrInvalidStorageKey, "", ""},
+		{"@$[key]", errorValues.ErrInvalidStorageKey, "", ""},
+		{"@_[key]", errorValues.ErrInvalidStorageKey, "", ""},
 		{"@$abc[]", nil, "$abc", ""},
 		{"@$abc[key]", nil, "$abc", "key"},
 		{"@abc[key]", nil, "abc", "key"},
@@ -63,7 +64,7 @@ func TestStorageKeyPattern(t *testing.T) {
 
 			matches := StorageKeyPattern.FindAllStringSubmatch(tt.key, -1)
 			if matches == nil {
-				err = ErrInvalidStorageKey
+				err = errorValues.ErrInvalidStorageKey
 			} else {
 				domainKey, itemKey = matches[0][1], matches[0][2]
 			}

@@ -19,12 +19,7 @@
 package common
 
 import (
-	"errors"
-)
-
-var (
-	ErrCantCreateEmptyNode  = errors.New("tree: node index and value must not be empty")
-	ErrNodeAlreadyHasParent = errors.New("tree: node already has a parent")
+	errorValues "github.com/dappley/go-dappley/errors"
 )
 
 type TreeNode struct {
@@ -36,7 +31,7 @@ type TreeNode struct {
 //NewTreeNode creates a new tree node
 func NewTreeNode(value interface{}) (*TreeNode, error) {
 	if value == nil {
-		return nil, ErrCantCreateEmptyNode
+		return nil, errorValues.ErrCantCreateEmptyNode
 	}
 	return &TreeNode{value, nil, nil}, nil
 }
@@ -132,7 +127,7 @@ func (t *TreeNode) AddChild(child *TreeNode) {
 //SetParent sets parent of the tree node
 func (t *TreeNode) SetParent(parent *TreeNode) error {
 	if t.Parent != nil {
-		return ErrNodeAlreadyHasParent
+		return errorValues.ErrNodeAlreadyHasParent
 	}
 	parent.AddChild(t)
 	return nil

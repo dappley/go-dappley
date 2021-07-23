@@ -20,10 +20,10 @@ package logic
 
 import (
 	"context"
-	"errors"
 	"io"
 	"strconv"
 
+	errorValues "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 
@@ -42,21 +42,12 @@ import (
 )
 
 var minerPrivateKey string
-var (
-	ErrInvalidAmount        = errors.New("invalid amount (must be > 0)")
-	ErrInvalidAddress       = errors.New("invalid address")
-	ErrInvalidSenderAddress = errors.New("invalid sender address")
-	ErrInvalidRcverAddress  = errors.New("invalid receiver address")
-	ErrPasswordNotMatch     = errors.New("password is incorrect")
-	ErrPathEmpty            = errors.New("empty path")
-	ErrPasswordEmpty        = errors.New("empty password")
-)
 
 //create a blockchain
 func CreateBlockchain(address account.Address, db storage.Storage, libPolicy lblockchain.LIBPolicy, txPool *transactionpool.TransactionPool, blkSizeLimit int) (*lblockchain.Blockchain, error) {
 	addressAccount := account.NewTransactionAccountByAddress(address)
 	if !addressAccount.IsValid() {
-		return nil, ErrInvalidAddress
+		return nil, errorValues.ErrInvalidAddress
 	}
 
 	bc := lblockchain.CreateBlockchain(address, db, libPolicy, txPool, blkSizeLimit)
@@ -113,7 +104,7 @@ func CreateAccountWithPassphrase(password string, optionalAccountFilePath ...str
 	if len(am.Accounts) > 0 && am.PassPhrase != nil {
 		err = bcrypt.CompareHashAndPassword(am.PassPhrase, []byte(password))
 		if err != nil {
-			return nil, ErrPasswordNotMatch
+			return nil, errorValues.ErrPasswordIncorrect
 		}
 		account := account.NewAccount()
 		am.AddAccount(account)
@@ -149,7 +140,7 @@ func CreateAccount() (*account.Account, error) {
 func GetBalance(address account.Address, bc *lblockchain.Blockchain) (*common.Amount, error) {
 	acc := account.NewTransactionAccountByAddress(address)
 	if acc.IsValid() == false {
-		return common.NewAmount(0), ErrInvalidAddress
+		return common.NewAmount(0), errorValues.ErrInvalidAddress
 	}
 
 	balance := common.NewAmount(0)
@@ -228,10 +219,10 @@ func GetAccountManager(path string) (*wallet.AccountManager, error) {
 func sendProducerChange(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]byte, error) {
 	fromAccount := account.NewTransactionAccountByAddress(sendTxParam.From)
 	if !fromAccount.IsValid() {
-		return nil, ErrInvalidSenderAddress
+		return nil, errorValues.ErrInvalidSenderAddress
 	}
 	if sendTxParam.Amount.Validate() != nil || sendTxParam.Amount.IsZero() {
-		return nil, ErrInvalidAmount
+		return nil, errorValues.ErrInvalidAmount
 	}
 
 	acc := account.NewAccountByKey(sendTxParam.SenderKeyPair)
@@ -261,16 +252,16 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 	fromAccount := account.NewTransactionAccountByAddress(sendTxParam.From)
 	toAccount := account.NewTransactionAccountByAddress(sendTxParam.To)
 	if !fromAccount.IsValid() {
-		return nil, "", ErrInvalidSenderAddress
+		return nil, "", errorValues.ErrInvalidSenderAddress
 	}
 
 	//Contract deployment transaction does not need to validate to address
 	if !toAccount.IsValid() && sendTxParam.Contract == "" {
-		return nil, "", ErrInvalidRcverAddress
+		return nil, "", errorValues.ErrInvalidRcverAddress
 	}
 
 	if sendTxParam.Amount.Validate() != nil || sendTxParam.Amount.IsZero() {
-		return nil, "", ErrInvalidAmount
+		return nil, "", errorValues.ErrInvalidAmount
 	}
 
 	acc := account.NewAccountByKey(sendTxParam.SenderKeyPair)

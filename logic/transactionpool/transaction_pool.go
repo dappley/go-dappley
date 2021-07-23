@@ -21,12 +21,12 @@ package transactionpool
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"sort"
 	"sync"
 
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
+	errorValues "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/lutxo"
 
@@ -177,13 +177,13 @@ func (txPool *TransactionPool) GetAllTransactions(utxoIndex *lutxo.UTXOIndex) []
 }
 
 //PopTransactionWithMostTips pops the transactions with the most tips
-func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *lutxo.UTXOIndex) (*transaction.TransactionNode,error) {
+func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *lutxo.UTXOIndex) (*transaction.TransactionNode, error) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 
 	txNode := txPool.getMaxTipTransaction()
 	if txNode == nil {
-		return txNode,errors.New("txNode is nil")
+		return txNode, errorValues.ErrTxNode
 	}
 	//remove the transaction from tip order
 	txPool.tipOrder = txPool.tipOrder[1:]
@@ -194,11 +194,11 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *lutxo.UTXOI
 	} else {
 		logger.WithError(err).Warn("Transaction Pool: Pop max tip transaction failed!")
 		txPool.removeTransactionNodeAndChildren(txNode.Value)
-		return nil ,nil
+		return nil, nil
 	}
 
 	txPool.pendingTxs = append(txPool.pendingTxs, txNode.Value)
-	return txNode,nil
+	return txNode, nil
 }
 
 //Rollback adds a popped transaction back to the transaction pool. The existing transactions in txpool may be dependent on the input transactionbase. However, the input transaction should never be dependent on any transaction in the current pool
@@ -473,7 +473,6 @@ func (txPool *TransactionPool) insertIntoTipOrder(txNode *transaction.Transactio
 	txPool.tipOrder[index] = hex.EncodeToString(txNode.Value.ID)
 }
 
-
 //getMinTipTransaction gets the transaction.TransactionNode with minimum tip
 func (txPool *TransactionPool) getMaxTipTransaction() *transaction.TransactionNode {
 	txid := txPool.getMaxTipTxid()
@@ -518,7 +517,6 @@ func (txPool *TransactionPool) getMinTipTxid() string {
 	}
 	return txPool.tipOrder[len(txPool.tipOrder)-1]
 }
-
 
 func (txPool *TransactionPool) BroadcastTx(tx *transaction.Transaction) {
 	txPool.netService.BroadcastNormalPriorityCommand(BroadcastTx, tx.ToProto())

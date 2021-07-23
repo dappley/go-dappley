@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	errorValues "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/downloadmanager"
 
 	"github.com/dappley/go-dappley/common/deadline"
@@ -86,8 +87,8 @@ func TestSend(t *testing.T) {
 		{"Deploy contract", common.NewAmount(7), common.NewAmount(0), "dapp_schedule!", common.NewAmount(30000), common.NewAmount(1), common.NewAmount(7), common.NewAmount(0), nil},
 		{"Send with no tip", common.NewAmount(7), common.NewAmount(0), "", common.NewAmount(0), common.NewAmount(0), common.NewAmount(7), common.NewAmount(0), nil},
 		{"Send with tips", common.NewAmount(6), common.NewAmount(2), "", common.NewAmount(0), common.NewAmount(0), common.NewAmount(6), common.NewAmount(2), nil},
-		{"Send zero with no tip", common.NewAmount(0), common.NewAmount(0), "", common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), logic.ErrInvalidAmount},
-		{"Send zero with tips", common.NewAmount(0), common.NewAmount(2), "", common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), logic.ErrInvalidAmount},
+		{"Send zero with no tip", common.NewAmount(0), common.NewAmount(0), "", common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), errorValues.ErrInvalidAmount},
+		{"Send zero with tips", common.NewAmount(0), common.NewAmount(2), "", common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), errorValues.ErrInvalidAmount},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -547,7 +548,7 @@ func TestAddBalance(t *testing.T) {
 		expectedErr  error
 	}{
 		{"Add 5", common.NewAmount(5), common.NewAmount(5), nil},
-		{"Add zero", common.NewAmount(0), common.NewAmount(0), logic.ErrInvalidAmount},
+		{"Add zero", common.NewAmount(0), common.NewAmount(0), errorValues.ErrInvalidAmount},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -627,7 +628,7 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			logic.SetMinerKeyPair(key)
 
 			_, _, err = logic.SendFromMiner(account.NewAddress(tc.address), common.NewAmount(8), bc)
-			assert.Equal(t, logic.ErrInvalidRcverAddress, err)
+			assert.Equal(t, errorValues.ErrInvalidRcverAddress, err)
 		})
 	}
 }
