@@ -430,6 +430,82 @@ func TestVerifyGasTxs(t *testing.T) {
 	}
 }
 
+func TestVerifyGeneratedTXs(t *testing.T) {
+	var txs []*transaction.Transaction
+	var utxosToAdd []*utxo.UTXO
+	db := storage.NewRamStorage()
+	defer db.Close()
+	cache := utxo.NewUTXOCache(db)
+	utxoIndex := lutxo.NewUTXOIndex(cache)
+
+	for i := 0; i < 5; i++ {
+		newTx := &transaction.Transaction{
+			ID: []byte("test"),
+			Vin: []transactionbase.TXInput{
+				{Txid: []byte("test"), Vout: i, Signature: util.GenerateRandomAoB(2), PubKey: util.GenerateRandomAoB(32)},
+			},
+			Vout:     transactionbase.MockTxOutputs(),
+			Tip:      common.NewAmount(1),
+			GasLimit: common.NewAmount(3),
+			GasPrice: common.NewAmount(2),
+		}
+		txs = append(txs, newTx)
+		transactionbase.GenerateFakeTxOutputs()
+
+		newUTXO := utxo.NewUTXO(newTx.Vout[0], newTx.ID, i, utxo.UtxoNormal)
+		utxosToAdd = append(utxosToAdd, newUTXO)
+	}
+	utxoTx := utxo.NewUTXOTx()
+	for _, utxo := range utxosToAdd {
+		utxoTx.PutUtxo(utxo)
+	}
+	firstPubkeyHash := utxoTx.Indices[utxosToAdd[0].GetUTXOKey()].PubKeyHash.String()
+	cache.AddUtxos(&utxoTx, firstPubkeyHash)
+
+	tests := []struct {
+		name         string
+		utxoIndex    *lutxo.UTXOIndex
+		candidates   []*transaction.Transaction
+		generatedTXs []*transaction.Transaction
+		expectedRes  bool
+	}{
+		{
+			name:         "same elements in candidates and generatedTXs",
+			utxoIndex:    utxoIndex,
+			candidates:   txs,
+			generatedTXs: txs,
+			expectedRes:  true,
+		},
+		{
+			name:         "generatedTXs has elements not in candidates",
+			utxoIndex:    utxoIndex,
+			candidates:   []*transaction.Transaction{txs[0], txs[1], txs[4]},
+			generatedTXs: []*transaction.Transaction{txs[0], txs[1], txs[3], txs[4]},
+			expectedRes:  true,
+		},
+		{
+			name:         "candidates has elements not in generatedTXs",
+			utxoIndex:    utxoIndex,
+			candidates:   []*transaction.Transaction{txs[0], txs[1], txs[2], txs[4]},
+			generatedTXs: []*transaction.Transaction{txs[0], txs[1], txs[3], txs[4]},
+			expectedRes:  false,
+		},
+		{
+			name:         "empty candidates and generatedTXs",
+			utxoIndex:    utxoIndex,
+			candidates:   []*transaction.Transaction{},
+			generatedTXs: []*transaction.Transaction{},
+			expectedRes:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := verifyGeneratedTXs(tt.utxoIndex, tt.candidates, tt.generatedTXs)
+			assert.Equal(t, tt.expectedRes, result)
+		})
+	}
+}
+
 func NewTransactionByVin(vinTxId []byte, vinVout int, vinPubkey []byte, voutValue uint64, voutPubKeyHash account.PubKeyHash, tip uint64) transaction.Transaction {
 	tx := transaction.Transaction{
 		ID: nil,
