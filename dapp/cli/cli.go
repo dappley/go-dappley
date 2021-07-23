@@ -998,21 +998,20 @@ func createAccount(ctx context.Context, c interface{}, flags cmdFlags) *account.
 			return nil
 		}
 		acc = account
-	}
+	} else {
+		passphrase = prompter.GetPassPhrase("Please input the password: ", false)
+		if passphrase == "" {
+			fmt.Println("Error: password should not be empty!")
+			return nil
+		}
+		account, err := logic.CreateAccountWithPassphrase(passphrase)
+		if err != nil {
+			fmt.Println("Error:", err.Error())
+			return nil
+		}
 
-	passphrase = prompter.GetPassPhrase("Please input the password: ", false)
-	if passphrase == "" {
-		fmt.Println("Error: password should not be empty!")
-		return nil
+		acc = account
 	}
-	account, err := logic.CreateAccountWithPassphrase(passphrase)
-	if err != nil {
-		fmt.Println("Error:", err.Error())
-		return nil
-	}
-
-	acc = account
-
 	return acc
 }
 
