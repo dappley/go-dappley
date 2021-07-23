@@ -59,7 +59,7 @@ const (
 	peerConfDirPath  = "../dapp/"
 	defaultPassword  = "password"
 	size1kB          = 1024
-	version          = "v0.5.0"
+	version          = "v0.6.0"
 )
 
 func main() {

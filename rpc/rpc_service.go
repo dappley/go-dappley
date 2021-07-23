@@ -22,6 +22,7 @@ import (
 	"github.com/dappley/go-dappley/consensus"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/pkg/errors"
 	"io"
 	"strings"
 	"sync"
@@ -288,8 +289,8 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	}
 
 	var generatedContractAddress string
-	if adaptedTx.IsContract(){
-		if adaptedTx.GasPrice.Cmp(common.NewAmount(0)) < 0 {
+	if adaptedTx.IsContract() {
+		if adaptedTx.GasPrice.Cmp(common.NewAmount(0)) < 0 || tx.GasPrice.Cmp(common.NewAmount(0)) == ltransaction.GasConsumption {
 			return nil, status.Error(codes.InvalidArgument, "gas price error, must be a positive number")
 		}
 
@@ -301,7 +302,6 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 			}).Error("Smart Contract Deployed Failed!")
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-
 		generatedContractAddress = ltransaction.NewTxContract(tx).GetContractAddress().String()
 	}
 
@@ -331,10 +331,8 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	rpcService.mutex.Unlock()
 	bc.GetTxPool().BroadcastTx(tx)
 
-	if generatedContractAddress!="" {
-		logger.WithFields(logger.Fields{
-			"Contract Address": generatedContractAddress,
-		}).Info("Smart Contract has been received.")
+	if generatedContractAddress != "" {
+		logger.WithFields(logger.Fields{"Contract Address": generatedContractAddress}).Info("Smart Contract has been received.")
 	}
 
 	return &rpcpb.SendTransactionResponse{GeneratedContractAddress: generatedContractAddress}, nil
@@ -513,7 +511,9 @@ func (rpcService *RpcService) RpcContractQuery(ctx context.Context, in *rpcpb.Co
 		return nil, status.Error(codes.InvalidArgument, "contract query params error")
 	}
 	scState := scState.NewScState(rpcService.GetBlockchain().GetUtxoCache())
-	resultValue := scState.GetStateValue(contractAddr, queryKey)
-
+	resultValue, exist := scState.GetStateValue(contractAddr, queryKey)
+	if !exist {
+		return nil, errors.New("key does not exist.")
+	}
 	return &rpcpb.ContractQueryResponse{Key: queryKey, Value: resultValue}, nil
 }
