@@ -203,6 +203,90 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	assert.Equal(t, blk.GetHash(), hash.Hash(bc.GetTailBlockHash()))
 }
 
+func TestBlockchain_GetMaxHeight(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	defer s.Close()
+
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	assert.Equal(t, uint64(0), bc.GetMaxHeight())
+
+	// Add new block
+	genesis, err := bc.GetTailBlock()
+	assert.Nil(t, err)
+	blk1 := block.NewBlock([]*transaction.Transaction{}, genesis, "")
+	blk1.SetHash([]byte("hash1"))
+	blk1.SetHeight(5)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk1))
+	assert.Nil(t, err)
+	assert.Equal(t, uint64(5), bc.GetMaxHeight())
+
+	blk2 := block.NewBlock([]*transaction.Transaction{}, blk1, "")
+	blk2.SetHash([]byte("hash2"))
+	blk2.SetHeight(1)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk2))
+	assert.Nil(t, err)
+	assert.Equal(t, uint64(1), bc.GetMaxHeight())
+}
+
+func TestBlockchain_GetLIBHeight(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	defer s.Close()
+
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	assert.Equal(t, uint64(0), bc.GetLIBHeight())
+	genesis, err := bc.GetTailBlock()
+	assert.Nil(t, err)
+
+	blk1 := block.NewBlock([]*transaction.Transaction{}, genesis, "")
+	blk1.SetHash([]byte("hash1"))
+	blk1.SetHeight(5)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk1))
+	assert.Equal(t, uint64(0), bc.GetLIBHeight())
+	assert.Nil(t, err)
+	bc.SetLIBHash(blk1.GetHash())
+	assert.Equal(t, uint64(5), bc.GetLIBHeight())
+	bc.SetLIBHash(genesis.GetHash())
+	assert.Equal(t, uint64(0), bc.GetLIBHeight())
+}
+
+func TestBlockchain_GetBlockByHash(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	defer s.Close()
+
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	genesis, err := bc.GetTailBlock()
+	assert.Nil(t, err)
+
+	// Add new blocks
+	blk1 := block.NewBlock([]*transaction.Transaction{}, genesis, "")
+	blk1.SetHash([]byte("hash1"))
+	blk1.SetHeight(1)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk1))
+	assert.Nil(t, err)
+
+	blk2 := block.NewBlock([]*transaction.Transaction{}, blk1, "")
+	blk2.SetHash([]byte("hash2"))
+	blk2.SetHeight(2)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk2))
+	assert.Nil(t, err)
+
+	result, err := bc.GetBlockByHash(genesis.GetHash())
+	assert.Equal(t, genesis.GetHash(), result.GetHash())
+	assert.Nil(t, err)
+	result, err = bc.GetBlockByHash(blk1.GetHash())
+	assert.Equal(t, blk1.GetHash(), result.GetHash())
+	assert.Nil(t, err)
+	result, err = bc.GetBlockByHash(blk2.GetHash())
+	assert.Equal(t, blk2.GetHash(), result.GetHash())
+	assert.Nil(t, err)
+}
+
 func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 	//create a new block chain
 
