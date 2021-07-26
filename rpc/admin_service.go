@@ -61,7 +61,7 @@ func (adminRpcService *AdminRpcService) RpcChangeProducer(ctx context.Context, i
 	addresses := in.GetAddresses()
 	height := in.GetHeight()
 	adminRpcService.mutex.Lock()
-	_, err := logic.SendProducerChangeTX(addresses, height, adminRpcService.bm.Getblockchain())
+	_, err := logic.SendProducerModifyTX(addresses, height, adminRpcService.bm.Getblockchain(), 1)
 	adminRpcService.mutex.Unlock()
 	if err != nil {
 		switch err {
@@ -83,7 +83,7 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 	addresses := in.GetAddresses()
 	height := in.GetHeight()
 	adminRpcService.mutex.Lock()
-	_, err := logic.SendProducerAddTX(addresses, height, adminRpcService.bm.Getblockchain())
+	_, err := logic.SendProducerModifyTX(addresses, height, adminRpcService.bm.Getblockchain(), 2)
 	adminRpcService.mutex.Unlock()
 	if err != nil {
 		switch err {
@@ -103,7 +103,7 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 func (adminRpcService *AdminRpcService) RpcDeleteProducer(ctx context.Context, in *rpcpb.DeleteProducerRequest) (*rpcpb.DeleteProducerResponse, error) {
 	height := in.GetHeight()
 	adminRpcService.mutex.Lock()
-	_, err := logic.SendProducerDeleteTX(height, adminRpcService.bm.Getblockchain())
+	_, err := logic.SendProducerModifyTX("", height, adminRpcService.bm.Getblockchain(), 3)
 	adminRpcService.mutex.Unlock()
 	if err != nil {
 		switch err {

@@ -187,21 +187,9 @@ func ChangeProducers(address string, height uint64, bm *lblockchain.BlockchainMa
 	bm.SetNewDynasty(minerAccount.GetAddress().String(), address, height, kind)
 }
 
-func SendProducerAddTX(addresses string, height uint64, bc *lblockchain.Blockchain) ([]byte, error) {
+func SendProducerModifyTX(addresses string, height uint64, bc *lblockchain.Blockchain, kind int) ([]byte, error) {
 	minerAccount := account.NewAccountByPrivateKey(minerPrivateKey)
-	sendTxParam := transaction.NewSendTxParam(minerAccount.GetAddress(), minerAccount.GetKeyPair(), minerAccount.GetAddress(), common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "{ \"height\":"+strconv.FormatUint(height, 10)+",\"addresses\":\""+addresses+"\",\"kind\":2}")
-	return sendProducerChange(sendTxParam, bc)
-}
-
-func SendProducerDeleteTX(height uint64, bc *lblockchain.Blockchain) ([]byte, error) {
-	minerAccount := account.NewAccountByPrivateKey(minerPrivateKey)
-	sendTxParam := transaction.NewSendTxParam(minerAccount.GetAddress(), minerAccount.GetKeyPair(), minerAccount.GetAddress(), common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "{ \"height\":"+strconv.FormatUint(height, 10)+",\"addresses\":\""+"\",\"kind\":3}")
-	return sendProducerChange(sendTxParam, bc)
-}
-
-func SendProducerChangeTX(addresses string, height uint64, bc *lblockchain.Blockchain) ([]byte, error) {
-	minerAccount := account.NewAccountByPrivateKey(minerPrivateKey)
-	sendTxParam := transaction.NewSendTxParam(minerAccount.GetAddress(), minerAccount.GetKeyPair(), minerAccount.GetAddress(), common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "{ \"height\":"+strconv.FormatUint(height, 10)+",\"addresses\":\""+addresses+"\",\"kind\":1}")
+	sendTxParam := transaction.NewSendTxParam(minerAccount.GetAddress(), minerAccount.GetKeyPair(), minerAccount.GetAddress(), common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "{ \"height\":"+strconv.FormatUint(height, 10)+",\"addresses\":\""+addresses+"\",\"kind\":"+strconv.Itoa(kind)+"}")
 	return sendProducerChange(sendTxParam, bc)
 }
 
