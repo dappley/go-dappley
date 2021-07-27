@@ -21,6 +21,10 @@ package lblockchain
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"github.com/dappley/go-dappley/core/transactionbase"
+	blockchainMock "github.com/dappley/go-dappley/logic/lblockchain/mocks"
+	"github.com/dappley/go-dappley/util"
 	"os"
 	"sync"
 	"testing"
@@ -285,6 +289,178 @@ func TestBlockchain_GetBlockByHash(t *testing.T) {
 	result, err = bc.GetBlockByHash(blk2.GetHash())
 	assert.Equal(t, blk2.GetHash(), result.GetHash())
 	assert.Nil(t, err)
+}
+
+func TestBlockchain_Iterator(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	defer s.Close()
+
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	libPolicy := &blockchainMock.LIBPolicy{}
+	libPolicy.On("GetProducers").Return(nil)
+	libPolicy.On("GetMinConfirmationNum").Return(6)
+	libPolicy.On("IsBypassingLibCheck").Return(true)
+	bc := CreateBlockchain(addr, s, libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	genesis, err := bc.GetTailBlock()
+	assert.Nil(t, err)
+
+	// Add new block
+	blk1 := block.NewBlock([]*transaction.Transaction{}, genesis, "")
+	blk1.SetHash([]byte("hash1"))
+	blk1.SetHeight(1)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk1))
+
+	expected := &Blockchain{
+		blockchain.NewBlockchain(blk1.GetHash(), genesis.GetHash()),
+		s,
+		bc.utxoCache,
+		libPolicy,
+		nil,
+		nil,
+		1000000,
+		bc.mutex,
+	}
+	assert.Equal(t, expected, bc.Iterator())
+}
+
+func TestBlockchain_String(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	defer s.Close()
+
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	genesis, err := bc.GetTailBlock()
+	assert.Nil(t, err)
+
+	txs := []*transaction.Transaction{
+		{
+			ID: []byte("test1"),
+			Vin: []transactionbase.TXInput{
+				{
+					Txid:      []byte("vin1"),
+					Vout:      0,
+					Signature: []byte("signature"),
+					PubKey:    account.PubKeyHash([]byte{0xde, 0xad}),
+				},
+			},
+			Vout: []transactionbase.TXOutput{
+				{
+					Value:      common.NewAmount(10),
+					PubKeyHash: account.PubKeyHash([]byte{0xbe, 0xef}),
+					Contract:   "testcontract",
+				},
+			},
+			Tip:        common.NewAmount(1),
+			GasLimit:   common.NewAmount(30000),
+			GasPrice:   common.NewAmount(2),
+			CreateTime: 99,
+			Type:       transaction.TxTypeNormal,
+		},
+	}
+
+	// Add new blocks
+	blk1 := block.NewBlock(txs, genesis, "hello")
+	blk1.SetHash([]byte("hash1"))
+	blk1.SetHeight(1)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk1))
+	assert.Nil(t, err)
+
+	expected := "============ Block 36383631373336383331 ============\n" +
+		"Height: 1\nPrev. block: 61653333363636666433316666366664333461653837633863333161316661643030653266353962643537373736396332356466653632653033393934623166\n\n--- Transaction: 7465737431\n     " +
+		"Input 0:\n       TXID:      76696e31\n       Out:       0\n       Signature: 7369676e6174757265\n       PubKey:    dead\n     Output: 0\n       Value:  10\n       Script: beef\n       Contract: testcontract\n     GasLimit: 30000\n     GasPrice: 2\n     Type: 1\n\n\n\n" +
+		"============ Block 61653333363636666433316666366664333461653837633863333161316661643030653266353962643537373736396332356466653632653033393934623166 ============\n" +
+		"Height: 0\nPrev. block: \n\n--- Transaction: 1e3cb55cd3ae308b894a8a85869fb940e2c91e8bd115502f90f66e5abc1da287\n" +
+		"     Input 0:\n       TXID:      \n       Out:       -1\n       Signature: \n       PubKey:    48656c6c6f20776f726c64\n     Output: 0\n       Value:  10000000000\n       Script: 003b21529355fe27c192eeda99a8330caaf16f5f0a\n       Contract: \n     GasLimit: 0\n     GasPrice: 0\n     Type: 3\n\n\n\n"
+	assert.Equal(t, expected, bc.String())
+	fmt.Println(bc.String())
+}
+
+func TestBlockchain_AddBlockToDb(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	defer s.Close()
+
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	genesis, err := bc.GetTailBlock()
+	assert.Nil(t, err)
+
+	txs := []*transaction.Transaction{
+		{
+			ID:         []byte("test1"),
+			Vin:        transactionbase.MockTxInputs(),
+			Vout:       transactionbase.MockTxOutputs(),
+			Tip:        common.NewAmount(1),
+			GasLimit:   common.NewAmount(30000),
+			GasPrice:   common.NewAmount(2),
+			CreateTime: 0,
+			Type:       transaction.TxTypeNormal,
+		},
+		{
+			ID:         []byte("test2"),
+			Vin:        transactionbase.MockTxInputs(),
+			Vout:       transactionbase.MockTxOutputs(),
+			Tip:        common.NewAmount(15),
+			GasLimit:   common.NewAmount(200),
+			GasPrice:   common.NewAmount(1),
+			CreateTime: 100000,
+			Type:       transaction.TxTypeReward,
+		},
+	}
+
+	blk := block.NewBlock(txs, genesis, "")
+	blk.SetHash([]byte("hash1"))
+	blk.SetHeight(1)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
+	assert.Nil(t, err)
+
+	bc.AddBlockToDb(blk)
+
+	// check that blk is stored in db
+	result, err := bc.db.Get(blk.GetHash())
+	assert.Equal(t, blk.Serialize(), result)
+	assert.Nil(t, err)
+
+	// check that blk hash is stored in db
+	result, err = bc.db.Get(util.UintToHex(blk.GetHeight()))
+	assert.Equal(t, []uint8("hash1"), result)
+	assert.Nil(t, err)
+
+	// check that blk's txs are stored in db
+	txJournal1 := transaction.NewTxJournal(txs[0].ID, txs[0].Vout)
+	expected, err := txJournal1.SerializeJournal()
+	assert.Nil(t, err)
+	result, err = bc.db.Get([]byte("tx_journal_test1"))
+	assert.Equal(t, expected, result)
+	assert.Nil(t, err)
+
+	txJournal2 := transaction.NewTxJournal(txs[1].ID, txs[1].Vout)
+	expected, err = txJournal2.SerializeJournal()
+	assert.Nil(t, err)
+	result, err = bc.db.Get([]byte("tx_journal_test2"))
+	assert.Equal(t, expected, result)
+	assert.Nil(t, err)
+}
+
+func TestBlockchain_setTailBlockHash(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	defer s.Close()
+
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+
+	testHash := []byte("test")
+	err := bc.setTailBlockHash(testHash)
+	assert.Nil(t, err)
+	// check db
+	storedHash, err := bc.db.Get(tailBlockHash)
+	assert.Equal(t, testHash, storedHash)
+	assert.Nil(t, err)
+	// check bc.tailBlockHash
+	assert.Equal(t, hash.Hash(testHash), bc.GetTailBlockHash())
 }
 
 func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
