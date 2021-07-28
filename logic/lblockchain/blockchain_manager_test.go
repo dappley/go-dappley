@@ -1,26 +1,24 @@
 package lblockchain
 
 import (
-	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/core/blockproducerinfo"
-	"testing"
-
-	"github.com/dappley/go-dappley/core/blockchain"
-	"github.com/dappley/go-dappley/logic/ltransaction"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/common/hash"
+	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/blockchain"
+	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/lblock"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"testing"
 
 	"github.com/stretchr/testify/require"
 
@@ -337,6 +335,82 @@ func TestBlockchainManager_SetNewDynastyByString(t *testing.T) {
 	bcm.CheckDynast(2)
 	expected = []string{"newaddress1", "address2", "newaddress2"}
 	assert.Equal(t, expected, bcm.consensus.(*consensus.DPOS).GetProducers())
+}
+
+func TestBlockchainManager_GetSubscribedTopics(t *testing.T) {
+	// create BlockChain
+	bc := CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, transactionpool.NewTransactionPool(nil, 100), 100)
+	_, err := bc.GetTailBlock()
+	require.Nil(t, err)
+
+	bp := blockchain.NewBlockPool(nil)
+	bcm := NewBlockchainManager(bc, bp, nil, nil)
+
+	expected := []string{
+		SendBlock,
+		RequestBlock,
+	}
+	assert.Equal(t, expected, bcm.GetSubscribedTopics())
+}
+
+func TestBlockchainManager_VerifyBlock(t *testing.T) {
+	txs := []*transaction.Transaction{
+		{
+			ID:  []byte{0x74},
+			Vin: []transactionbase.TXInput{},
+			Vout: []transactionbase.TXOutput{
+				{
+					Value:      common.NewAmount(10),
+					PubKeyHash: account.PubKeyHash{0x5a, 0xf8, 0xbf, 0x23, 0x39, 0x70, 0xf0, 0x9b, 0x65, 0x31, 0x98, 0xca, 0xed, 0x6c, 0xb6, 0x13, 0xb, 0x77, 0xd, 0x6f, 0x5},
+					Contract:   "",
+				},
+			},
+			Tip:        common.NewAmount(1),
+			GasLimit:   common.NewAmount(1),
+			GasPrice:   common.NewAmount(30000),
+			CreateTime: 0,
+			Type:       transaction.TxTypeCoinbase,
+		},
+	}
+
+	// create BlockChain
+	bc := CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, transactionpool.NewTransactionPool(nil, 100), 100)
+	blk, err := bc.GetTailBlock()
+	require.Nil(t, err)
+
+	acc := account.NewAccount()
+	bp := blockchain.NewBlockPool(nil)
+	producerInfo := blockproducerinfo.NewBlockProducerInfo(acc.GetAddress().String())
+	conss := consensus.NewDPOS(producerInfo)
+	conss.SetDynasty(consensus.NewDynasty([]string{"dc6YApYeNS2MLyrKKvFVDYMGTy7RGQmRzm"}, 1, 99))
+	signKey := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	conss.SetKey(signKey)
+	bcm := NewBlockchainManager(bc, bp, nil, conss)
+
+	// bad hash
+	b1 := block.NewBlockWithRawInfo([]byte("invalid hash"), blk.GetHash(), 1, 0, 1, nil)
+	assert.False(t, bcm.VerifyBlock(b1))
+
+	// consensus validate failed
+	b2 := block.NewBlockWithRawInfo([]byte{}, blk.GetHash(), 2, 0, 2, []*transaction.Transaction{})
+	b2.SetHash(lblock.CalculateHash(b2))
+	success := lblock.SignBlock(b2, signKey)
+	assert.True(t, success)
+	assert.False(t, bcm.VerifyBlock(b2))
+
+	// valid block
+	b3 := block.NewBlockWithRawInfo([]byte{}, blk.GetHash(), 3, 0, 3, txs)
+	b3.SetHash(lblock.CalculateHash(b3))
+	success = lblock.SignBlock(b3, signKey)
+	assert.True(t, success)
+	assert.True(t, bcm.VerifyBlock(b3))
+
+	// double-minting (b4 has same timestamp as b3)
+	b4 := block.NewBlockWithRawInfo([]byte{}, b3.GetHash(), 4, 0, 4, txs)
+	b4.SetHash(lblock.CalculateHash(b4))
+	success = lblock.SignBlock(b4, signKey)
+	assert.True(t, success)
+	assert.False(t, bcm.VerifyBlock(b4))
 }
 
 func TestCopyAndRevertUtxos(t *testing.T) {
