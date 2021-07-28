@@ -342,7 +342,8 @@ func TestTransaction_Sign(t *testing.T) {
 		[]byte{0xe6, 0xe6, 0xda, 0xc5, 0xf1, 0xc, 0xb, 0xb0, 0x85, 0x44, 0xc2, 0xb1, 0xdc, 0xe2, 0x19, 0x5a, 0x59, 0xf4, 0x4c, 0xad, 0xf8, 0x50, 0x68, 0x93, 0xe0, 0x1f, 0xdb, 0x72, 0x76, 0xdc, 0xa0, 0xa5},
 		[]byte{0xc4, 0x3, 0x9, 0xbb, 0xa6, 0xfa, 0x9e, 0xe6, 0x1, 0xc6, 0xe4, 0x5f, 0x7e, 0x73, 0xc9, 0x3b, 0xc1, 0x2a, 0x8e, 0x35, 0xd2, 0xf, 0x74, 0x99, 0x42, 0x3b, 0x53, 0xb7, 0xac, 0x67, 0xe0, 0x4a},
 	}
-	tx.Sign(*privKey, utxos)
+	err := tx.Sign(*privKey, utxos)
+	assert.Nil(t, err)
 	for i, vin := range tx.Vin {
 		expectedSignature, _ := secp256k1.Sign(bytesToSign[i], privKeyBytes)
 		assert.Equal(t, expectedSignature, vin.Signature)
@@ -666,6 +667,118 @@ func TestTransaction_GetDefaultFromTransactionAccount(t *testing.T) {
 
 	assert.Equal(t, expectedAddr, result.GetAddress())
 	assert.Equal(t, expectedPkh, result.GetPubKeyHash())
+}
+
+func TestTransaction_VerifySignatures(t *testing.T) {
+	keyPair := account.NewAccount().GetKeyPair()
+	tx := &Transaction{
+		ID: []byte{0x66},
+		Vin: []transactionbase.TXInput{
+			{Txid: []byte{0x12, 0x34}, Vout: 0, Signature: nil, PubKey: keyPair.GetPublicKey()},
+			{Txid: []byte{0x56, 0x78}, Vout: 1, Signature: nil, PubKey: keyPair.GetPublicKey()},
+		},
+		Vout:     []transactionbase.TXOutput{},
+		Tip:      common.NewAmount(5),
+		GasLimit: common.NewAmount(1024),
+		GasPrice: common.NewAmount(1),
+		Type:     TxTypeNormal,
+	}
+	utxos := []*utxo.UTXO{
+		{
+			TXOutput: transactionbase.TXOutput{Value: common.NewAmount(10), PubKeyHash: []byte{}, Contract: ""},
+			Txid:     []byte{0x20, 0x21},
+			TxIndex:  0,
+			UtxoType: 0,
+		},
+		{
+			TXOutput: transactionbase.TXOutput{Value: common.NewAmount(20), PubKeyHash: []byte{}, Contract: ""},
+			Txid:     []byte{0x22, 0x23},
+			TxIndex:  1,
+			UtxoType: 0,
+		},
+	}
+	err := tx.Sign(keyPair.GetPrivateKey(), utxos)
+	assert.Nil(t, err)
+	success, err := tx.VerifySignatures(utxos)
+	assert.True(t, success)
+	assert.Nil(t, err)
+
+	tx.Vin[0].Signature = nil
+	success, err = tx.VerifySignatures(utxos)
+	assert.False(t, success)
+	assert.Equal(t, errors.New("Transaction: Signatures is empty"), err)
+
+	tx.Vin[0].Signature = []byte("invalid")
+	success, err = tx.VerifySignatures(utxos)
+	assert.False(t, success)
+	assert.Equal(t, errors.New("Transaction: Signatures is invalid"), err)
+}
+
+func TestTransaction_VerifyPublicKeyHash(t *testing.T) {
+	acc := account.NewAccount()
+	tx := &Transaction{
+		ID: []byte{0x66},
+		Vin: []transactionbase.TXInput{
+			{Txid: []byte{0x12, 0x34}, Vout: 0, Signature: nil, PubKey: acc.GetKeyPair().GetPublicKey()},
+			{Txid: []byte{0x56, 0x78}, Vout: 1, Signature: nil, PubKey: acc.GetKeyPair().GetPublicKey()},
+		},
+		Vout:     []transactionbase.TXOutput{},
+		Tip:      common.NewAmount(5),
+		GasLimit: common.NewAmount(1024),
+		GasPrice: common.NewAmount(1),
+		Type:     TxTypeNormal,
+	}
+	utxos := []*utxo.UTXO{
+		{
+			TXOutput: transactionbase.TXOutput{Value: common.NewAmount(10), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
+			Txid:     []byte{0x20, 0x21},
+			TxIndex:  0,
+			UtxoType: 0,
+		},
+		{
+			TXOutput: transactionbase.TXOutput{Value: common.NewAmount(20), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
+			Txid:     []byte{0x22, 0x23},
+			TxIndex:  1,
+			UtxoType: 0,
+		},
+	}
+	err := tx.Sign(acc.GetKeyPair().GetPrivateKey(), utxos)
+	assert.Nil(t, err)
+
+	// successful
+	success, err := tx.VerifyPublicKeyHash(utxos)
+	assert.True(t, success)
+	assert.Nil(t, err)
+
+	// nil pubkeyhash in utxo
+	utxos[0].PubKeyHash = nil
+	success, err = tx.VerifyPublicKeyHash(utxos)
+	assert.False(t, success)
+	assert.Equal(t, errors.New("Transaction: prevUtxos not found"), err)
+	utxos[0].PubKeyHash = acc.GetPubKeyHash()
+
+	// wrong vin pubkey
+	tx.Vin[0].PubKey = []byte("invalid")
+	success, err = tx.VerifyPublicKeyHash(utxos)
+	assert.False(t, success)
+	assert.Equal(t, errors.New("public key not correct"), err)
+	tx.Vin[0].PubKey = acc.GetKeyPair().GetPublicKey()
+
+	// pubkeyhash does not match
+	acc2 := account.NewAccount()
+	tx.Vin[0].PubKey = acc2.GetKeyPair().GetPublicKey()
+	success, err = tx.VerifyPublicKeyHash(utxos)
+	assert.False(t, success)
+	assert.Equal(t, errors.New("the pubic key hash does not match"), err)
+	tx.Vin[0].PubKey = acc.GetKeyPair().GetPublicKey()
+
+	// contract
+	contractAcc := account.NewContractTransactionAccount()
+	utxos[0].PubKeyHash = contractAcc.GetPubKeyHash()
+	tx.Vin[0].PubKey = nil
+	success, err = tx.VerifyPublicKeyHash(utxos)
+	assert.True(t, success)
+	assert.Nil(t, err)
 }
 
 func TestTransaction_CheckVinNum(t *testing.T) {
