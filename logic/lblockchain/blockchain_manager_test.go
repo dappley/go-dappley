@@ -1,6 +1,8 @@
 package lblockchain
 
 import (
+	"github.com/dappley/go-dappley/consensus"
+	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"testing"
 
 	"github.com/dappley/go-dappley/core/blockchain"
@@ -280,6 +282,61 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBlockchainManager_SetNewDynasty(t *testing.T) {
+	// create BlockChain
+	bc := CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, transactionpool.NewTransactionPool(nil, 100), 100)
+	_, err := bc.GetTailBlock()
+	require.Nil(t, err)
+
+	bp := blockchain.NewBlockPool(nil)
+
+	producerInfo := blockproducerinfo.NewBlockProducerInfo("address")
+	conss := consensus.NewDPOS(producerInfo)
+	conss.SetDynasty(consensus.NewDynasty([]string{"address1", "address2", "address3"}, 3, 99))
+	bcm := NewBlockchainManager(bc, bp, nil, conss)
+	assert.Equal(t, []string{"address1", "address2", "address3"}, bcm.consensus.(*consensus.DPOS).GetProducers())
+
+	bcm.SetNewDynasty("address1", "newaddress1", 1, 1) // type 1: change producer
+	bcm.SetNewDynasty("address2", "newaddress2", 1, 2) // type 2: append producer
+	bcm.SetNewDynasty("address3", "newaddress3", 2, 3) // type 3: delete producer
+
+	bcm.CheckDynast(1)
+	expected := []string{"newaddress1", "address2", "address3", "newaddress2"}
+	assert.Equal(t, expected, bcm.consensus.(*consensus.DPOS).GetProducers())
+	bcm.CheckDynast(2)
+	expected = []string{"newaddress1", "address2", "newaddress2"}
+	assert.Equal(t, expected, bcm.consensus.(*consensus.DPOS).GetProducers())
+}
+
+func TestBlockchainManager_SetNewDynastyByString(t *testing.T) {
+	// create BlockChain
+	bc := CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, transactionpool.NewTransactionPool(nil, 100), 100)
+	_, err := bc.GetTailBlock()
+	require.Nil(t, err)
+
+	bp := blockchain.NewBlockPool(nil)
+
+	producerInfo := blockproducerinfo.NewBlockProducerInfo("address")
+	conss := consensus.NewDPOS(producerInfo)
+	conss.SetDynasty(consensus.NewDynasty([]string{"address1", "address2", "address3"}, 3, 99))
+	bcm := NewBlockchainManager(bc, bp, nil, conss)
+	assert.Equal(t, []string{"address1", "address2", "address3"}, bcm.consensus.(*consensus.DPOS).GetProducers())
+
+	json1 := `{"height":1,"addresses":"newaddress1","kind":1}`
+	json2 := `{"height":1,"addresses":"newaddress2","kind":2}`
+	json3 := `{"height":2,"addresses":"newaddress3","kind":3}`
+	bcm.SetNewDynastyByString(json1, "address1") // type 1: change producer
+	bcm.SetNewDynastyByString(json2, "address2") // type 2: append producer
+	bcm.SetNewDynastyByString(json3, "address3") // type 3: delete producer
+
+	bcm.CheckDynast(1)
+	expected := []string{"newaddress1", "address2", "address3", "newaddress2"}
+	assert.Equal(t, expected, bcm.consensus.(*consensus.DPOS).GetProducers())
+	bcm.CheckDynast(2)
+	expected = []string{"newaddress1", "address2", "newaddress2"}
+	assert.Equal(t, expected, bcm.consensus.(*consensus.DPOS).GetProducers())
 }
 
 func TestCopyAndRevertUtxos(t *testing.T) {

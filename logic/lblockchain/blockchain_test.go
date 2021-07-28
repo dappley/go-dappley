@@ -463,6 +463,69 @@ func TestBlockchain_setTailBlockHash(t *testing.T) {
 	assert.Equal(t, hash.Hash(testHash), bc.GetTailBlockHash())
 }
 
+func TestBlockchain_IsLIB(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	defer s.Close()
+
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	genesis, err := bc.GetTailBlock()
+	assert.Nil(t, err)
+
+	// Add blocks to blockchain
+	blk1 := block.NewBlock([]*transaction.Transaction{}, genesis, "")
+	blk1.SetHash([]byte("hash1"))
+	blk1.SetHeight(1)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk1))
+	assert.Nil(t, err)
+
+	blk2 := block.NewBlock([]*transaction.Transaction{}, blk1, "")
+	blk2.SetHash([]byte("hash2"))
+	blk2.SetHeight(2)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk2))
+	assert.Nil(t, err)
+
+	// blk3 is not added to the blockchain
+	blk3 := block.NewBlock([]*transaction.Transaction{}, blk2, "")
+	blk3.SetHash([]byte("hash3"))
+	blk3.SetHeight(3)
+
+	bc.SetLIBHash(blk1.GetHash())
+	assert.True(t, bc.IsLIB(genesis)) // blocks exist and isLIB
+	assert.True(t, bc.IsLIB(blk1))
+	assert.False(t, bc.IsLIB(blk2)) // block exists but !isLIB
+	assert.False(t, bc.IsLIB(blk3)) // block does not exist
+}
+
+func TestBlockchain_DeleteBlockByHash(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	defer s.Close()
+
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	genesis, err := bc.GetTailBlock()
+	assert.Nil(t, err)
+
+	// Add block to blockchain
+	blk1 := block.NewBlock([]*transaction.Transaction{}, genesis, "")
+	blk1.SetHash([]byte("hash1"))
+	blk1.SetHeight(1)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk1))
+	assert.Nil(t, err)
+
+	// make sure block was added properly
+	result, err := bc.GetBlockByHash(blk1.GetHash())
+	assert.Equal(t, blk1.GetHash(), result.GetHash())
+	assert.Nil(t, err)
+
+	bc.DeleteBlockByHash(blk1.GetHash())
+	result, err = bc.GetBlockByHash(blk1.GetHash())
+	assert.Nil(t, result)
+	assert.Equal(t, ErrBlockDoesNotExist, err)
+}
+
 func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 	//create a new block chain
 
