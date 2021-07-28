@@ -998,21 +998,20 @@ func createAccount(ctx context.Context, c interface{}, flags cmdFlags) *account.
 			return nil
 		}
 		acc = account
-	}
+	} else {
+		passphrase = prompter.GetPassPhrase("Please input the password: ", false)
+		if passphrase == "" {
+			fmt.Println("Error: password should not be empty!")
+			return nil
+		}
+		account, err := logic.CreateAccountWithPassphrase(passphrase)
+		if err != nil {
+			fmt.Println("Error:", err.Error())
+			return nil
+		}
 
-	passphrase = prompter.GetPassPhrase("Please input the password: ", false)
-	if passphrase == "" {
-		fmt.Println("Error: password should not be empty!")
-		return nil
+		acc = account
 	}
-	account, err := logic.CreateAccountWithPassphrase(passphrase)
-	if err != nil {
-		fmt.Println("Error:", err.Error())
-		return nil
-	}
-
-	acc = account
-
 	return acc
 }
 
@@ -1169,8 +1168,10 @@ func clideleteProducerCommandHandler(ctx context.Context, c interface{}, flags c
 		fmt.Println()
 		return
 	}
-	_, err := c.(rpcpb.AdminServiceClient).RpcDeleteProducer(ctx, &rpcpb.DeleteProducerRequest{
-		Height: height,
+	_, err := c.(rpcpb.AdminServiceClient).RpcChangeProducer(ctx, &rpcpb.ChangeProducerRequest{
+		Addresses: "",
+		Height:    height,
+		Kind:      uint64(3),
 	})
 
 	if err != nil {
@@ -1201,9 +1202,10 @@ func cliaddProducerCommandHandler(ctx context.Context, c interface{}, flags cmdF
 		return
 	}
 
-	_, err := c.(rpcpb.AdminServiceClient).RpcAddProducer(ctx, &rpcpb.AddProducerRequest{
+	_, err := c.(rpcpb.AdminServiceClient).RpcChangeProducer(ctx, &rpcpb.ChangeProducerRequest{
 		Addresses: producerAddress,
 		Height:    height,
+		Kind:      uint64(2),
 	})
 
 	if err != nil {
@@ -1237,6 +1239,7 @@ func clichangeProducerCommandHandler(ctx context.Context, c interface{}, flags c
 	_, err := c.(rpcpb.AdminServiceClient).RpcChangeProducer(ctx, &rpcpb.ChangeProducerRequest{
 		Addresses: producerAddress,
 		Height:    height,
+		Kind:      uint64(1),
 	})
 
 	if err != nil {
