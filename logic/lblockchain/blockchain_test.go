@@ -187,7 +187,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	assert.Equal(t, genesis.GetHash(), hash.Hash(bc.GetTailBlockHash()))
 
 	// Simulate a failure when flushing new block to storage
-	db.On("Flush").Return(errorValues.ErrSimulatedStorageFailure)
+	db.On("Flush").Return(errorValues.SimulatedStorageFailure)
 
 	// Add new block
 	blk := block.NewBlock([]*transaction.Transaction{}, genesis, "")

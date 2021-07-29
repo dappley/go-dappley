@@ -32,18 +32,18 @@ func TestStorageKeyPattern(t *testing.T) {
 		domainKey string
 		itemKey   string
 	}{
-		{"", errorValues.ErrInvalidStorageKey, "", ""},
-		{"string", errorValues.ErrInvalidStorageKey, "", ""},
-		{"_map[key]", errorValues.ErrInvalidStorageKey, "", ""},
-		{"@map[key", errorValues.ErrInvalidStorageKey, "", ""},
-		{"@mapkey]", errorValues.ErrInvalidStorageKey, "", ""},
-		{"@123[key]", errorValues.ErrInvalidStorageKey, "", ""},
-		{"@|abc[key]", errorValues.ErrInvalidStorageKey, "", ""},
-		{"@abc123-[key]", errorValues.ErrInvalidStorageKey, "", ""},
-		{"@abc$[key]", errorValues.ErrInvalidStorageKey, "", ""},
-		{"@a[key]", errorValues.ErrInvalidStorageKey, "", ""},
-		{"@$[key]", errorValues.ErrInvalidStorageKey, "", ""},
-		{"@_[key]", errorValues.ErrInvalidStorageKey, "", ""},
+		{"", errorValues.InvalidStorageKey, "", ""},
+		{"string", errorValues.InvalidStorageKey, "", ""},
+		{"_map[key]", errorValues.InvalidStorageKey, "", ""},
+		{"@map[key", errorValues.InvalidStorageKey, "", ""},
+		{"@mapkey]", errorValues.InvalidStorageKey, "", ""},
+		{"@123[key]", errorValues.InvalidStorageKey, "", ""},
+		{"@|abc[key]", errorValues.InvalidStorageKey, "", ""},
+		{"@abc123-[key]", errorValues.InvalidStorageKey, "", ""},
+		{"@abc$[key]", errorValues.InvalidStorageKey, "", ""},
+		{"@a[key]", errorValues.InvalidStorageKey, "", ""},
+		{"@$[key]", errorValues.InvalidStorageKey, "", ""},
+		{"@_[key]", errorValues.InvalidStorageKey, "", ""},
 		{"@$abc[]", nil, "$abc", ""},
 		{"@$abc[key]", nil, "$abc", "key"},
 		{"@abc[key]", nil, "abc", "key"},
@@ -64,7 +64,7 @@ func TestStorageKeyPattern(t *testing.T) {
 
 			matches := StorageKeyPattern.FindAllStringSubmatch(tt.key, -1)
 			if matches == nil {
-				err = errorValues.ErrInvalidStorageKey
+				err = errorValues.InvalidStorageKey
 			} else {
 				domainKey, itemKey = matches[0][1], matches[0][2]
 			}

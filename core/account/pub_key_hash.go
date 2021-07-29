@@ -45,7 +45,7 @@ func (pkh PubKeyHash) GenerateAddress() Address {
 func (pkh PubKeyHash) IsContract() (bool, error) {
 
 	if len(pkh) == 0 {
-		return false, errorValues.ErrEmptyPublicKeyHash
+		return false, errorValues.EmptyPublicKeyHash
 	}
 
 	if pkh[0] == versionUser {
@@ -56,7 +56,7 @@ func (pkh PubKeyHash) IsContract() (bool, error) {
 		return true, nil
 	}
 
-	return false, errorValues.ErrInvalidPubKeyHashVersion
+	return false, errorValues.InvalidPubKeyHashVersion
 }
 
 //generatePubKeyHash hashes a public key
@@ -69,7 +69,7 @@ func generatePubKeyHash(pubKey []byte) []byte {
 //IsValidPubKey return true if pubkey is valid
 func IsValidPubKey(pubKey []byte) (bool, error) {
 	if pubKey == nil || len(pubKey) < 32 {
-		return false, errorValues.ErrIncorrectPublicKey
+		return false, errorValues.IncorrectPublicKey
 	}
 	return true, nil
 }

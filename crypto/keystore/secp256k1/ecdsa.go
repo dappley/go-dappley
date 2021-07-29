@@ -64,7 +64,7 @@ func NewECDSAPrivateKey() (*ecdsa.PrivateKey, error) {
 // FromECDSAPrivateKey exports a private key into a binary dump.
 func FromECDSAPrivateKey(priv *ecdsa.PrivateKey) ([]byte, error) {
 	if priv == nil {
-		return nil, errorValues.ErrECDSAInputPvtKey
+		return nil, errorValues.ECDSAInputPvtKey
 	}
 	// as private key len cannot guarantee greater than Params bytes len, padding big bytes.
 	return paddedBigBytes(priv.D, priv.Params().BitSize/8), nil
@@ -73,7 +73,7 @@ func FromECDSAPrivateKey(priv *ecdsa.PrivateKey) ([]byte, error) {
 // FromECDSAPublicKey exports a public key into a binary dump.
 func FromECDSAPublicKey(pub *ecdsa.PublicKey) ([]byte, error) {
 	if pub == nil || pub.X == nil || pub.Y == nil {
-		return nil, errorValues.ErrECDSAInputPvtKey
+		return nil, errorValues.ECDSAInputPvtKey
 	}
 	return elliptic.Marshal(S256(), pub.X, pub.Y), nil
 }
@@ -99,7 +99,7 @@ func ToECDSAPrivateKey(d []byte) (*ecdsa.PrivateKey, error) {
 // ToECDSAPublicKey creates a public key with the given data value.
 func ToECDSAPublicKey(pub []byte) (*ecdsa.PublicKey, error) {
 	if len(pub) == 0 {
-		return nil, errorValues.ErrECDSAInputPvtKey
+		return nil, errorValues.ECDSAInputPvtKey
 	}
 	x, y := elliptic.Unmarshal(S256(), pub)
 	return &ecdsa.PublicKey{Curve: S256(), X: x, Y: y}, nil

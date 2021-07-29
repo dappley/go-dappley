@@ -159,7 +159,7 @@ func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *networkmodel.DappPack
 		packet, err := networkmodel.DeserializeIntoDappPacket(s.rawByteRead)
 
 		if err != nil {
-			if err == errorValues.ErrLengthTooShort {
+			if err == errorValues.LengthTooShort {
 				return
 			} else {
 				logger.WithError(err).WithFields(logger.Fields{

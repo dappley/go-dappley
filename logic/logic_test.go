@@ -90,14 +90,14 @@ func TestLoopCreateBlockchain(t *testing.T) {
 
 	//create a account address
 
-	err := errorValues.ErrInvalidAddress
+	err := errorValues.InvalidAddress
 	//create a blockchain loop
 	for i := 0; i < 2000; i++ {
 		err = nil
 		account := account.NewAccount()
 		if !account.IsValid() {
 			fmt.Println(i, account.GetAddress())
-			err = errorValues.ErrInvalidAddress
+			err = errorValues.InvalidAddress
 			break
 		}
 	}
@@ -111,7 +111,7 @@ func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
 
 	//create a blockchain with an invalid address
 	bc, err := CreateBlockchain(account.NewAddress(InvalidAddress), store, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
-	assert.Equal(t, errorValues.ErrInvalidAddress, err)
+	assert.Equal(t, errorValues.InvalidAddress, err)
 	assert.Nil(t, bc)
 }
 
@@ -150,7 +150,7 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	assert.Equal(t, common.NewAmount(0), balance1)
 
 	balance2, err := GetBalance(account.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAtfSs"), bc)
-	assert.Equal(t, errorValues.ErrInvalidAddress, err)
+	assert.Equal(t, errorValues.InvalidAddress, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
 }
 

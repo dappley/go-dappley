@@ -76,7 +76,7 @@ func TestScState_Save(t *testing.T) {
 			key:      "Account3",
 			value:    ScStateValueIsNotExist,
 			block:    util.Str2bytes("blkHash5"),
-			expected: errorValues.ErrInvalidKey,
+			expected: errorValues.InvalidKey,
 			statelog: map[string]map[string]string{
 				"dUuPPYshbBgkzUrgScEHWvdGbSxC8z4R12": {"Account3": "399"},
 			},

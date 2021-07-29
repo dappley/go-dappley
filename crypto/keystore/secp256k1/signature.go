@@ -46,7 +46,7 @@ func (s *Signature) InitSign(priv keystore.PrivateKey) error {
 // Sign ecdsa sign
 func (s *Signature) Sign(data []byte) (out []byte, err error) {
 	if s.privateKey == nil {
-		return nil, errorValues.ErrGetPvtKeyFirst
+		return nil, errorValues.GetPvtKeyFirst
 	}
 	signature, err := s.privateKey.Sign(data)
 	if err != nil {
@@ -74,7 +74,7 @@ func (s *Signature) InitVerify(pub keystore.PublicKey) error {
 // Verify ecdsa verify
 func (s *Signature) Verify(data []byte, signature []byte) (bool, error) {
 	if s.publicKey == nil {
-		return false, errorValues.ErrGivePubKeyFirst
+		return false, errorValues.GivePubKeyFirst
 	}
 	return s.publicKey.Verify(data, signature)
 }

@@ -43,13 +43,13 @@ func TestPubKeyHash_IsContract(t *testing.T) {
 			name:        "InvalidAddress",
 			pubKeyHash:  []byte{0x00},
 			expectedRes: false,
-			expectedErr: errorValues.ErrInvalidPubKeyHashVersion,
+			expectedErr: errorValues.InvalidPubKeyHashVersion,
 		},
 		{
 			name:        "EmptyAddress",
 			pubKeyHash:  []byte{},
 			expectedRes: false,
-			expectedErr: errorValues.ErrEmptyPublicKeyHash,
+			expectedErr: errorValues.EmptyPublicKeyHash,
 		},
 	}
 
@@ -93,10 +93,10 @@ func TestIsValidPubKey(t *testing.T) {
 	isPubKey3Valid, err3 := IsValidPubKey(pubKey3)
 
 	assert.False(t, isPubKey1Valid)
-	assert.Equal(t, errorValues.ErrIncorrectPublicKey, err1)
+	assert.Equal(t, errorValues.IncorrectPublicKey, err1)
 
 	assert.False(t, isPubKey2Valid)
-	assert.Equal(t, errorValues.ErrIncorrectPublicKey, err2)
+	assert.Equal(t, errorValues.IncorrectPublicKey, err2)
 
 	assert.True(t, isPubKey3Valid)
 	assert.Nil(t, err3)

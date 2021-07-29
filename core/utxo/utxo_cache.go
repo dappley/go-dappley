@@ -84,7 +84,7 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkeyHash string) error {
 	lastestUtxoKey := utxoCache.getLastUTXOKey(pubkeyHash)
 	for key, utxo := range utxoTx.Indices {
 		if bytes.Equal(util.Str2bytes(key), lastestUtxoKey) {
-			return errorValues.ErrAddSameUtxo
+			return errorValues.AddSameUtxo
 		}
 
 		if !bytes.Equal([]byte{}, lastestUtxoKey) { //this pubkeyHash already has a UTXO
@@ -143,7 +143,7 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkeyHash string) error
 			}
 		} else {
 			if bytes.Equal(utxo.NextUtxoKey, util.Str2bytes(preUTXO.GetUTXOKey())) {
-				return errorValues.ErrRemoveDuplicateUtxo
+				return errorValues.RemoveDuplicateUtxo
 			}
 			preUTXO.NextUtxoKey = utxo.NextUtxoKey
 			err = utxoCache.putUTXOToDB(preUTXO)
@@ -328,7 +328,7 @@ func (utxoCache *UTXOCache) deleteUTXOInfo(pubkeyHash string) error {
 
 func (utxoCache *UTXOCache) putCreateContractUTXOKey(pubkeyHash string, createContractUTXOKey []byte) error {
 	if _, err := utxoCache.db.Get(util.Str2bytes(pubkeyHash)); err == nil {
-		return errorValues.ErrUtxoInfoExists
+		return errorValues.UtxoInfoExists
 	}
 
 	utxoInfo := NewUTXOInfo()
@@ -455,7 +455,7 @@ func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash accou
 
 		utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
 	}
-	return nil, errorValues.ErrInsufficientFund
+	return nil, errorValues.InsufficientFund
 }
 
 func GetscStateKey(address, key string) string {

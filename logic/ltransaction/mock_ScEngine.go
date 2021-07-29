@@ -114,7 +114,7 @@ func (_m *MockScEngine) CheckContactSyntax(sourece string) error {
 	r0 = ret.Get(0).(string)
 
 	if r0 == "" {
-		return errorValues.ErrContractErrorSyntax
+		return errorValues.ContractErrorSyntax
 	}
 	return nil
 }

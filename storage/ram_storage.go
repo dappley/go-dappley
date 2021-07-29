@@ -44,7 +44,7 @@ func (rs *RamStorage) Get(key []byte) ([]byte, error) {
 	if ok {
 		return value.([]byte), nil
 	}
-	return nil, errorValues.ErrInvalidKey
+	return nil, errorValues.InvalidKey
 }
 
 func (rs *RamStorage) Put(key []byte, val []byte) error {

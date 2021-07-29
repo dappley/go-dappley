@@ -284,7 +284,7 @@ func (tx *Transaction) verifyID() (bool, error) {
 	if bytes.Equal(tx.ID, (&txCopy).Hash()) {
 		return true, nil
 	} else {
-		return false, errorValues.ErrTransactionIDInvalid
+		return false, errorValues.TransactionIDInvalid
 	}
 }
 
@@ -292,7 +292,7 @@ func (tx *Transaction) verifyID() (bool, error) {
 func (tx *Transaction) verifyAmount(totalPrev *common.Amount, totalVoutValue *common.Amount) (bool, error) {
 	//TotalVin amount must equal or greater than total vout
 	if totalPrev.Cmp(totalVoutValue) < 0 {
-		return false, errorValues.ErrTransactionAmountInvalid
+		return false, errorValues.TransactionAmountInvalid
 	}
 	sub, err := totalPrev.Sub(totalVoutValue)
 	if err != nil {
@@ -301,11 +301,11 @@ func (tx *Transaction) verifyAmount(totalPrev *common.Amount, totalVoutValue *co
 	if tx.GasLimit != nil {
 		sub, err = sub.Sub(tx.GasLimit.Mul(tx.GasPrice))
 		if err != nil {
-			return false, errorValues.ErrTransactionGasLimitInvalid
+			return false, errorValues.TransactionGasLimitInvalid
 		}
 	}
 	if tx.Tip.Cmp(sub) != 0 {
-		return false, errorValues.ErrTransactionTipInvalid
+		return false, errorValues.TransactionTipInvalid
 	}
 	return true, nil
 }
@@ -463,19 +463,19 @@ func CalculateUtxoSum(utxos []*utxo.UTXO) *common.Amount {
 func CalculateChange(input, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) (*common.Amount, error) {
 	change, err := input.Sub(amount)
 	if err != nil {
-		return nil, errorValues.ErrInsufficientFund
+		return nil, errorValues.InsufficientFund
 	}
 
 	change, err = change.Sub(tip)
 	if err != nil {
-		return nil, errorValues.ErrInsufficientFund
+		return nil, errorValues.InsufficientFund
 	}
 	change, err = change.Sub(gasLimit.Mul(gasPrice))
 	if err != nil {
-		return nil, errorValues.ErrInsufficientFund
+		return nil, errorValues.InsufficientFund
 	}
 	if change.Cmp(common.NewAmount(0)) < 0 {
-		return nil, errorValues.ErrInsufficientFund
+		return nil, errorValues.InsufficientFund
 	}
 	return change, nil
 }
@@ -495,13 +495,13 @@ func (tx *Transaction) VerifySignatures(prevUtxos []*utxo.UTXO) (bool, error) {
 		copy(originPub[1:], vin.PubKey)
 
 		if vin.Signature == nil || len(vin.Signature) == 0 {
-			return false, errorValues.ErrSignaturesEmpty
+			return false, errorValues.SignaturesEmpty
 		}
 
 		verifyResult, err := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
 
 		if err != nil || verifyResult == false {
-			return false, errorValues.ErrSignaturesInvalid
+			return false, errorValues.SignaturesInvalid
 		}
 	}
 
@@ -515,7 +515,7 @@ func (tx *Transaction) VerifyPublicKeyHash(prevUtxos []*utxo.UTXO) (bool, error)
 	for i, vin := range tx.Vin {
 		if prevUtxos[i].PubKeyHash == nil {
 			logger.Error("Transaction: previous transaction is not correct.")
-			return false, errorValues.ErrPrevUtxosMissing
+			return false, errorValues.PrevUtxosMissing
 		}
 
 		isContract, err := prevUtxos[i].PubKeyHash.IsContract()
@@ -535,7 +535,7 @@ func (tx *Transaction) VerifyPublicKeyHash(prevUtxos []*utxo.UTXO) (bool, error)
 		ta := account.NewTransactionAccountByPubKey(vin.PubKey)
 
 		if !bytes.Equal([]byte(ta.GetPubKeyHash()), []byte(prevUtxos[i].PubKeyHash)) {
-			return false, errorValues.ErrPublicKeyHashDoesNotMatch
+			return false, errorValues.PublicKeyHashDoesNotMatch
 		}
 	}
 	return true, nil
@@ -543,7 +543,7 @@ func (tx *Transaction) VerifyPublicKeyHash(prevUtxos []*utxo.UTXO) (bool, error)
 
 func (tx *Transaction) Verify(prevUtxos []*utxo.UTXO) error {
 	if prevUtxos == nil {
-		return errorValues.ErrPrevUtxosMissing
+		return errorValues.PrevUtxosMissing
 	}
 	result, err := tx.verifyID()
 	if !result {
@@ -558,7 +558,7 @@ func (tx *Transaction) Verify(prevUtxos []*utxo.UTXO) error {
 	totalPrev := CalculateUtxoSum(prevUtxos)
 	totalVoutValue, ok := tx.CalculateTotalVoutValue()
 	if !ok {
-		return errorValues.ErrVoutInvalid
+		return errorValues.VoutInvalid
 	}
 	result, err = tx.verifyAmount(totalPrev, totalVoutValue)
 	if !result {
@@ -574,7 +574,7 @@ func (tx *Transaction) Verify(prevUtxos []*utxo.UTXO) error {
 
 func (tx *Transaction) CheckVinNum() error {
 	if len(tx.Vin) > maxVinNumber {
-		return errorValues.ErrTransactionTooManyVin
+		return errorValues.TransactionTooManyVin
 	}
 	return nil
 }

@@ -32,7 +32,7 @@ func TestCommandBroker_Subscribe(t *testing.T) {
 			name:        "Listen same unreserved topics",
 			cmd1:        "cmd",
 			cmd2:        "cmd",
-			expectedErr: errorValues.ErrTopicOccupied,
+			expectedErr: errorValues.TopicOccupied,
 		},
 		{
 			name:        "Listen same reserved topics",
@@ -79,7 +79,7 @@ func TestCommandBroker_Dispatch(t *testing.T) {
 			name:          "unsubscribed cmd",
 			subScribedCmd: "cmd",
 			dispatchedCmd: "cmd1",
-			expectedErr:   errorValues.ErrNoSubscribersFound,
+			expectedErr:   errorValues.NoSubscribersFound,
 		},
 	}
 	for _, tt := range tests {

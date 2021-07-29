@@ -291,7 +291,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 
 	for i := len(forkBlks) - 1; i >= 0; i-- {
 		if !bm.Getblockchain().CheckMinProducerPolicy(forkBlks[i]) {
-			return errorValues.ErrProducerNotEnough
+			return errorValues.ProducerNotEnough
 		}
 
 		logger.WithFields(logger.Fields{
@@ -302,7 +302,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		contractStates := scState.NewScState(bm.blockchain.GetUtxoCache())
 
 		if !lblock.VerifyTransactions(forkBlks[i], utxo, contractStates, parentBlk, bm.Getblockchain().GetDb()) {
-			return errorValues.ErrTransactionVerifyFailed
+			return errorValues.TransactionVerifyFailed
 		}
 
 		ctx := BlockContext{forkBlks[i], utxo, contractStates}
@@ -410,7 +410,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 		}
 
 		if blk.GetHash().Equals(bc.GetLIBHash()) {
-			return nil, nil, errorValues.ErrBlockDoesNotFound
+			return nil, nil, errorValues.BlockDoesNotFound
 		}
 
 		err = index.UndoTxsInBlock(blk, db)

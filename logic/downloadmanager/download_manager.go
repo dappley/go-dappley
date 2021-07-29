@@ -287,12 +287,12 @@ func (downloadManager *DownloadManager) validateReturnBlocks(blocksPb *networkpb
 
 	if downloadManager.downloadingPeer == nil || downloadManager.downloadingPeer.peerid != peerId {
 		returnBlocksLogger.Info("validateReturnBlocks: downloadingPeer is empty or peerId is not match.")
-		return nil, errorValues.ErrPeerNotFound
+		return nil, errorValues.PeerNotFound
 	}
 
 	if blocksPb.GetBlocks() == nil || len(blocksPb.GetBlocks()) == 0 {
 		returnBlocksLogger.Error("DownloadManager: received no block.")
-		return nil, errorValues.ErrEmptyBlocks
+		return nil, errorValues.EmptyBlocks
 	}
 
 	hashes := make([]hash.Hash, len(blocksPb.GetStartBlockHashes()))
@@ -302,7 +302,7 @@ func (downloadManager *DownloadManager) validateReturnBlocks(blocksPb *networkpb
 
 	if downloadManager.isDownloadCommandFinished(hashes) {
 		returnBlocksLogger.Info("DownloadManager: response is not for waiting command.")
-		return nil, errorValues.ErrMismatchResponse
+		return nil, errorValues.MismatchResponse
 	}
 
 	return downloadManager.downloadingPeer, nil

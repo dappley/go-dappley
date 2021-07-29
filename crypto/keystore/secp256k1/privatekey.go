@@ -51,7 +51,7 @@ func (k *PrivateKey) Encoded() ([]byte, error) {
 // Decode decode data to key
 func (k *PrivateKey) Decode(data []byte) error {
 	if SeckeyVerify(data) == false {
-		return errorValues.ErrInvalidPrivateKey
+		return errorValues.InvalidPrivateKey
 	}
 	k.seckey = data
 	return nil

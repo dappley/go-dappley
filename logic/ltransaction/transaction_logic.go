@@ -44,10 +44,10 @@ func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, 
 func VerifyAndCollectContractOutput(utxoIndex *lutxo.UTXOIndex, tx *TxContract, ctState *scState.ScState, scEngine ScEngine, currBlkHeight uint64, parentBlk *block.Block, rewards map[string]string, db storage.Storage) (gasCount uint64, generatedTxs []*transaction.Transaction, err error) {
 	// Run the contract and collect generated transactions
 	if scEngine == nil {
-		return 0, nil, errorValues.ErrMissingEngineManager
+		return 0, nil, errorValues.MissingEngineManager
 	}
 	if tx.GasPrice.Cmp(common.NewAmount(0)) < 0 {
-		err := errorValues.ErrNegativeGasPrice
+		err := errorValues.NegativeGasPrice
 		logger.WithError(err).Error("CollectContractOutput: executeSmartContract error")
 		return 0, nil, err
 	}

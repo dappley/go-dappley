@@ -31,7 +31,7 @@ type TreeNode struct {
 //NewTreeNode creates a new tree node
 func NewTreeNode(value interface{}) (*TreeNode, error) {
 	if value == nil {
-		return nil, errorValues.ErrCantCreateEmptyNode
+		return nil, errorValues.CantCreateEmptyNode
 	}
 	return &TreeNode{value, nil, nil}, nil
 }
@@ -127,7 +127,7 @@ func (t *TreeNode) AddChild(child *TreeNode) {
 //SetParent sets parent of the tree node
 func (t *TreeNode) SetParent(parent *TreeNode) error {
 	if t.Parent != nil {
-		return errorValues.ErrNodeAlreadyHasParent
+		return errorValues.NodeAlreadyHasParent
 	}
 	parent.AddChild(t)
 	return nil

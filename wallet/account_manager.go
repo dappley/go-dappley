@@ -144,7 +144,7 @@ func (am *AccountManager) GetAddressesWithPassphrase(password string) ([]string,
 	err := bcrypt.CompareHashAndPassword(am.PassPhrase, []byte(password))
 	if err != nil {
 		am.mutex.Unlock()
-		return nil, errorValues.ErrPasswordIncorrect
+		return nil, errorValues.PasswordIncorrect
 	}
 	for _, account := range am.Accounts {
 		address := account.GetAddress().String()
@@ -179,11 +179,11 @@ func (am *AccountManager) GetAccountByAddressWithPassphrase(address account.Addr
 	if err == nil {
 		account := am.GetAccountByAddress(address)
 		if account == nil {
-			return nil, errorValues.ErrAddressNotFound
+			return nil, errorValues.AddressNotFound
 		}
 		return account, nil
 	}
-	return nil, errorValues.ErrPasswordIncorrect
+	return nil, errorValues.PasswordIncorrect
 
 }
 

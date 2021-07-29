@@ -78,7 +78,7 @@ func (ds *DataStore) RegisterNewMetric(name string, updateMetric func() metricsp
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 	if _, ok := ds.Metrics[name]; ok {
-		return errorValues.ErrDuplicateMetric
+		return errorValues.DuplicateMetric
 	}
 
 	ds.Metrics[name] = &metric{common.NewEvictingQueue(ds.statCapacity), updateMetric}

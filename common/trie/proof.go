@@ -57,7 +57,7 @@ func (t *Trie) Prove(key []byte) (MerkleProof, error) {
 			next := rootNode.Val[2]
 			matchLen := prefixLen(path, curRoute)
 			if matchLen != len(path) {
-				return nil, errorValues.ErrNotFound
+				return nil, errorValues.NotFound
 			}
 			proof = append(proof, rootNode.Val)
 			curRootHash = next
@@ -66,15 +66,15 @@ func (t *Trie) Prove(key []byte) (MerkleProof, error) {
 			path := rootNode.Val[1]
 			matchLen := prefixLen(path, curRoute)
 			if matchLen != len(path) {
-				return nil, errorValues.ErrNotFound
+				return nil, errorValues.NotFound
 			}
 			proof = append(proof, rootNode.Val)
 			return proof, nil
 		default:
-			return nil, errorValues.ErrNotFound
+			return nil, errorValues.NotFound
 		}
 	}
-	return nil, errorValues.ErrNotFound
+	return nil, errorValues.NotFound
 }
 
 // Verify whether the merkle proof from root to the associated node is right
@@ -90,7 +90,7 @@ func (t *Trie) Verify(rootHash []byte, key []byte, proof MerkleProof) error {
 		}
 		proofHash := n.Hash
 		if !bytes.Equal(wantHash, proofHash) {
-			return errorValues.ErrWrongHash
+			return errorValues.WrongHash
 		}
 		switch len(val) {
 		case 16: // Branch Node
@@ -99,23 +99,23 @@ func (t *Trie) Verify(rootHash []byte, key []byte, proof MerkleProof) error {
 			break
 		case 3: // Extension Node or Leaf Node
 			if val[0] == nil || len(val) == 0 {
-				return errorValues.ErrUnknownNode
+				return errorValues.UnknownNode
 			}
 			if val[0][0] == byte(ext) {
 				extLen := len(val[1])
 				if !bytes.Equal(val[1], curRoute[:extLen]) {
-					return errorValues.ErrWrongHash
+					return errorValues.WrongHash
 				}
 				wantHash = val[2]
 				curRoute = curRoute[extLen:]
 				break
 			} else if val[0][0] == byte(leaf) {
 				if !bytes.Equal(val[1], curRoute) {
-					return errorValues.ErrWrongHash
+					return errorValues.WrongHash
 				}
 				return nil
 			}
-			return errorValues.ErrUnknownNode
+			return errorValues.UnknownNode
 		default:
 			return errors.New("wrong node value, expect [16][]byte or [3][]byte, get [" + strconv.Itoa(len(proofHash)) + "][]byte")
 		}

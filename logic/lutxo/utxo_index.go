@@ -132,7 +132,7 @@ func (utxos *UTXOIndex) GetUpdatedUtxo(pubkeyHash account.PubKeyHash, txid []byt
 	if _, ok := utxos.indexRemove[pubkeyHash.String()]; ok {
 		utxo := utxos.indexRemove[pubkeyHash.String()].GetUtxo(txid, vout)
 		if utxo != nil {
-			return nil, errorValues.ErrUtxoAlreadyRemoved
+			return nil, errorValues.UtxoAlreadyRemoved
 		}
 	}
 
@@ -308,7 +308,7 @@ func getTXOutputSpent(in transactionbase.TXInput, db storage.Storage) (transacti
 	vout, err := transaction.GetTxOutput(in, db)
 
 	if err != nil {
-		return transactionbase.TXOutput{}, 0, errorValues.ErrTXInputInvalid
+		return transactionbase.TXOutput{}, 0, errorValues.TXInputInvalid
 	}
 	return vout, in.Vout, nil
 }
@@ -368,7 +368,7 @@ func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int
 		u, err := utxos.cache.GetUtxo(utxoKey)
 		if err != nil {
 			logger.Error("removeUTXO err")
-			return errorValues.ErrUTXONotFound
+			return errorValues.UTXONotFound
 		}
 		utxoTx, ok := utxos.indexRemove[pkh.String()]
 		if !ok {

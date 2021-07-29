@@ -52,7 +52,7 @@ func DeserializeIntoDappPacket(bytes []byte) (*DappPacket, error) {
 	packet := &DappPacket{}
 
 	if len(bytes) <= headerLength {
-		return nil, errorValues.ErrLengthTooShort
+		return nil, errorValues.LengthTooShort
 	}
 
 	packet.header = bytes[:headerLength]
@@ -63,7 +63,7 @@ func DeserializeIntoDappPacket(bytes []byte) (*DappPacket, error) {
 	}
 
 	if len(bytes) < headerLength+packet.GetPacketDataLength() {
-		return nil, errorValues.ErrLengthTooShort
+		return nil, errorValues.LengthTooShort
 	}
 
 	packet.data = bytes[headerLength : headerLength+packet.GetPacketDataLength()]
@@ -128,16 +128,16 @@ func (packet *DappPacket) GetRawBytes() []byte {
 //verifyHeader verifies if the header bytes are correct
 func (packet *DappPacket) verifyHeader() error {
 	if len(packet.header) != headerLength {
-		return errorValues.ErrLengthTooShort
+		return errorValues.LengthTooShort
 	}
 
 	if !packet.containStartingBytes() {
-		return errorValues.ErrInvalidMessageFormat
+		return errorValues.InvalidMessageFormat
 	}
 
 	headerCheckSum := checkSum(packet.header[:headerLength-1])
 	if headerCheckSum != packet.GetHeaderCheckSum() {
-		return errorValues.ErrCheckSumIncorrect
+		return errorValues.CheckSumIncorrect
 	}
 
 	return nil
@@ -148,7 +148,7 @@ func (packet *DappPacket) verifyDataChecksum() error {
 	dataCheckSum := checkSum(packet.data)
 
 	if dataCheckSum != packet.GetCheckSum() {
-		return errorValues.ErrCheckSumIncorrect
+		return errorValues.CheckSumIncorrect
 	}
 
 	return nil

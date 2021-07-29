@@ -32,7 +32,7 @@ type Amount struct {
 // Validate returns error if a is not a valid amount, otherwise returns nil.
 func (a Amount) Validate() error {
 	if a.Sign() < 0 {
-		return errorValues.ErrAmountUnderflow
+		return errorValues.AmountUnderflow
 	}
 	return nil
 }
@@ -61,7 +61,7 @@ func NewAmountFromString(s string) (*Amount, error) {
 		_, success = i.SetString(s, 10)
 	}
 	if !success {
-		return nil, errorValues.ErrAmountInvalidString
+		return nil, errorValues.AmountInvalidString
 	}
 	if err := (&Amount{*i}).Validate(); nil != err {
 		return nil, err

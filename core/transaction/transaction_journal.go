@@ -64,7 +64,7 @@ func GetTxOutput(vin transactionbase.TXInput, db storage.Storage) (transactionba
 		return transactionbase.TXOutput{}, err
 	}
 	if vin.Vout >= len(txJournal.Vout) {
-		return transactionbase.TXOutput{}, errorValues.ErrVoutNotFound
+		return transactionbase.TXOutput{}, errorValues.VoutNotFound
 	}
 	return txJournal.Vout[vin.Vout], nil
 }

@@ -82,7 +82,7 @@ func TestNewTrie(t *testing.T) {
 func TestTrieNodeProto(t *testing.T) {
 	n := new(node)
 	var pn *triepb.Node
-	assert.Equal(t, n.FromProto(pn), errorValues.ErrInvalidProtoToNode)
+	assert.Equal(t, n.FromProto(pn), errorValues.InvalidProtoToNode)
 }
 
 func TestTrie_Empty(t *testing.T) {

@@ -138,7 +138,7 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 func (dynasty *Dynasty) isAddingProducerAllowed(producer string) error {
 	for _, producerNow := range dynasty.producers {
 		if producerNow == producer {
-			return errorValues.ErrAlreadyProducer
+			return errorValues.AlreadyProducer
 		}
 	}
 	producerAccount := account.NewTransactionAccountByAddress(account.NewAddress(producer))
@@ -148,9 +148,9 @@ func (dynasty *Dynasty) isAddingProducerAllowed(producer string) error {
 	}
 
 	if !producerAccount.IsValid() {
-		return errorValues.ErrInvalidAddress
+		return errorValues.InvalidAddress
 	}
-	return errorValues.ErrMaxProducer
+	return errorValues.MaxProducer
 }
 
 //GetProducers returns all producers
@@ -214,7 +214,7 @@ func (dynasty *Dynasty) IsSettingProducersAllowed(producers []string, maxProduce
 	}
 
 	if len(producers) > maxProd {
-		return errorValues.ErrMaxProducer
+		return errorValues.MaxProducer
 	}
 
 	seen := make(map[string]bool)

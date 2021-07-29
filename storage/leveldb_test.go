@@ -97,9 +97,9 @@ func TestLevelDB_BatchWrite(t *testing.T) {
 
 	// Not written to storage before flushing
 	_, err := ldb.Get([]byte("1"))
-	assert.Equal(t, errorValues.ErrInvalidKey, err)
+	assert.Equal(t, errorValues.InvalidKey, err)
 	_, err = ldb.Get([]byte("2"))
-	assert.Equal(t, errorValues.ErrInvalidKey, err)
+	assert.Equal(t, errorValues.InvalidKey, err)
 
 	err = ldb.Flush()
 	assert.Nil(t, err)

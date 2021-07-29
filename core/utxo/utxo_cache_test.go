@@ -73,7 +73,7 @@ func TestUTXO_DelStateLog(t *testing.T) {
 	_, ok := cache.stateLogCache.Get(GetscStateLogKey(blkHash))
 	assert.Equal(t, false, ok)
 	_, err := cache.db.Get(util.Str2bytes(GetscStateLogKey(blkHash)))
-	assert.Equal(t, errorValues.ErrInvalidKey, err)
+	assert.Equal(t, errorValues.InvalidKey, err)
 
 }
 
@@ -120,7 +120,7 @@ func TestUTXO_DelScStates(t *testing.T) {
 	assert.Equal(t, false, ok)
 
 	_, err := cache.db.Get(util.Str2bytes(GetscStateKey(address, key)))
-	assert.Equal(t, errorValues.ErrInvalidKey, err)
+	assert.Equal(t, errorValues.InvalidKey, err)
 }
 
 func TestNewScStateCache(t *testing.T) {
@@ -183,7 +183,7 @@ func TestUTXOCache_getUTXOFromDB(t *testing.T) {
 
 	result, err = cache.getUTXOFromDB("invalid key")
 	assert.Nil(t, result)
-	assert.Equal(t, errorValues.ErrInvalidKey, err)
+	assert.Equal(t, errorValues.InvalidKey, err)
 }
 
 func TestUTXOCache_GetUtxo(t *testing.T) {
@@ -214,7 +214,7 @@ func TestUTXOCache_GetUtxo(t *testing.T) {
 
 	result, err := cache.GetUtxo(utxo1.GetUTXOKey())
 	assert.Nil(t, result)
-	assert.Equal(t, errorValues.ErrInvalidKey, err)
+	assert.Equal(t, errorValues.InvalidKey, err)
 
 	utxoBytes, err := proto.Marshal(utxo1.ToProto().(*utxopb.Utxo))
 	assert.Nil(t, err)

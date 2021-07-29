@@ -13,7 +13,7 @@ import (
 //FindVinUtxosInUtxoPool Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
 func FindVinUtxosInUtxoPool(utxoIndex *UTXOIndex, tx *transaction.Transaction) ([]*utxo.UTXO, error) {
 	if tx.Type == transaction.TxTypeCoinbase {
-		return nil, errorValues.ErrTXInputNotFound
+		return nil, errorValues.TXInputNotFound
 	}
 	var res []*utxo.UTXO
 	for _, vin := range tx.Vin {
@@ -22,7 +22,7 @@ func FindVinUtxosInUtxoPool(utxoIndex *UTXOIndex, tx *transaction.Transaction) (
 		pubKeyHash := vin.PubKey
 		if !isContract {
 			if ok, _ := account.IsValidPubKey(vin.PubKey); !ok {
-				return nil, errorValues.ErrNewUserPubKeyHash
+				return nil, errorValues.NewUserPubKeyHash
 			}
 			ta := account.NewTransactionAccountByPubKey(vin.PubKey)
 			pubKeyHash = ta.GetPubKeyHash()
@@ -34,7 +34,7 @@ func FindVinUtxosInUtxoPool(utxoIndex *UTXOIndex, tx *transaction.Transaction) (
 				"vin_id":    hex.EncodeToString(vin.Txid),
 				"vin_index": vin.Vout,
 			}).Warn("Transaction: Can not find vin,err:", err)
-			return nil, errorValues.ErrTXInputNotFound
+			return nil, errorValues.TXInputNotFound
 		}
 		res = append(res, utxo)
 	}

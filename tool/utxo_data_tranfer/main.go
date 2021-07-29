@@ -94,7 +94,7 @@ func readOld(db storage.Storage) *UTXOIndexOld {
 // LoadUTXOIndexOld returns the UTXOIndex fetched from db.
 func LoadUTXOIndexOld(db storage.Storage) *UTXOIndexOld {
 	utxoBytes, err := db.Get([]byte(utxoMapKeyOld))
-	if err != nil && err.Error() == errorValues.ErrInvalidKey.Error() || len(utxoBytes) == 0 {
+	if err != nil && err == errorValues.InvalidKey || len(utxoBytes) == 0 {
 		logger.Error("Utxo_data_transfer: utxo does not exists in database.")
 		return nil
 	}

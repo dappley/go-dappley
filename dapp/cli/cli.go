@@ -1388,9 +1388,9 @@ func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 		return retUtxos, nil
 	}
 	if sum.Cmp(amount) > 0 {
-		return nil, errorValues.ErrTooManyUtxoFund
+		return nil, errorValues.TooManyUtxoFund
 	}
-	return nil, errorValues.ErrInsufficientFund
+	return nil, errorValues.InsufficientFund
 }
 
 func vinRules(utxoSum, amount *common.Amount, utxoNum, remainUtxoNum int) bool {

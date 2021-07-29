@@ -225,11 +225,11 @@ func (sm *StreamManager) connectPeer(peerInfo networkmodel.PeerInfo, connectionT
 	}
 
 	if sm.isStreamConnected(peerInfo.PeerId) {
-		return errorValues.ErrStreamAlreadyConnected
+		return errorValues.StreamAlreadyConnected
 	}
 
 	if sm.connectionManager.IsConnectionFull(connectionType) {
-		return errorValues.ErrConnectionsFull
+		return errorValues.ConnectionsFull
 	}
 
 	sm.host.Peerstore().AddAddrs(peerInfo.PeerId, peerInfo.Addrs, peerstore.PermanentAddrTTL)

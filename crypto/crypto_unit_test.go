@@ -294,7 +294,7 @@ func TestSecp256k1FromECDSAPriv(t *testing.T) {
 	//empty privKey
 	privData, err := secp256k1.FromECDSAPrivateKey(nil)
 	assert.Nil(t, privData)
-	assert.Equal(t, err, errorValues.ErrECDSAInputPvtKey)
+	assert.Equal(t, err, errorValues.ECDSAInputPvtKey)
 
 	//privKey.D bitlen far less than 256)
 	t.Run("privkey with short D", func(t *testing.T) {
@@ -368,28 +368,28 @@ func TestSecp256k1Sign_fail(t *testing.T) {
 		msg = []byte{102, 97, 107, 101, 102, 97, 107, 101, 232, 123, 139, 153, 141, 234, 158, 246, 4, 30, 205, 160, 212, 219, 15, 32, 208, 159, 66, 2}
 		sig, err := secp256k1.Sign(msg, sk)
 		assert.Nil(t, sig)
-		assert.Equal(t, err, errorValues.ErrInvalidMsgLen)
+		assert.Equal(t, err, errorValues.InvalidMsgLen)
 	})
 	//empty msg
 	t.Run("empty msg", func(t *testing.T) {
 		msg = []byte{}
 		sig, err := secp256k1.Sign(msg, sk)
 		assert.Nil(t, sig)
-		assert.Equal(t, err, errorValues.ErrInvalidMsgLen)
+		assert.Equal(t, err, errorValues.InvalidMsgLen)
 	})
 	//nil msg
 	t.Run("nil msg", func(t *testing.T) {
 		msg = nil
 		sig, err := secp256k1.Sign(msg, sk)
 		assert.Nil(t, sig)
-		assert.Equal(t, err, errorValues.ErrInvalidMsgLen)
+		assert.Equal(t, err, errorValues.InvalidMsgLen)
 	})
 	//msg too long
 	t.Run("msg too long", func(t *testing.T) {
 		msg = []byte{102, 97, 107, 101, 102, 97, 107, 101, 232, 123, 139, 153, 141, 234, 158, 246, 4, 30, 205, 160, 212, 219, 15, 32, 208, 159, 66, 2, 90, 115, 237, 38, 12, 44}
 		sig, err := secp256k1.Sign(msg, sk)
 		assert.Nil(t, sig)
-		assert.Equal(t, err, errorValues.ErrInvalidMsgLen)
+		assert.Equal(t, err, errorValues.InvalidMsgLen)
 	})
 }
 
@@ -458,7 +458,7 @@ func TestSecp256k1Verify_fail(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := secp256k1.Verify(tt.msg, tt.sig, invalid_pk)
 			assert.Equal(t, result, false)
-			assert.Equal(t, err, errorValues.ErrInvalidPublicKey)
+			assert.Equal(t, err, errorValues.InvalidPublicKey)
 		})
 	}
 	//wrong public key

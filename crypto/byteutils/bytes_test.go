@@ -33,7 +33,7 @@ func (o *testStringEncoderAndDecoder) EncodeToBytes(s interface{}) ([]byte, erro
 	str := s.(string)
 
 	if len(str) == 0 {
-		return nil, errorValues.ErrValueNotString
+		return nil, errorValues.ValueNotString
 	}
 
 	return []byte(str), nil

@@ -47,7 +47,7 @@ var minerPrivateKey string
 func CreateBlockchain(address account.Address, db storage.Storage, libPolicy lblockchain.LIBPolicy, txPool *transactionpool.TransactionPool, blkSizeLimit int) (*lblockchain.Blockchain, error) {
 	addressAccount := account.NewTransactionAccountByAddress(address)
 	if !addressAccount.IsValid() {
-		return nil, errorValues.ErrInvalidAddress
+		return nil, errorValues.InvalidAddress
 	}
 
 	bc := lblockchain.CreateBlockchain(address, db, libPolicy, txPool, blkSizeLimit)
@@ -104,7 +104,7 @@ func CreateAccountWithPassphrase(password string, optionalAccountFilePath ...str
 	if len(am.Accounts) > 0 && am.PassPhrase != nil {
 		err = bcrypt.CompareHashAndPassword(am.PassPhrase, []byte(password))
 		if err != nil {
-			return nil, errorValues.ErrPasswordIncorrect
+			return nil, errorValues.PasswordIncorrect
 		}
 		account := account.NewAccount()
 		am.AddAccount(account)
@@ -140,7 +140,7 @@ func CreateAccount() (*account.Account, error) {
 func GetBalance(address account.Address, bc *lblockchain.Blockchain) (*common.Amount, error) {
 	acc := account.NewTransactionAccountByAddress(address)
 	if acc.IsValid() == false {
-		return common.NewAmount(0), errorValues.ErrInvalidAddress
+		return common.NewAmount(0), errorValues.InvalidAddress
 	}
 
 	balance := common.NewAmount(0)
@@ -219,10 +219,10 @@ func GetAccountManager(path string) (*wallet.AccountManager, error) {
 func sendProducerChange(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]byte, error) {
 	fromAccount := account.NewTransactionAccountByAddress(sendTxParam.From)
 	if !fromAccount.IsValid() {
-		return nil, errorValues.ErrInvalidSenderAddress
+		return nil, errorValues.InvalidSenderAddress
 	}
 	if sendTxParam.Amount.Validate() != nil || sendTxParam.Amount.IsZero() {
-		return nil, errorValues.ErrInvalidAmount
+		return nil, errorValues.InvalidAmount
 	}
 
 	acc := account.NewAccountByKey(sendTxParam.SenderKeyPair)
@@ -252,16 +252,16 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 	fromAccount := account.NewTransactionAccountByAddress(sendTxParam.From)
 	toAccount := account.NewTransactionAccountByAddress(sendTxParam.To)
 	if !fromAccount.IsValid() {
-		return nil, "", errorValues.ErrInvalidSenderAddress
+		return nil, "", errorValues.InvalidSenderAddress
 	}
 
 	//Contract deployment transaction does not need to validate to address
 	if !toAccount.IsValid() && sendTxParam.Contract == "" {
-		return nil, "", errorValues.ErrInvalidRcverAddress
+		return nil, "", errorValues.InvalidRcverAddress
 	}
 
 	if sendTxParam.Amount.Validate() != nil || sendTxParam.Amount.IsZero() {
-		return nil, "", errorValues.ErrInvalidAmount
+		return nil, "", errorValues.InvalidAmount
 	}
 
 	acc := account.NewAccountByKey(sendTxParam.SenderKeyPair)

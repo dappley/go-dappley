@@ -43,7 +43,7 @@ func NewPrivateKey(alg keystore.Algorithm, data []byte) (keystore.PrivateKey, er
 		}
 		return priv, nil
 	default:
-		return nil, errorValues.ErrAlgorithmInvalid
+		return nil, errorValues.AlgorithmInvalid
 	}
 }
 
@@ -53,7 +53,7 @@ func NewSignature(alg keystore.Algorithm) (keystore.Signature, error) {
 	case keystore.SECP256K1:
 		return new(secp256k1.Signature), nil
 	default:
-		return nil, errorValues.ErrAlgorithmInvalid
+		return nil, errorValues.AlgorithmInvalid
 	}
 }
 
@@ -63,6 +63,6 @@ func CheckAlgorithm(alg keystore.Algorithm) error {
 	case keystore.SECP256K1:
 		return nil
 	default:
-		return errorValues.ErrAlgorithmInvalid
+		return errorValues.AlgorithmInvalid
 	}
 }

@@ -39,7 +39,7 @@ func OpenDatabase(dbFilePath string) *LevelDB {
 
 	db1, err := leveldb.OpenFile(fp, nil)
 	if err != nil {
-		logger.Panic(errorValues.ErrLevelDbNotAbleToOpenFile)
+		logger.Panic(errorValues.LevelDbNotAbleToOpenFile)
 	}
 
 	return &LevelDB{
@@ -59,7 +59,7 @@ func (ldb *LevelDB) Close() error {
 func (ldb *LevelDB) Get(key []byte) ([]byte, error) {
 	val, err := ldb.db.Get(key, nil)
 	if err != nil && err == leveldb.ErrNotFound {
-		return nil, errorValues.ErrInvalidKey
+		return nil, errorValues.InvalidKey
 	}
 	return val, err
 }

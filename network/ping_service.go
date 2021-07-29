@@ -30,7 +30,7 @@ type PingService struct {
 //NewPingService returns a new instance of PingService or an error if specified parameters are invalid
 func NewPingService(host host.Host, interval time.Duration) (*PingService, error) {
 	if host == nil || interval <= 0 {
-		return nil, errorValues.ErrInvalidPingParamaters
+		return nil, errorValues.InvalidPingParamaters
 	}
 
 	return &PingService{
@@ -64,7 +64,7 @@ func (ps *PingService) Start(getPeers func() map[peer.ID]networkmodel.PeerInfo, 
 		ps.started = true
 		return nil
 	} else {
-		return errorValues.ErrPingServiceRunning
+		return errorValues.PingServiceRunning
 	}
 }
 
@@ -76,7 +76,7 @@ func (ps *PingService) Stop() error {
 		ps.started = false
 		return nil
 	} else {
-		return errorValues.ErrPingServiceNotStarted
+		return errorValues.PingServiceNotStarted
 	}
 }
 

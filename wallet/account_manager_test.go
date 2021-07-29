@@ -49,7 +49,7 @@ func TestAccountManager_LoadFromFileNotExists(t *testing.T) {
 	mockStorage := storage_mock.NewMockFileStorage(mockCtrl)
 
 	gomock.InOrder(
-		mockStorage.EXPECT().ReadFromFile().Return(nil, errorValues.ErrMock),
+		mockStorage.EXPECT().ReadFromFile().Return(nil, errorValues.FileNotFound),
 	)
 
 	am := NewAccountManager(mockStorage)

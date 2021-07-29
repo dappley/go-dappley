@@ -212,12 +212,12 @@ func TestValidateReturnBlocks(t *testing.T) {
 
 	// test invalid peer id
 	_, err := downloadManager.validateReturnBlocks(nil, "foo")
-	assert.Equal(t, errorValues.ErrPeerNotFound, err)
+	assert.Equal(t, errorValues.PeerNotFound, err)
 
 	// test empty blocks
 	fakeReturnMsg := &networkpb.ReturnBlocks{Blocks: nil, StartBlockHashes: nil}
 	_, err = downloadManager.validateReturnBlocks(fakeReturnMsg, peerNode.GetHostPeerInfo().PeerId)
-	assert.Equal(t, errorValues.ErrEmptyBlocks, err)
+	assert.Equal(t, errorValues.EmptyBlocks, err)
 }
 func deleteConfFolderFiles() error {
 	dir, err := ioutil.ReadDir(confDir)

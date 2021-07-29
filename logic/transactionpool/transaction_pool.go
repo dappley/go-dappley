@@ -183,7 +183,7 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *lutxo.UTXOI
 
 	txNode := txPool.getMaxTipTransaction()
 	if txNode == nil {
-		return txNode, errorValues.ErrTxNode
+		return txNode, errorValues.TxNode
 	}
 	//remove the transaction from tip order
 	txPool.tipOrder = txPool.tipOrder[1:]

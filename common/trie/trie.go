@@ -86,22 +86,22 @@ func (n *node) FromProto(msg proto.Message) error {
 			n.Val = msg.Val
 			return nil
 		}
-		return errorValues.ErrInvalidProtoToNode
+		return errorValues.InvalidProtoToNode
 	}
-	return errorValues.ErrInvalidProtoToNode
+	return errorValues.InvalidProtoToNode
 }
 
 // Type of node, e.g. Branch, Extension, Leaf Node
 func (n *node) Type() (ty, error) {
 	if n.Val == nil {
-		return unknown, errorValues.ErrNilNode
+		return unknown, errorValues.NilNode
 	}
 	switch len(n.Val) {
 	case 16: // Branch Node
 		return branch, nil
 	case 3: // Extension Node or Leaf Node
 		if n.Val[0] == nil {
-			return unknown, errorValues.ErrUnknownNode
+			return unknown, errorValues.UnknownNode
 		}
 		return ty(n.Val[0][0]), nil
 	default:
@@ -206,7 +206,7 @@ func (t *Trie) get(rootHash []byte, route []byte) ([]byte, error) {
 			return nil, err
 		}
 		if len(curRoute) == 0 && flag != leaf {
-			return nil, errorValues.ErrKeyShort
+			return nil, errorValues.KeyShort
 		}
 		switch flag {
 		case branch:
@@ -218,7 +218,7 @@ func (t *Trie) get(rootHash []byte, route []byte) ([]byte, error) {
 			next := rootNode.Val[2]
 			matchLen := prefixLen(path, curRoute)
 			if matchLen != len(path) {
-				return nil, errorValues.ErrNotFound
+				return nil, errorValues.NotFound
 			}
 			curRootHash = next
 			curRoute = curRoute[matchLen:]
@@ -227,14 +227,14 @@ func (t *Trie) get(rootHash []byte, route []byte) ([]byte, error) {
 			path := rootNode.Val[1]
 			matchLen := prefixLen(path, curRoute)
 			if matchLen != len(path) || matchLen != len(curRoute) {
-				return nil, errorValues.ErrNotFound
+				return nil, errorValues.NotFound
 			}
 			return rootNode.Val[2], nil
 		default:
-			return nil, errorValues.ErrUnknownNode
+			return nil, errorValues.UnknownNode
 		}
 	}
-	return nil, errorValues.ErrNotFound
+	return nil, errorValues.NotFound
 }
 
 // Put the key-value pair in trie
@@ -279,7 +279,7 @@ func (t *Trie) update(root []byte, route []byte, val []byte) ([]byte, error) {
 	case leaf:
 		return t.updateWhenMeetLeaf(rootNode, route, val)
 	default:
-		return nil, errorValues.ErrUnknownNode
+		return nil, errorValues.UnknownNode
 	}
 }
 
@@ -305,7 +305,7 @@ func (t *Trie) updateWhenMeetExt(rootNode *node, route []byte, val []byte) ([]by
 	path := rootNode.Val[1]
 	next := rootNode.Val[2]
 	if len(path) > len(route) {
-		return nil, errorValues.ErrKeyShort
+		return nil, errorValues.KeyShort
 	}
 	matchLen := prefixLen(path, route)
 	// add new node to the ext node's sub-trie
@@ -383,7 +383,7 @@ func (t *Trie) updateWhenMeetLeaf(rootNode *node, route []byte, val []byte) ([]b
 	path := rootNode.Val[1]
 	leafVal := rootNode.Val[2]
 	if len(path) > len(route) {
-		return nil, errorValues.ErrKeyShort
+		return nil, errorValues.KeyShort
 	}
 	matchLen := prefixLen(path, route)
 
@@ -391,7 +391,7 @@ func (t *Trie) updateWhenMeetLeaf(rootNode *node, route []byte, val []byte) ([]b
 	if matchLen == len(path) {
 
 		if len(route) > matchLen {
-			return nil, errorValues.ErrKeyLong
+			return nil, errorValues.KeyLong
 		}
 		rootNode.Val[2] = val
 		// save updated node to storage
@@ -466,7 +466,7 @@ func (t *Trie) Del(key []byte) ([]byte, error) {
 
 func (t *Trie) del(root []byte, route []byte) ([]byte, error) {
 	if root == nil || len(root) == 0 {
-		return nil, errorValues.ErrNotFound
+		return nil, errorValues.NotFound
 	}
 	// fetch sub-trie root node
 	rootNode, err := t.fetchNode(root)
@@ -503,7 +503,7 @@ func (t *Trie) del(root []byte, route []byte) ([]byte, error) {
 		next := rootNode.Val[2]
 		matchLen := prefixLen(path, route)
 		if matchLen != len(path) {
-			return nil, errorValues.ErrNotFound
+			return nil, errorValues.NotFound
 		}
 		childHash, err := t.del(next, route[matchLen:])
 		if err != nil {
@@ -533,11 +533,11 @@ func (t *Trie) del(root []byte, route []byte) ([]byte, error) {
 		path := rootNode.Val[1]
 		matchLen := prefixLen(path, route)
 		if matchLen != len(path) {
-			return nil, errorValues.ErrNotFound
+			return nil, errorValues.NotFound
 		}
 		return nil, nil
 	default:
-		return nil, errorValues.ErrUnknownNode
+		return nil, errorValues.UnknownNode
 	}
 }
 
@@ -603,7 +603,7 @@ func (t *Trie) deleteWhenMeetSingleBranch(rootNode *node) ([]byte, error) {
 				}
 				return childNode.Hash, nil
 			default:
-				return nil, errorValues.ErrUnknownNode
+				return nil, errorValues.UnknownNode
 			}
 		}
 
