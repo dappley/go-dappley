@@ -18,6 +18,7 @@ import (
 	"github.com/dappley/go-dappley/logic/transactionpool"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -351,6 +352,27 @@ func TestBlockchainManager_GetSubscribedTopics(t *testing.T) {
 		RequestBlock,
 	}
 	assert.Equal(t, expected, bcm.GetSubscribedTopics())
+}
+
+func TestBlockchainManager_GetTopicHandler(t *testing.T) {
+	// create BlockChain
+	bc := CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, transactionpool.NewTransactionPool(nil, 100), 100)
+	_, err := bc.GetTailBlock()
+	require.Nil(t, err)
+
+	bp := blockchain.NewBlockPool(nil)
+	bcm := NewBlockchainManager(bc, bp, nil, nil)
+
+	// cannot directly compare functions so pointers are used
+	sendBlockExpected := reflect.ValueOf(bcm.SendBlockHandler).Pointer()
+	sendBlockActual := reflect.ValueOf(bcm.GetTopicHandler(SendBlock)).Pointer()
+	assert.Equal(t, sendBlockExpected, sendBlockActual)
+
+	requestBlockExpected := reflect.ValueOf(bcm.RequestBlockHandler).Pointer()
+	requestBlockActual := reflect.ValueOf(bcm.GetTopicHandler(RequestBlock)).Pointer()
+	assert.Equal(t, requestBlockExpected, requestBlockActual)
+
+	assert.Nil(t, bcm.GetTopicHandler("not a topic"))
 }
 
 func TestBlockchainManager_VerifyBlock(t *testing.T) {

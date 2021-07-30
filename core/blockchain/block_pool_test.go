@@ -258,6 +258,66 @@ func TestBlockPool_removeTree(t *testing.T) {
 	}
 }
 
+func TestBlockPool_findLongestChain(t *testing.T) {
+	serializedBp := "0^1, 1#2, 1#3, 3#4, 4#5, 4#6, 4#7, 2#8, 2#9, 8#10, 3^11, 11#12, 11#13, 13#14, 2^15, 15#16, 4^17"
+	bp, _ := deserializeBlockPool(serializedBp, "1")
+	/*  Test Block Pool Structure
+		Blkgheight 				MAIN FORK:		     	ORPHANS:(3 orphan forks)
+	         0							1
+			 1						2        3
+			 2					  8  9     4                              15
+			 3					10	     5 6 7              11          16
+			 4											  12  13						17
+			 5													14
+	*/
+	tests := []struct {
+		name            string
+		inputBlkHash    string
+		expectedBlkHash string
+	}{
+		{
+			name:            "main fork root",
+			inputBlkHash:    "1",
+			expectedBlkHash: "1",
+		},
+		{
+			name:            "main fork left branch",
+			inputBlkHash:    "2",
+			expectedBlkHash: "2",
+		},
+		{
+			name:            "orphan 1 right branch",
+			inputBlkHash:    "13",
+			expectedBlkHash: "13",
+		},
+		{
+			name:            "orphan 2 leaf",
+			inputBlkHash:    "16",
+			expectedBlkHash: "16",
+		},
+		{
+			name:            "orphan 3",
+			inputBlkHash:    "17",
+			expectedBlkHash: "17",
+		},
+		{
+			name:            "invalid hash",
+			inputBlkHash:    "invalid",
+			expectedBlkHash: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := bp.findLongestChain(hash.Hash(tt.inputBlkHash))
+			if tt.expectedBlkHash != "" {
+				assert.Equal(t, hash.Hash(tt.expectedBlkHash).String(), result.GetValue().(*block.Block).GetHash().String())
+			} else {
+				assert.Nil(t, result)
+			}
+		})
+	}
+}
+
 func TestBlockPool_SetRootBlock(t *testing.T) {
 	/*  Test Block Pool Structure
 		Blkgheight 				MAIN FORK:		     	ORPHANS:(3 orphan forks)
@@ -376,6 +436,45 @@ func TestBlockPool_SetRootBlock(t *testing.T) {
 			assert.Equal(t, node, bp.root)
 		})
 	}
+}
+
+func TestBlockPool_linkOrphan(t *testing.T) {
+	root, _ := common.NewTreeNode(createBlock(hash.Hash("root"), []byte{0}, 1))
+	orphan1, _ := common.NewTreeNode(createBlock(hash.Hash("orphan1"), hash.Hash("root"), 3))
+	orphan2, _ := common.NewTreeNode(createBlock(hash.Hash("orphan2"), hash.Hash("root"), 5))
+	orphan3, _ := common.NewTreeNode(createBlock(hash.Hash("orphan3"), hash.Hash("nonexistent"), 7))
+
+	bp := NewBlockPool(nil)
+	bp.orphans[orphan1.GetValue().(*block.Block).GetHash().String()] = orphan1
+	bp.orphans[orphan2.GetValue().(*block.Block).GetHash().String()] = orphan2
+	bp.orphans[orphan3.GetValue().(*block.Block).GetHash().String()] = orphan3
+
+	expectedOrphans := map[string]*common.TreeNode{
+		orphan3.GetValue().(*block.Block).GetHash().String(): orphan3,
+	}
+	bp.linkOrphan(root)
+	assert.Equal(t, expectedOrphans, bp.orphans)
+	assert.Equal(t, []*common.TreeNode{orphan1, orphan2}, root.Children)
+}
+
+func TestBlockPool_linkParent(t *testing.T) {
+	parent, _ := common.NewTreeNode(createBlock(hash.Hash("parent"), []byte{0}, 1))
+	node, _ := common.NewTreeNode(createBlock(hash.Hash("node"), hash.Hash("parent"), 3))
+	orphan, _ := common.NewTreeNode(createBlock(hash.Hash("orphan"), hash.Hash("nonexistent"), 3))
+
+	bp := NewBlockPool(nil)
+	bp.blkCache.Add(getKey(parent), parent)
+
+	bp.linkParent(node)
+	assert.Equal(t, parent, node.Parent)
+	assert.Equal(t, map[string]*common.TreeNode{}, bp.orphans)
+
+	expectedOrphans := map[string]*common.TreeNode{
+		orphan.GetValue().(*block.Block).GetHash().String(): orphan,
+	}
+	bp.linkParent(orphan)
+	assert.Nil(t, orphan.Parent)
+	assert.Equal(t, expectedOrphans, bp.orphans)
 }
 
 func testGetForkHeadHashes(bp *BlockPool) []string {

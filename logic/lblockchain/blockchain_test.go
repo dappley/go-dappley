@@ -526,6 +526,113 @@ func TestBlockchain_DeleteBlockByHash(t *testing.T) {
 	assert.Equal(t, ErrBlockDoesNotExist, err)
 }
 
+func TestBlockchain_getLIB(t *testing.T) {
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+
+	libPolicy := &blockchainMock.LIBPolicy{}
+	libPolicy.On("GetProducers").Return(nil)
+	libPolicy.On("GetMinConfirmationNum").Return(6)
+	libPolicy.On("IsBypassingLibCheck").Return(true)
+
+	tests := []struct {
+		name          string
+		libPolicy     *blockchainMock.LIBPolicy
+		currBlkHeight uint64
+		expectedRes   hash.Hash
+		expectedErr   error
+	}{
+		{
+			name:          "nil libPolicy",
+			libPolicy:     nil,
+			currBlkHeight: 0,
+			expectedRes:   []byte{},
+			expectedErr:   errors.New("libPolicy is nil"),
+		},
+		{
+			name:          "successful currBlkHeight < minConfirmationNum",
+			libPolicy:     libPolicy,
+			currBlkHeight: 2,
+			expectedRes:   hash.Hash{0xae, 0x33, 0x66, 0x6f, 0xd3, 0x1f, 0xf6, 0xfd, 0x34, 0xae, 0x87, 0xc8, 0xc3, 0x1a, 0x1f, 0xad, 0x0, 0xe2, 0xf5, 0x9b, 0xd5, 0x77, 0x76, 0x9c, 0x25, 0xdf, 0xe6, 0x2e, 0x3, 0x99, 0x4b, 0x1f},
+			expectedErr:   nil,
+		},
+		{
+			name:          "successful currBlkHeight > minConfirmationNum",
+			libPolicy:     libPolicy,
+			currBlkHeight: 9,
+			expectedRes:   hash.Hash("hash2"),
+			expectedErr:   nil,
+		},
+		{
+			name:          "block not found",
+			libPolicy:     libPolicy,
+			currBlkHeight: 10,
+			expectedRes:   []byte{},
+			expectedErr:   errors.New("block does not exist in db"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			//create a new block chain
+			s := storage.NewRamStorage()
+			defer s.Close()
+
+			var bc *Blockchain
+			if tt.libPolicy == nil {
+				bc = CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+			} else {
+				bc = CreateBlockchain(addr, s, tt.libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
+			}
+			genesis, err := bc.GetTailBlock()
+			assert.Nil(t, err)
+			// add some blocks
+			blk1 := block.NewBlockWithRawInfo(hash.Hash("hash1"), genesis.GetHash(), 1, 0, 2, nil)
+			err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk1))
+			assert.Nil(t, err)
+			blk2 := block.NewBlockWithRawInfo(hash.Hash("hash2"), blk1.GetHash(), 2, 0, 3, nil)
+			err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk2))
+			assert.Nil(t, err)
+
+			result, err := bc.getLIB(tt.currBlkHeight)
+			assert.Equal(t, tt.expectedRes, result)
+			if tt.expectedErr != nil {
+				assert.Equal(t, tt.expectedErr, err)
+			} else {
+				assert.Nil(t, err)
+			}
+		})
+	}
+}
+
+func TestBlockchain_updateLIB(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	defer s.Close()
+
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	libPolicy := &blockchainMock.LIBPolicy{}
+	libPolicy.On("GetProducers").Return(nil)
+	libPolicy.On("GetMinConfirmationNum").Return(6)
+	libPolicy.On("IsBypassingLibCheck").Return(true)
+	bc := CreateBlockchain(addr, s, libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	genesis, err := bc.GetTailBlock()
+	assert.Nil(t, err)
+	// add some blocks
+	blk1 := block.NewBlockWithRawInfo(hash.Hash("hash1"), genesis.GetHash(), 1, 0, 2, nil)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk1))
+	assert.Nil(t, err)
+	blk2 := block.NewBlockWithRawInfo(hash.Hash("hash2"), blk1.GetHash(), 2, 0, 3, nil)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk2))
+	assert.Nil(t, err)
+
+	// unsuccessful update should not change LIBHash
+	bc.updateLIB(10)
+	assert.Equal(t, genesis.GetHash(), bc.GetLIBHash())
+
+	// successful update
+	bc.updateLIB(9)
+	assert.Equal(t, blk2.GetHash(), bc.GetLIBHash())
+}
+
 func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 	//create a new block chain
 
