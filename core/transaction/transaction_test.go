@@ -716,68 +716,230 @@ func TestTransaction_VerifySignatures(t *testing.T) {
 
 func TestTransaction_VerifyPublicKeyHash(t *testing.T) {
 	acc := account.NewAccount()
-	tx := &Transaction{
-		ID: []byte{0x66},
-		Vin: []transactionbase.TXInput{
-			{Txid: []byte{0x12, 0x34}, Vout: 0, Signature: nil, PubKey: acc.GetKeyPair().GetPublicKey()},
-			{Txid: []byte{0x56, 0x78}, Vout: 1, Signature: nil, PubKey: acc.GetKeyPair().GetPublicKey()},
+	acc2 := account.NewAccount()
+	contractAcc := account.NewContractTransactionAccount()
+
+	tests := []struct {
+		name        string
+		tx          *Transaction
+		utxos       []*utxo.UTXO
+		expectedRes bool
+		expectedErr error
+	}{
+		{
+			name: "successful",
+			tx: &Transaction{
+				ID: []byte{0x66},
+				Vin: []transactionbase.TXInput{
+					{Txid: []byte{0x12, 0x34}, Vout: 0, Signature: nil, PubKey: acc.GetKeyPair().GetPublicKey()},
+					{Txid: []byte{0x56, 0x78}, Vout: 1, Signature: nil, PubKey: acc.GetKeyPair().GetPublicKey()},
+				},
+				Vout:     []transactionbase.TXOutput{},
+				Tip:      common.NewAmount(5),
+				GasLimit: common.NewAmount(1024),
+				GasPrice: common.NewAmount(1),
+				Type:     TxTypeNormal,
+			},
+			utxos: []*utxo.UTXO{
+				{
+					TXOutput: transactionbase.TXOutput{Value: common.NewAmount(10), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
+					Txid:     []byte{0x20, 0x21},
+					TxIndex:  0,
+					UtxoType: 0,
+				},
+				{
+					TXOutput: transactionbase.TXOutput{Value: common.NewAmount(20), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
+					Txid:     []byte{0x22, 0x23},
+					TxIndex:  1,
+					UtxoType: 0,
+				},
+			},
+			expectedRes: true,
+			expectedErr: nil,
 		},
-		Vout:     []transactionbase.TXOutput{},
-		Tip:      common.NewAmount(5),
-		GasLimit: common.NewAmount(1024),
-		GasPrice: common.NewAmount(1),
+		{
+			name: "nil utxo PubKeyHash",
+			tx: &Transaction{
+				ID: []byte{0x66},
+				Vin: []transactionbase.TXInput{
+					{Txid: []byte{0x12, 0x34}, Vout: 0, Signature: nil, PubKey: acc.GetKeyPair().GetPublicKey()},
+				},
+				Vout:     []transactionbase.TXOutput{},
+				Tip:      common.NewAmount(5),
+				GasLimit: common.NewAmount(1024),
+				GasPrice: common.NewAmount(1),
+				Type:     TxTypeNormal,
+			},
+			utxos: []*utxo.UTXO{
+				{
+					TXOutput: transactionbase.TXOutput{Value: common.NewAmount(10), PubKeyHash: nil, Contract: ""},
+					Txid:     []byte{0x20, 0x21},
+					TxIndex:  0,
+					UtxoType: 0,
+				},
+			},
+			expectedRes: false,
+			expectedErr: errors.New("Transaction: prevUtxos not found"),
+		},
+		{
+			name: "invalid tx.Vin PubKey",
+			tx: &Transaction{
+				ID: []byte{0x66},
+				Vin: []transactionbase.TXInput{
+					{Txid: []byte{0x12, 0x34}, Vout: 0, Signature: nil, PubKey: []byte("invalid")},
+				},
+				Vout:     []transactionbase.TXOutput{},
+				Tip:      common.NewAmount(5),
+				GasLimit: common.NewAmount(1024),
+				GasPrice: common.NewAmount(1),
+				Type:     TxTypeNormal,
+			},
+			utxos: []*utxo.UTXO{
+				{
+					TXOutput: transactionbase.TXOutput{Value: common.NewAmount(10), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
+					Txid:     []byte{0x20, 0x21},
+					TxIndex:  0,
+					UtxoType: 0,
+				},
+			},
+			expectedRes: false,
+			expectedErr: errors.New("public key not correct"),
+		},
+		{
+			name: "tx vin PubKey does not match utxo PubKeyHash",
+			tx: &Transaction{
+				ID: []byte{0x66},
+				Vin: []transactionbase.TXInput{
+					{Txid: []byte{0x12, 0x34}, Vout: 0, Signature: nil, PubKey: acc2.GetKeyPair().GetPublicKey()},
+				},
+				Vout:     []transactionbase.TXOutput{},
+				Tip:      common.NewAmount(5),
+				GasLimit: common.NewAmount(1024),
+				GasPrice: common.NewAmount(1),
+				Type:     TxTypeNormal,
+			},
+			utxos: []*utxo.UTXO{
+				{
+					TXOutput: transactionbase.TXOutput{Value: common.NewAmount(10), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
+					Txid:     []byte{0x20, 0x21},
+					TxIndex:  0,
+					UtxoType: 0,
+				},
+			},
+			expectedRes: false,
+			expectedErr: errors.New("the pubic key hash does not match"),
+		},
+		{
+			name: "contract",
+			tx: &Transaction{
+				ID: []byte{0x66},
+				Vin: []transactionbase.TXInput{
+					{Txid: []byte{0x12, 0x34}, Vout: 0, Signature: nil, PubKey: nil},
+				},
+				Vout:     []transactionbase.TXOutput{},
+				Tip:      common.NewAmount(5),
+				GasLimit: common.NewAmount(1024),
+				GasPrice: common.NewAmount(1),
+				Type:     TxTypeNormal,
+			},
+			utxos: []*utxo.UTXO{
+				{
+					TXOutput: transactionbase.TXOutput{Value: common.NewAmount(10), PubKeyHash: contractAcc.GetPubKeyHash(), Contract: ""},
+					Txid:     []byte{0x20, 0x21},
+					TxIndex:  0,
+					UtxoType: 0,
+				},
+			},
+			expectedRes: true,
+			expectedErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			success, err := tt.tx.VerifyPublicKeyHash(tt.utxos)
+			assert.Equal(t, tt.expectedRes, success)
+			if tt.expectedErr != nil {
+				assert.Equal(t, tt.expectedErr, err)
+			} else {
+				assert.Nil(t, err)
+			}
+		})
+	}
+}
+
+func TestTransaction_Verify(t *testing.T) {
+	acc := account.NewAccount()
+	tx := &Transaction{
+		ID: []byte{},
+		Vin: []transactionbase.TXInput{
+			{Txid: []byte{}, Vout: 0, Signature: nil, PubKey: nil},
+			{Txid: []byte{}, Vout: 1, Signature: nil, PubKey: acc.GetKeyPair().GetPublicKey()},
+		},
+		Vout: []transactionbase.TXOutput{
+			{Value: common.NewAmount(10), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
+			{Value: common.NewAmount(20), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
+		},
+		Tip:      common.NewAmount(1),
+		GasLimit: common.NewAmount(3000),
+		GasPrice: common.NewAmount(2),
 		Type:     TxTypeNormal,
 	}
 	utxos := []*utxo.UTXO{
 		{
-			TXOutput: transactionbase.TXOutput{Value: common.NewAmount(10), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
+			TXOutput: transactionbase.TXOutput{Value: common.NewAmount(3010), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
 			Txid:     []byte{0x20, 0x21},
 			TxIndex:  0,
 			UtxoType: 0,
 		},
 		{
-			TXOutput: transactionbase.TXOutput{Value: common.NewAmount(20), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
+			TXOutput: transactionbase.TXOutput{Value: common.NewAmount(3021), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
 			Txid:     []byte{0x22, 0x23},
 			TxIndex:  1,
 			UtxoType: 0,
 		},
 	}
-	err := tx.Sign(acc.GetKeyPair().GetPrivateKey(), utxos)
-	assert.Nil(t, err)
+	// nil prevUtxos
+	err := tx.Verify(nil)
 
-	// successful
-	success, err := tx.VerifyPublicKeyHash(utxos)
-	assert.True(t, success)
-	assert.Nil(t, err)
+	// invalid tx ID
+	err = tx.Verify(utxos)
+	assert.Equal(t, errors.New("Transaction: ID is invalid"), err)
+	txCopy := tx.TrimmedCopy(true)
+	tx.ID = (&txCopy).Hash()
 
-	// nil pubkeyhash in utxo
-	utxos[0].PubKeyHash = nil
-	success, err = tx.VerifyPublicKeyHash(utxos)
-	assert.False(t, success)
-	assert.Equal(t, errors.New("Transaction: prevUtxos not found"), err)
-	utxos[0].PubKeyHash = acc.GetPubKeyHash()
-
-	// wrong vin pubkey
-	tx.Vin[0].PubKey = []byte("invalid")
-	success, err = tx.VerifyPublicKeyHash(utxos)
-	assert.False(t, success)
+	// invalid PubKey/PubKeyHash
+	err = tx.Verify(utxos)
 	assert.Equal(t, errors.New("public key not correct"), err)
 	tx.Vin[0].PubKey = acc.GetKeyPair().GetPublicKey()
+	txCopy = tx.TrimmedCopy(true)
+	tx.ID = (&txCopy).Hash()
 
-	// pubkeyhash does not match
-	acc2 := account.NewAccount()
-	tx.Vin[0].PubKey = acc2.GetKeyPair().GetPublicKey()
-	success, err = tx.VerifyPublicKeyHash(utxos)
-	assert.False(t, success)
-	assert.Equal(t, errors.New("the pubic key hash does not match"), err)
-	tx.Vin[0].PubKey = acc.GetKeyPair().GetPublicKey()
+	// invalid tx vout value
+	tx.Vout[0].Value = &common.Amount{*new(big.Int).SetInt64(-1)}
+	txCopy = tx.TrimmedCopy(true)
+	tx.ID = (&txCopy).Hash()
+	err = tx.Verify(utxos)
+	assert.Equal(t, errors.New("Transaction: vout is invalid"), err)
 
-	// contract
-	contractAcc := account.NewContractTransactionAccount()
-	utxos[0].PubKeyHash = contractAcc.GetPubKeyHash()
-	tx.Vin[0].PubKey = nil
-	success, err = tx.VerifyPublicKeyHash(utxos)
-	assert.True(t, success)
+	// invalid utxo amount
+	tx.Vout[0].Value = common.NewAmount(999)
+	txCopy = tx.TrimmedCopy(true)
+	tx.ID = (&txCopy).Hash()
+	err = tx.Verify(utxos)
+	assert.Equal(t, errors.New("Transaction: GasLimit is invalid"), err)
+	tx.Vout[0].Value = common.NewAmount(10)
+
+	// invalid signature
+	txCopy = tx.TrimmedCopy(true)
+	tx.ID = (&txCopy).Hash()
+	err = tx.Verify(utxos)
+	assert.Equal(t, errors.New("Transaction: Signatures is empty"), err)
+
+	// successfully verified
+	err = tx.Sign(acc.GetKeyPair().GetPrivateKey(), utxos)
+	assert.Nil(t, err)
+	err = tx.Verify(utxos)
 	assert.Nil(t, err)
 }
 
@@ -815,6 +977,13 @@ func TestSendTxParam_TotalCost(t *testing.T) {
 	params.GasLimit = common.NewAmount(3)
 	params.GasPrice = common.NewAmount(2)
 	assert.Equal(t, common.NewAmount(28), params.TotalCost())
+}
+
+func TestSetSubsidy(t *testing.T) {
+	SetSubsidy(0)
+	assert.Equal(t, common.NewAmount(0), Subsidy)
+	SetSubsidy(10000000000)
+	assert.Equal(t, common.NewAmount(10000000000), Subsidy)
 }
 
 func TestCalculateUtxoSum(t *testing.T) {

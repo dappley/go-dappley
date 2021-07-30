@@ -85,6 +85,71 @@ func TestBlockPool_ForkHeadRange(t *testing.T) {
 	require.Nil(t, testGetForkHeadHashes(bp))
 }
 
+func TestBlockPool_GetForkHead(t *testing.T) {
+	bp := NewBlockPool(nil)
+
+	parent := block.NewBlockWithRawInfo(hash.Hash("parent"), []byte{0}, 0, 0, 1, nil)
+	blk := block.NewBlockWithRawInfo(hash.Hash("blk"), parent.GetHash(), 0, 0, 2, nil)
+	child := block.NewBlockWithRawInfo(hash.Hash("child"), blk.GetHash(), 0, 0, 3, nil)
+
+	bp.AddBlock(blk)
+	bp.AddBlock(child)
+	assert.Equal(t, blk, bp.GetForkHead(child))
+	bp.AddBlock(parent)
+	assert.Equal(t, parent, bp.GetForkHead(blk))
+
+	unrelatedBlk := block.NewBlockWithRawInfo(hash.Hash("unrelated"), []byte{0}, 0, 0, 1, nil)
+
+	bp.AddBlock(unrelatedBlk)
+	assert.Equal(t, unrelatedBlk, bp.GetForkHead(unrelatedBlk))
+
+	nonexistentBlk := block.NewBlockWithRawInfo(hash.Hash("nonexistent"), []byte{0}, 0, 0, 1, nil)
+	assert.Nil(t, bp.GetForkHead(nonexistentBlk))
+}
+
+func TestBlockPool_pruneOrphans(t *testing.T) {
+
+	parent := block.NewBlockWithRawInfo(hash.Hash("parent"), []byte{0}, 0, 0, 1, nil)
+	blk1 := block.NewBlockWithRawInfo(hash.Hash("blk"), parent.GetHash(), 0, 0, 3, nil)
+	blk2 := block.NewBlockWithRawInfo(hash.Hash("child"), parent.GetHash(), 0, 0, 5, nil)
+
+	bp := NewBlockPool(parent)
+	bp.AddBlock(blk1)
+
+	// manually add unlinked child blk
+	blk2Node, _ := common.NewTreeNode(blk2)
+	bp.blkCache.Add(getKey(blk2Node), blk2Node)
+	bp.orphans[getKey(blk2Node)] = blk2Node
+
+	unrelatedBlk := block.NewBlockWithRawInfo(hash.Hash("unrelated"), []byte{0}, 0, 0, 3, nil)
+	bp.AddBlock(unrelatedBlk)
+
+	blk1NodeInterface, _ := bp.blkCache.Get(blk1.GetHash().String())
+	blk1Node := blk1NodeInterface.(*common.TreeNode)
+
+	unrelatedNodeInterface, _ := bp.blkCache.Get(unrelatedBlk.GetHash().String())
+	unrelatedNode := unrelatedNodeInterface.(*common.TreeNode)
+
+	beforePrune := map[string]*common.TreeNode{
+		blk2.GetHash().String():         blk2Node,
+		unrelatedBlk.GetHash().String(): unrelatedNode,
+	}
+	assert.Equal(t, beforePrune, bp.orphans)
+
+	bp.pruneOrphans()
+	// unrelatedBlk still has valid height so it is not pruned
+	assert.Equal(t, []*common.TreeNode{blk1Node, blk2Node}, bp.root.Children)
+	assert.Equal(t, map[string]*common.TreeNode{unrelatedBlk.GetHash().String(): unrelatedNode}, bp.orphans)
+
+	// replace unrelatedBlk with a block that has invalid height
+	replacementBlk := block.NewBlockWithRawInfo(hash.Hash("unrelated"), []byte{0}, 0, 0, 1, nil)
+	replacementNode, _ := common.NewTreeNode(replacementBlk)
+	*unrelatedNode = *replacementNode
+
+	bp.pruneOrphans()
+	assert.Equal(t, map[string]*common.TreeNode{}, bp.orphans)
+}
+
 func TestBlockPool_isBlockValid(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -402,7 +467,7 @@ func deserializeBlockPool(s string, rootBlkHash string) (*BlockPool, map[string]
 	return bp, blocks
 }
 
-func TestGetKey (t *testing.T) {
+func TestGetKey(t *testing.T) {
 	node1, _ := common.NewTreeNode(createBlock(hash.Hash("hello"), hash.Hash("world"), 0))
 	node2, _ := common.NewTreeNode(createBlock(hash.Hash("123"), hash.Hash("456"), 0))
 	node3, _ := common.NewTreeNode(createBlock(nil, nil, 0))
