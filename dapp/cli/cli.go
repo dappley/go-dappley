@@ -158,7 +158,7 @@ var cmdList = []string{
 
 var (
 	ErrInsufficientFund = errors.New("cli: the balance is insufficient")
-	ErrTooManyUtxoFund  = errors.New("cli: utxo is too many should to merge")
+	ErrTooManyUtxoFund  = errors.New("cli: too many UTXOs, please merge first")
 )
 
 //configure input parameters/flags for each command
@@ -1308,14 +1308,17 @@ func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 	if vinRulesCheck {
 		return retUtxos, nil
 	}
-	if sum.Cmp(amount) > 0 {
+	if sum.Cmp(amount) >= 0 {
 		return nil, ErrTooManyUtxoFund
 	}
 	return nil, ErrInsufficientFund
 }
 
-func vinRules(utxoSum, amount *common.Amount, utxoNum, remainUtxoNum int) bool {
-	return utxoSum.Cmp(amount) >= 0 && (utxoNum == 50 || remainUtxoNum < 100)
+func vinRules(utxoSum, amount *common.Amount, utxoNum, totalUtxoNum int) bool {
+	if totalUtxoNum < 100 {
+		return utxoSum.Cmp(amount) >= 0 && utxoNum < 50
+	}
+	return utxoSum.Cmp(amount) >= 0 && utxoNum == 49 //there is 50 utxos when utxoNum = 49
 }
 
 func helpCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
