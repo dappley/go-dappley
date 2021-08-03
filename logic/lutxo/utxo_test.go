@@ -25,7 +25,7 @@ import (
 	"time"
 
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/util"
 
 	"github.com/dappley/go-dappley/core"
@@ -100,14 +100,14 @@ func TestUTXOIndex_RemoveUTXO(t *testing.T) {
 func TestUpdate_Failed(t *testing.T) {
 	db := new(mocks.Storage)
 
-	db.On("Put", mock.Anything, mock.Anything).Return(errorValues.SimulatedStorageFailure)
+	db.On("Put", mock.Anything, mock.Anything).Return(errval.SimulatedStorageFailure)
 	db.On("Get", mock.Anything, mock.Anything).Return(nil, nil)
 
 	blk := core.GenerateUtxoMockBlockWithoutInputs()
 	utxoIndex := NewUTXOIndex(utxo.NewUTXOCache(db))
 	utxoIndex.UpdateUtxos(blk.GetTransactions())
 	err := utxoIndex.Save()
-	assert.Equal(t, errorValues.SimulatedStorageFailure, err)
+	assert.Equal(t, errval.SimulatedStorageFailure, err)
 	assert.Equal(t, 2, utxoIndex.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).Size())
 }
 
@@ -208,7 +208,7 @@ func TestUTXOIndex_GetUTXOsAccordingToAmount(t *testing.T) {
 		{"notEnoughUtxo",
 			common.NewAmount(4),
 			[]byte(ta1.GetPubKeyHash()),
-			errorValues.InsufficientFund},
+			errval.InsufficientFund},
 
 		{"justEnoughUtxo",
 			common.NewAmount(9),
@@ -217,7 +217,7 @@ func TestUTXOIndex_GetUTXOsAccordingToAmount(t *testing.T) {
 		{"notEnoughUtxo2",
 			common.NewAmount(10),
 			[]byte(ta2.GetPubKeyHash()),
-			errorValues.InsufficientFund},
+			errval.InsufficientFund},
 		{"smartContractUtxo",
 			common.NewAmount(3),
 			[]byte(contractPkh),
@@ -225,7 +225,7 @@ func TestUTXOIndex_GetUTXOsAccordingToAmount(t *testing.T) {
 		{"smartContractUtxoInsufficient",
 			common.NewAmount(5),
 			[]byte(contractPkh),
-			errorValues.InsufficientFund},
+			errval.InsufficientFund},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -420,14 +420,14 @@ func TestUTXOIndex_Save(t *testing.T) {
 		ta4.GetPubKeyHash().String(): &utxoTx4,
 	})
 	err = utxoIndex.Save()
-	assert.Equal(t, errorValues.InvalidKey, err)
+	assert.Equal(t, errval.InvalidKey, err)
 
 	//add a utxo which is same as last utxo
 	utxoIndex.SetIndexAdd(map[string]*utxo.UTXOTx{
 		ta5.GetPubKeyHash().String(): &utxoTx5,
 	})
 	err = utxoIndex.Save()
-	assert.Equal(t, errorValues.AddSameUtxo, err)
+	assert.Equal(t, errval.AddSameUtxo, err)
 
 	utxoIndex2 := NewUTXOIndex(utxo.NewUTXOCache(db))
 	utxoTx10 := utxo.NewUTXOTx() //ta1
@@ -457,7 +457,7 @@ func TestUTXOIndex_Save(t *testing.T) {
 		ta1.GetPubKeyHash().String(): &utxoTx1Remove,
 	})
 	err = utxoIndex2.Save()
-	assert.Equal(t, errorValues.RemoveDuplicateUtxo, err)
+	assert.Equal(t, errval.RemoveDuplicateUtxo, err)
 
 	//The following print outs are normal, because the utxoInfo has not been created
 	// until the first pubkey's utxo is stored.
@@ -578,7 +578,7 @@ func TestUTXOIndex_AddAndRmoveUTXO(t *testing.T) {
 
 	//chain: utxo21-utxo20
 	utxoValue, _, _, err = getUTXOValue(utxo1.GetUTXOKey())
-	assert.Equal(t, errorValues.InvalidKey, err)
+	assert.Equal(t, errval.InvalidKey, err)
 
 	utxoValue, prevKey, nextKey, err = getUTXOValue(utxo20.GetUTXOKey())
 	assert.Nil(t, err)
@@ -625,7 +625,7 @@ func TestUTXOIndex_AddAndRmoveUTXO(t *testing.T) {
 
 	//chain: utxo3-utxo20
 	utxoValue, prevKey, nextKey, err = getUTXOValue(utxo21.GetUTXOKey())
-	assert.Equal(t, errorValues.InvalidKey, err)
+	assert.Equal(t, errval.InvalidKey, err)
 
 	utxoValue, prevKey, nextKey, err = getUTXOValue(utxo3.GetUTXOKey())
 	assert.Nil(t, err)
@@ -645,7 +645,7 @@ func TestUTXOIndex_AddAndRmoveUTXO(t *testing.T) {
 
 	//chain: utxo20
 	utxoValue, prevKey, nextKey, err = getUTXOValue(utxo1.GetUTXOKey())
-	assert.Equal(t, errorValues.InvalidKey, err)
+	assert.Equal(t, errval.InvalidKey, err)
 
 	utxoValue, prevKey, nextKey, err = getUTXOValue(utxo20.GetUTXOKey())
 	assert.Nil(t, err)
@@ -658,5 +658,5 @@ func TestUTXOIndex_AddAndRmoveUTXO(t *testing.T) {
 	assert.Nil(t, err)
 	//chain:
 	utxoValue, prevKey, nextKey, err = getUTXOValue(utxo20.GetUTXOKey())
-	assert.Equal(t, errorValues.InvalidKey, err)
+	assert.Equal(t, errval.InvalidKey, err)
 }

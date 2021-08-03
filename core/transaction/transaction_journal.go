@@ -21,7 +21,7 @@ import (
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	transactionbasepb "github.com/dappley/go-dappley/core/transactionbase/pb"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
@@ -64,7 +64,7 @@ func GetTxOutput(vin transactionbase.TXInput, db storage.Storage) (transactionba
 		return transactionbase.TXOutput{}, err
 	}
 	if vin.Vout >= len(txJournal.Vout) {
-		return transactionbase.TXOutput{}, errorValues.VoutNotFound
+		return transactionbase.TXOutput{}, errval.VoutNotFound
 	}
 	return txJournal.Vout[vin.Vout], nil
 }

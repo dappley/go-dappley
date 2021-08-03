@@ -21,7 +21,7 @@ package network
 import (
 	"bufio"
 
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/network/networkmodel"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -159,7 +159,7 @@ func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *networkmodel.DappPack
 		packet, err := networkmodel.DeserializeIntoDappPacket(s.rawByteRead)
 
 		if err != nil {
-			if err == errorValues.LengthTooShort {
+			if err == errval.LengthTooShort {
 				return
 			} else {
 				logger.WithError(err).WithFields(logger.Fields{

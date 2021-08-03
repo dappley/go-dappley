@@ -26,7 +26,7 @@ import (
 
 	"github.com/dappley/go-dappley/consensus"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/lutxo"
 
 	"github.com/dappley/go-dappley/core/scState"
@@ -99,13 +99,13 @@ func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 	address := in.GetAddress()
 	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(address))
 	if !addressAccount.IsValid() {
-		return nil, status.Error(codes.InvalidArgument, errorValues.InvalidAddress.Error())
+		return nil, status.Error(codes.InvalidArgument, errval.InvalidAddress.Error())
 	}
 
 	amount, err := logic.GetBalance(addressAccount.GetAddress(), rpcService.GetBlockchain())
 	if err != nil {
 		switch err {
-		case errorValues.InvalidAddress:
+		case errval.InvalidAddress:
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		default:
 			return nil, status.Error(codes.Unknown, err.Error())
@@ -118,7 +118,7 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 	tailBlock, err := rpcService.GetBlockchain().GetTailBlock()
 	if err != nil {
 		switch err {
-		case errorValues.BlockDoesNotExist:
+		case errval.BlockDoesNotExist:
 			return nil, status.Error(codes.Internal, err.Error())
 		default:
 			return nil, status.Error(codes.Unknown, err.Error())
@@ -152,7 +152,7 @@ func (rpcService *RpcService) RpcGetUTXO(server rpcpb.RpcService_RpcGetUTXOServe
 
 	acc := account.NewTransactionAccountByAddress(account.NewAddress(req.Address))
 	if !acc.IsValid() {
-		return status.Error(codes.InvalidArgument, errorValues.InvalidAddress.Error())
+		return status.Error(codes.InvalidArgument, errval.InvalidAddress.Error())
 	}
 	response := rpcpb.GetUTXOResponse{}
 	//TODO Race condition Blockchain update after GetUTXO
@@ -308,7 +308,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 
 	if err := ltransaction.VerifyTransaction(rpcService.utxoIndex, tx, 0); err != nil {
 		logger.Warn(err.Error())
-		return nil, status.Error(codes.FailedPrecondition, errorValues.TransactionVerifyFailed.Error())
+		return nil, status.Error(codes.FailedPrecondition, errval.TransactionVerifyFailed.Error())
 	}
 
 	engine := vm.NewV8Engine()
@@ -387,7 +387,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 			respon = append(respon, &rpcpb.SendTransactionStatus{
 				Txid:    tx.ID,
 				Code:    uint32(codes.FailedPrecondition),
-				Message: errorValues.TransactionVerifyFailed.Error(),
+				Message: errval.TransactionVerifyFailed.Error(),
 			})
 			continue
 		}

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/dappley/go-dappley/core/blockchain"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 
 	"github.com/dappley/go-dappley/common"
@@ -241,7 +241,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 			bc:       bcs[2],
 			hash:     hash.Hash("not there"),
 			expected: lutxo.NewUTXOIndex(bcs[2].GetUtxoCache()),
-			err:      errorValues.BlockDoesNotFound,
+			err:      errval.BlockDoesNotFound,
 		},
 		{
 			name:     "no txs in blocks",
@@ -262,14 +262,14 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 			bc:       bcs[5],
 			hash:     normalBlock.GetHash(),
 			expected: lutxo.NewUTXOIndex(bcs[5].GetUtxoCache()),
-			err:      errorValues.UTXONotFound,
+			err:      errval.UTXONotFound,
 		},
 		{
 			name:     "corrupted utxoIndex",
 			bc:       bcs[6],
 			hash:     normalBlock.GetHash(),
 			expected: lutxo.NewUTXOIndex(bcs[6].GetUtxoCache()),
-			err:      errorValues.UTXONotFound,
+			err:      errval.UTXONotFound,
 		},
 	}
 

@@ -3,7 +3,7 @@ package account
 import (
 	"testing"
 
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -43,13 +43,13 @@ func TestPubKeyHash_IsContract(t *testing.T) {
 			name:        "InvalidAddress",
 			pubKeyHash:  []byte{0x00},
 			expectedRes: false,
-			expectedErr: errorValues.InvalidPubKeyHashVersion,
+			expectedErr: errval.InvalidPubKeyHashVersion,
 		},
 		{
 			name:        "EmptyAddress",
 			pubKeyHash:  []byte{},
 			expectedRes: false,
-			expectedErr: errorValues.EmptyPublicKeyHash,
+			expectedErr: errval.EmptyPublicKeyHash,
 		},
 	}
 
@@ -93,10 +93,10 @@ func TestIsValidPubKey(t *testing.T) {
 	isPubKey3Valid, err3 := IsValidPubKey(pubKey3)
 
 	assert.False(t, isPubKey1Valid)
-	assert.Equal(t, errorValues.IncorrectPublicKey, err1)
+	assert.Equal(t, errval.IncorrectPublicKey, err1)
 
 	assert.False(t, isPubKey2Valid)
-	assert.Equal(t, errorValues.IncorrectPublicKey, err2)
+	assert.Equal(t, errval.IncorrectPublicKey, err2)
 
 	assert.True(t, isPubKey3Valid)
 	assert.Nil(t, err3)

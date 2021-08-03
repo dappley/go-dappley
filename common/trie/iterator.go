@@ -20,7 +20,7 @@ package trie
 
 import (
 	"github.com/dappley/go-dappley/crypto/hash"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 )
 
 // IteratorState represents the intermediate statue in iterator
@@ -101,7 +101,7 @@ func (t *Trie) getSubTrieWithMaxCommonPrefix(prefix []byte) ([]byte, []byte, err
 			next := rootNode.Val[2]
 			matchLen := prefixLen(path, curRoute)
 			if matchLen != len(path) && matchLen != len(curRoute) {
-				return nil, nil, errorValues.NotFound
+				return nil, nil, errval.NotFound
 			}
 			route = append(route, path...)
 			curRootHash = next
@@ -110,15 +110,15 @@ func (t *Trie) getSubTrieWithMaxCommonPrefix(prefix []byte) ([]byte, []byte, err
 			path := rootNode.Val[1]
 			matchLen := prefixLen(path, curRoute)
 			if matchLen != len(path) && matchLen != len(curRoute) {
-				return nil, nil, errorValues.NotFound
+				return nil, nil, errval.NotFound
 			}
 			curRootHash = rootNode.Hash
 			curRoute = curRoute[matchLen:]
 			if len(curRoute) > 0 {
-				return nil, nil, errorValues.NotFound
+				return nil, nil, errval.NotFound
 			}
 		default:
-			return nil, nil, errorValues.UnknownNode
+			return nil, nil, errval.UnknownNode
 		}
 	}
 	return curRootHash, route, nil
@@ -131,7 +131,7 @@ func (it *Iterator) push(node *node, pos int, route []byte) {
 func (it *Iterator) pop() (*IteratorState, error) {
 	size := len(it.stack)
 	if size == 0 {
-		return nil, errorValues.EmptyStack
+		return nil, errval.EmptyStack
 	}
 	state := it.stack[size-1]
 	it.stack = it.stack[0 : size-1]
@@ -153,7 +153,7 @@ func (it *Iterator) Next() (bool, error) {
 		case branch:
 			valid := validElementsInBranchNode(pos, node)
 			if len(valid) == 0 {
-				return false, errorValues.EmptyBranch
+				return false, errval.EmptyBranch
 			}
 			if len(valid) > 1 {
 				//curRoute := append(route, []byte{byte(valid[1])}...)

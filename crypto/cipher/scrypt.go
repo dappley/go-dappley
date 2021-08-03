@@ -27,7 +27,7 @@ import (
 
 	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/crypto/utils"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/scrypt"
 )
@@ -187,7 +187,7 @@ func (s *Scrypt) DecryptKey(keyjson []byte, passphrase []byte) ([]byte, error) {
 	}
 	version := keyJSON.Version
 	if version != currentVersion && version != version3 {
-		return nil, errorValues.VersionInvalid
+		return nil, errval.VersionInvalid
 	}
 	return s.scryptDecrypt(&keyJSON.Crypto, passphrase, version)
 }
@@ -195,7 +195,7 @@ func (s *Scrypt) DecryptKey(keyjson []byte, passphrase []byte) ([]byte, error) {
 func (s *Scrypt) scryptDecrypt(crypto *cryptoJSON, passphrase []byte, version int) ([]byte, error) {
 
 	if crypto.Cipher != cipherName {
-		return nil, errorValues.CipherInvalid
+		return nil, errval.CipherInvalid
 	}
 
 	mac, err := hex.DecodeString(crypto.MAC)
@@ -229,7 +229,7 @@ func (s *Scrypt) scryptDecrypt(crypto *cryptoJSON, passphrase []byte, version in
 			return nil, err
 		}
 	} else {
-		return nil, errorValues.KDFInvalid
+		return nil, errval.KDFInvalid
 	}
 
 	var calculatedMAC []byte
@@ -243,11 +243,11 @@ func (s *Scrypt) scryptDecrypt(crypto *cryptoJSON, passphrase []byte, version in
 			calculatedMAC = hash.Keccak256(derivedKey[16:32], cipherText)
 		}
 	} else {
-		return nil, errorValues.VersionInvalid
+		return nil, errval.VersionInvalid
 	}
 
 	if !bytes.Equal(calculatedMAC, mac) {
-		return nil, errorValues.Decrypt
+		return nil, errval.Decrypt
 	}
 
 	key, err := s.aesCTRXOR(derivedKey[:16], cipherText, iv)

@@ -25,7 +25,7 @@ import (
 
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
@@ -188,7 +188,7 @@ func (bc *Blockchain) GetLIBHeight() uint64 {
 func (bc *Blockchain) GetBlockByHash(hash hash.Hash) (*block.Block, error) {
 	rawBytes, err := bc.db.Get(hash)
 	if err != nil {
-		return nil, errorValues.BlockDoesNotExist
+		return nil, errval.BlockDoesNotExist
 	}
 	return block.Deserialize(rawBytes), nil
 }
@@ -196,7 +196,7 @@ func (bc *Blockchain) GetBlockByHash(hash hash.Hash) (*block.Block, error) {
 func (bc *Blockchain) GetBlockByHeight(height uint64) (*block.Block, error) {
 	hash, err := bc.db.Get(util.UintToHex(height))
 	if err != nil {
-		return nil, errorValues.BlockDoesNotExist
+		return nil, errval.BlockDoesNotExist
 	}
 
 	return bc.GetBlockByHash(hash)
@@ -227,7 +227,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		logger.WithFields(logger.Fields{
 			"blockHeight": ctx.Block.GetHeight(),
 		}).Warn("AddBlockContextToTail : prevhash verify failed.")
-		return errorValues.PrevHashVerifyFailed
+		return errval.PrevHashVerifyFailed
 	}
 
 	blockLogger := logger.WithFields(logger.Fields{
@@ -518,7 +518,7 @@ func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
 
 func (bc *Blockchain) getLIB(currBlkHeight uint64) (hash.Hash, error) {
 	if bc.libPolicy == nil {
-		return []byte{}, errorValues.LibPolicyNil
+		return []byte{}, errval.LibPolicyNil
 	}
 
 	minConfirmationNum := bc.libPolicy.GetMinConfirmationNum()

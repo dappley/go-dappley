@@ -22,7 +22,7 @@ import (
 	"sync"
 
 	"github.com/dappley/go-dappley/crypto/cipher"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 )
 
 // Entry keeps in memory
@@ -71,10 +71,10 @@ func (p *MemoryProvider) Aliases() []string {
 // SetKey assigns the given key (that has already been protected) to the given alias.
 func (p *MemoryProvider) SetKey(a string, key Key, passphrase []byte) error {
 	if len(a) == 0 {
-		return errorValues.NeedAlias
+		return errval.NeedAlias
 	}
 	if len(passphrase) == 0 {
-		return errorValues.InvalidPassphrase
+		return errval.InvalidPassphrase
 	}
 
 	encoded, err := key.Encoded()
@@ -98,10 +98,10 @@ func (p *MemoryProvider) SetKey(a string, key Key, passphrase []byte) error {
 // password to recover it.
 func (p *MemoryProvider) GetKey(a string, passphrase []byte) (Key, error) {
 	if len(a) == 0 {
-		return nil, errorValues.NeedAlias
+		return nil, errval.NeedAlias
 	}
 	if len(passphrase) == 0 {
-		return nil, errorValues.InvalidPassphrase
+		return nil, errval.InvalidPassphrase
 	}
 
 	p.mu.RLock()
@@ -109,7 +109,7 @@ func (p *MemoryProvider) GetKey(a string, passphrase []byte) (Key, error) {
 
 	entry, ok := p.entries[a]
 	if !ok {
-		return nil, errorValues.NotFound
+		return nil, errval.NotFound
 	}
 	data, err := p.cipher.Decrypt(entry.data, passphrase)
 	if err != nil {
@@ -128,7 +128,7 @@ func (p *MemoryProvider) Delete(a string) error {
 	defer p.mu.Unlock()
 
 	if &a == nil {
-		return errorValues.NeedAlias
+		return errval.NeedAlias
 	}
 	delete(p.entries, a)
 	return nil
@@ -140,13 +140,13 @@ func (p *MemoryProvider) ContainsAlias(a string) (bool, error) {
 	defer p.mu.RUnlock()
 
 	if &a == nil {
-		return false, errorValues.NeedAlias
+		return false, errval.NeedAlias
 	}
 
 	if _, ok := p.entries[a]; ok {
 		return true, nil
 	}
-	return false, errorValues.NotFound
+	return false, errval.NotFound
 }
 
 // Clear clear all entries in provider
@@ -155,7 +155,7 @@ func (p *MemoryProvider) Clear() error {
 	defer p.mu.Unlock()
 
 	if p.entries == nil {
-		return errorValues.NeedEntriesMap
+		return errval.NeedEntriesMap
 	}
 	p.entries = make(map[string]Entry)
 	return nil

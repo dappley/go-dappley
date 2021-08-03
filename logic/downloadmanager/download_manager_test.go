@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"testing"
 
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/lblockchain/mocks"
 	networkpb "github.com/dappley/go-dappley/network/pb"
 	"github.com/stretchr/testify/mock"
@@ -212,12 +212,12 @@ func TestValidateReturnBlocks(t *testing.T) {
 
 	// test invalid peer id
 	_, err := downloadManager.validateReturnBlocks(nil, "foo")
-	assert.Equal(t, errorValues.PeerNotFound, err)
+	assert.Equal(t, errval.PeerNotFound, err)
 
 	// test empty blocks
 	fakeReturnMsg := &networkpb.ReturnBlocks{Blocks: nil, StartBlockHashes: nil}
 	_, err = downloadManager.validateReturnBlocks(fakeReturnMsg, peerNode.GetHostPeerInfo().PeerId)
-	assert.Equal(t, errorValues.EmptyBlocks, err)
+	assert.Equal(t, errval.EmptyBlocks, err)
 }
 func deleteConfFolderFiles() error {
 	dir, err := ioutil.ReadDir(confDir)

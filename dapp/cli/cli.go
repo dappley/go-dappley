@@ -35,7 +35,7 @@ import (
 	"strings"
 	"time"
 
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	crypto "github.com/libp2p/go-libp2p-crypto"
 
@@ -1388,9 +1388,9 @@ func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 		return retUtxos, nil
 	}
 	if sum.Cmp(amount) > 0 {
-		return nil, errorValues.TooManyUtxoFund
+		return nil, errval.TooManyUtxoFund
 	}
-	return nil, errorValues.InsufficientFund
+	return nil, errval.InsufficientFund
 }
 
 func vinRules(utxoSum, amount *common.Amount, utxoNum, remainUtxoNum int) bool {

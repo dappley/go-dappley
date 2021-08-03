@@ -28,7 +28,7 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 )
@@ -132,7 +132,7 @@ func (utxos *UTXOIndex) GetUpdatedUtxo(pubkeyHash account.PubKeyHash, txid []byt
 	if _, ok := utxos.indexRemove[pubkeyHash.String()]; ok {
 		utxo := utxos.indexRemove[pubkeyHash.String()].GetUtxo(txid, vout)
 		if utxo != nil {
-			return nil, errorValues.UtxoAlreadyRemoved
+			return nil, errval.UtxoAlreadyRemoved
 		}
 	}
 
@@ -308,7 +308,7 @@ func getTXOutputSpent(in transactionbase.TXInput, db storage.Storage) (transacti
 	vout, err := transaction.GetTxOutput(in, db)
 
 	if err != nil {
-		return transactionbase.TXOutput{}, 0, errorValues.TXInputInvalid
+		return transactionbase.TXOutput{}, 0, errval.TXInputInvalid
 	}
 	return vout, in.Vout, nil
 }
@@ -368,7 +368,7 @@ func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int
 		u, err := utxos.cache.GetUtxo(utxoKey)
 		if err != nil {
 			logger.Error("removeUTXO err")
-			return errorValues.UTXONotFound
+			return errval.UTXONotFound
 		}
 		utxoTx, ok := utxos.indexRemove[pkh.String()]
 		if !ok {

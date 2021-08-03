@@ -7,7 +7,7 @@ import (
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/stretchr/testify/mock"
 )
@@ -114,7 +114,7 @@ func (_m *MockScEngine) CheckContactSyntax(sourece string) error {
 	r0 = ret.Get(0).(string)
 
 	if r0 == "" {
-		return errorValues.ContractErrorSyntax
+		return errval.ContractErrorSyntax
 	}
 	return nil
 }

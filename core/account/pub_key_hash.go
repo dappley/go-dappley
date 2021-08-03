@@ -5,7 +5,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/dappley/go-dappley/crypto/hash"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 )
 
 const versionUser = byte(0x5A)
@@ -45,7 +45,7 @@ func (pkh PubKeyHash) GenerateAddress() Address {
 func (pkh PubKeyHash) IsContract() (bool, error) {
 
 	if len(pkh) == 0 {
-		return false, errorValues.EmptyPublicKeyHash
+		return false, errval.EmptyPublicKeyHash
 	}
 
 	if pkh[0] == versionUser {
@@ -56,7 +56,7 @@ func (pkh PubKeyHash) IsContract() (bool, error) {
 		return true, nil
 	}
 
-	return false, errorValues.InvalidPubKeyHashVersion
+	return false, errval.InvalidPubKeyHashVersion
 }
 
 //generatePubKeyHash hashes a public key
@@ -69,7 +69,7 @@ func generatePubKeyHash(pubKey []byte) []byte {
 //IsValidPubKey return true if pubkey is valid
 func IsValidPubKey(pubKey []byte) (bool, error) {
 	if pubKey == nil || len(pubKey) < 32 {
-		return false, errorValues.IncorrectPublicKey
+		return false, errval.IncorrectPublicKey
 	}
 	return true, nil
 }

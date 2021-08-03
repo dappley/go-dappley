@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/dappley/go-dappley/core/account"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	storage_mock "github.com/dappley/go-dappley/storage/mock"
 	laccountpb "github.com/dappley/go-dappley/wallet/pb"
 	"github.com/golang/mock/gomock"
@@ -49,7 +49,7 @@ func TestAccountManager_LoadFromFileNotExists(t *testing.T) {
 	mockStorage := storage_mock.NewMockFileStorage(mockCtrl)
 
 	gomock.InOrder(
-		mockStorage.EXPECT().ReadFromFile().Return(nil, errorValues.FileNotFound),
+		mockStorage.EXPECT().ReadFromFile().Return(nil, errval.FileNotFound),
 	)
 
 	am := NewAccountManager(mockStorage)

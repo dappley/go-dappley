@@ -23,7 +23,7 @@ import (
 	"sync"
 
 	"github.com/dappley/go-dappley/consensus"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 
 	"time"
 
@@ -65,9 +65,9 @@ func (adminRpcService *AdminRpcService) RpcChangeProducer(ctx context.Context, i
 	adminRpcService.mutex.Unlock()
 	if err != nil {
 		switch err {
-		case errorValues.InvalidSenderAddress, errorValues.InvalidRcverAddress, errorValues.InvalidAmount:
+		case errval.InvalidSenderAddress, errval.InvalidRcverAddress, errval.InvalidAmount:
 			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case errorValues.InsufficientFund:
+		case errval.InsufficientFund:
 			return nil, status.Error(codes.FailedPrecondition, err.Error())
 		default:
 			return nil, status.Error(codes.Unknown, err.Error())
@@ -87,9 +87,9 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 	adminRpcService.mutex.Unlock()
 	if err != nil {
 		switch err {
-		case errorValues.InvalidSenderAddress, errorValues.InvalidRcverAddress, errorValues.InvalidAmount:
+		case errval.InvalidSenderAddress, errval.InvalidRcverAddress, errval.InvalidAmount:
 			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case errorValues.InsufficientFund:
+		case errval.InsufficientFund:
 			return nil, status.Error(codes.FailedPrecondition, err.Error())
 		default:
 			return nil, status.Error(codes.Unknown, err.Error())
@@ -107,9 +107,9 @@ func (adminRpcService *AdminRpcService) RpcDeleteProducer(ctx context.Context, i
 	adminRpcService.mutex.Unlock()
 	if err != nil {
 		switch err {
-		case errorValues.InvalidSenderAddress, errorValues.InvalidRcverAddress, errorValues.InvalidAmount:
+		case errval.InvalidSenderAddress, errval.InvalidRcverAddress, errval.InvalidAmount:
 			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case errorValues.InsufficientFund:
+		case errval.InsufficientFund:
 			return nil, status.Error(codes.FailedPrecondition, err.Error())
 		default:
 			return nil, status.Error(codes.Unknown, err.Error())
@@ -141,7 +141,7 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 	sendToAddress := account.NewAddress(in.GetTo())
 	sendAmount := common.NewAmountFromBytes(in.GetAmount())
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return nil, status.Error(codes.InvalidArgument, errorValues.InvalidAmount.Error())
+		return nil, status.Error(codes.InvalidArgument, errval.InvalidAmount.Error())
 	}
 
 	adminRpcService.mutex.Lock()
@@ -149,9 +149,9 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 	adminRpcService.mutex.Unlock()
 	if err != nil {
 		switch err {
-		case errorValues.InvalidSenderAddress, errorValues.InvalidRcverAddress, errorValues.InvalidAmount:
+		case errval.InvalidSenderAddress, errval.InvalidRcverAddress, errval.InvalidAmount:
 			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case errorValues.InsufficientFund:
+		case errval.InsufficientFund:
 			return nil, status.Error(codes.FailedPrecondition, err.Error())
 		default:
 			return nil, status.Error(codes.Unknown, err.Error())
@@ -180,7 +180,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	gasPrice := common.NewAmountFromBytes(in.GetGasPrice())
 
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return nil, status.Error(codes.InvalidArgument, errorValues.InvalidAmount.Error())
+		return nil, status.Error(codes.InvalidArgument, errval.InvalidAmount.Error())
 	}
 	path := in.GetAccountPath()
 	if len(path) == 0 {
@@ -194,7 +194,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 
 	senderAccount := am.GetAccountByAddress(sendFromAddress)
 	if senderAccount == nil || senderAccount.GetKeyPair() == nil {
-		return nil, status.Error(codes.NotFound, errorValues.AddressNotFound.Error())
+		return nil, status.Error(codes.NotFound, errval.AddressNotFound.Error())
 	}
 
 	adminRpcService.mutex.Lock()
@@ -205,9 +205,9 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	txHashStr := hex.EncodeToString(txHash)
 	if err != nil {
 		switch err {
-		case errorValues.InvalidSenderAddress, errorValues.InvalidRcverAddress, errorValues.InvalidAmount:
+		case errval.InvalidSenderAddress, errval.InvalidRcverAddress, errval.InvalidAmount:
 			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case errorValues.InsufficientFund:
+		case errval.InsufficientFund:
 			return nil, status.Error(codes.FailedPrecondition, err.Error())
 		default:
 			return nil, status.Error(codes.Unknown, err.Error())

@@ -21,7 +21,7 @@ import (
 	"os"
 	"sync"
 
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	logger "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
 )
@@ -39,7 +39,7 @@ func OpenDatabase(dbFilePath string) *LevelDB {
 
 	db1, err := leveldb.OpenFile(fp, nil)
 	if err != nil {
-		logger.Panic(errorValues.LevelDbNotAbleToOpenFile)
+		logger.Panic(errval.LevelDbNotAbleToOpenFile)
 	}
 
 	return &LevelDB{
@@ -59,7 +59,7 @@ func (ldb *LevelDB) Close() error {
 func (ldb *LevelDB) Get(key []byte) ([]byte, error) {
 	val, err := ldb.db.Get(key, nil)
 	if err != nil && err == leveldb.ErrNotFound {
-		return nil, errorValues.InvalidKey
+		return nil, errval.InvalidKey
 	}
 	return val, err
 }

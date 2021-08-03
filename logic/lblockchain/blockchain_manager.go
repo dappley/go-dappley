@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 
 	"github.com/dappley/go-dappley/common"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/common/log"
@@ -291,7 +291,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 
 	for i := len(forkBlks) - 1; i >= 0; i-- {
 		if !bm.Getblockchain().CheckMinProducerPolicy(forkBlks[i]) {
-			return errorValues.ProducerNotEnough
+			return errval.ProducerNotEnough
 		}
 
 		logger.WithFields(logger.Fields{
@@ -302,7 +302,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		contractStates := scState.NewScState(bm.blockchain.GetUtxoCache())
 
 		if !lblock.VerifyTransactions(forkBlks[i], utxo, contractStates, parentBlk, bm.Getblockchain().GetDb()) {
-			return errorValues.TransactionVerifyFailed
+			return errval.TransactionVerifyFailed
 		}
 
 		ctx := BlockContext{forkBlks[i], utxo, contractStates}
@@ -410,7 +410,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 		}
 
 		if blk.GetHash().Equals(bc.GetLIBHash()) {
-			return nil, nil, errorValues.BlockDoesNotFound
+			return nil, nil, errval.BlockDoesNotFound
 		}
 
 		err = index.UndoTxsInBlock(blk, db)

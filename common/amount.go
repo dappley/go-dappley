@@ -21,7 +21,7 @@ package common
 import (
 	"math/big"
 
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 )
 
 // Amount implements an unsigned integer type with arbitrary/no upper bound. It is based on big.Int.
@@ -32,7 +32,7 @@ type Amount struct {
 // Validate returns error if a is not a valid amount, otherwise returns nil.
 func (a Amount) Validate() error {
 	if a.Sign() < 0 {
-		return errorValues.AmountUnderflow
+		return errval.AmountUnderflow
 	}
 	return nil
 }
@@ -61,7 +61,7 @@ func NewAmountFromString(s string) (*Amount, error) {
 		_, success = i.SetString(s, 10)
 	}
 	if !success {
-		return nil, errorValues.AmountInvalidString
+		return nil, errval.AmountInvalidString
 	}
 	if err := (&Amount{*i}).Validate(); nil != err {
 		return nil, err

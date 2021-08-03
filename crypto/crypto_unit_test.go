@@ -14,7 +14,7 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/stretchr/testify/assert"
 	//"fmt"
 	//"crypto/sha256"
@@ -294,7 +294,7 @@ func TestSecp256k1FromECDSAPriv(t *testing.T) {
 	//empty privKey
 	privData, err := secp256k1.FromECDSAPrivateKey(nil)
 	assert.Nil(t, privData)
-	assert.Equal(t, err, errorValues.ECDSAInputPvtKey)
+	assert.Equal(t, err, errval.ECDSAInputPvtKey)
 
 	//privKey.D bitlen far less than 256)
 	t.Run("privkey with short D", func(t *testing.T) {
@@ -368,28 +368,28 @@ func TestSecp256k1Sign_fail(t *testing.T) {
 		msg = []byte{102, 97, 107, 101, 102, 97, 107, 101, 232, 123, 139, 153, 141, 234, 158, 246, 4, 30, 205, 160, 212, 219, 15, 32, 208, 159, 66, 2}
 		sig, err := secp256k1.Sign(msg, sk)
 		assert.Nil(t, sig)
-		assert.Equal(t, err, errorValues.InvalidMsgLen)
+		assert.Equal(t, err, errval.InvalidMsgLen)
 	})
 	//empty msg
 	t.Run("empty msg", func(t *testing.T) {
 		msg = []byte{}
 		sig, err := secp256k1.Sign(msg, sk)
 		assert.Nil(t, sig)
-		assert.Equal(t, err, errorValues.InvalidMsgLen)
+		assert.Equal(t, err, errval.InvalidMsgLen)
 	})
 	//nil msg
 	t.Run("nil msg", func(t *testing.T) {
 		msg = nil
 		sig, err := secp256k1.Sign(msg, sk)
 		assert.Nil(t, sig)
-		assert.Equal(t, err, errorValues.InvalidMsgLen)
+		assert.Equal(t, err, errval.InvalidMsgLen)
 	})
 	//msg too long
 	t.Run("msg too long", func(t *testing.T) {
 		msg = []byte{102, 97, 107, 101, 102, 97, 107, 101, 232, 123, 139, 153, 141, 234, 158, 246, 4, 30, 205, 160, 212, 219, 15, 32, 208, 159, 66, 2, 90, 115, 237, 38, 12, 44}
 		sig, err := secp256k1.Sign(msg, sk)
 		assert.Nil(t, sig)
-		assert.Equal(t, err, errorValues.InvalidMsgLen)
+		assert.Equal(t, err, errval.InvalidMsgLen)
 	})
 }
 
@@ -458,7 +458,7 @@ func TestSecp256k1Verify_fail(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := secp256k1.Verify(tt.msg, tt.sig, invalid_pk)
 			assert.Equal(t, result, false)
-			assert.Equal(t, err, errorValues.InvalidPublicKey)
+			assert.Equal(t, err, errval.InvalidPublicKey)
 		})
 	}
 	//wrong public key

@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 
 	"github.com/dappley/go-dappley/core/scState"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/transaction"
@@ -24,7 +24,7 @@ func EstimateGas(tx *transaction.Transaction, tailBlk *block.Block, utxoCache *u
 	rewards := make(map[string]string)
 	ctx := ltransaction.NewTxContract(tx)
 	if ctx == nil {
-		return 0, errorValues.ErrTransactionVerifyFailed
+		return 0, errval.TransactionVerifyFailed
 	}
 	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, ctx.Transaction)
 	if err != nil {

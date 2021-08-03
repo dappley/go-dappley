@@ -27,7 +27,7 @@ import (
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
@@ -187,7 +187,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	assert.Equal(t, genesis.GetHash(), hash.Hash(bc.GetTailBlockHash()))
 
 	// Simulate a failure when flushing new block to storage
-	db.On("Flush").Return(errorValues.SimulatedStorageFailure)
+	db.On("Flush").Return(errval.SimulatedStorageFailure)
 
 	// Add new block
 	blk := block.NewBlock([]*transaction.Transaction{}, genesis, "")

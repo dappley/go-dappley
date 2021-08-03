@@ -21,7 +21,7 @@ package crypto
 import (
 	"github.com/dappley/go-dappley/crypto/keystore"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 )
 
 // NewPrivateKey generate a privatekey with Algorithm
@@ -43,7 +43,7 @@ func NewPrivateKey(alg keystore.Algorithm, data []byte) (keystore.PrivateKey, er
 		}
 		return priv, nil
 	default:
-		return nil, errorValues.AlgorithmInvalid
+		return nil, errval.AlgorithmInvalid
 	}
 }
 
@@ -53,7 +53,7 @@ func NewSignature(alg keystore.Algorithm) (keystore.Signature, error) {
 	case keystore.SECP256K1:
 		return new(secp256k1.Signature), nil
 	default:
-		return nil, errorValues.AlgorithmInvalid
+		return nil, errval.AlgorithmInvalid
 	}
 }
 
@@ -63,6 +63,6 @@ func CheckAlgorithm(alg keystore.Algorithm) error {
 	case keystore.SECP256K1:
 		return nil
 	default:
-		return errorValues.AlgorithmInvalid
+		return errval.AlgorithmInvalid
 	}
 }

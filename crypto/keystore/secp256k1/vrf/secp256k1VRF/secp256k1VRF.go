@@ -36,7 +36,7 @@ import (
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1/bitelliptic"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1/vrf"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 )
 
 var (
@@ -158,7 +158,7 @@ func (pk *PublicKey) ProofToHash(m, proof []byte) (index [32]byte, err error) {
 	nilIndex := [32]byte{}
 	// verifier checks that s == H2(m, [t]G + [s]([k]G), [t]H1(m) + [s]VRF_k(m))
 	if got, want := len(proof), 64+65; got != want {
-		return nilIndex, errorValues.InvalidVRF
+		return nilIndex, errval.InvalidVRF
 	}
 
 	// Parse proof into s, t, and vrf.
@@ -169,7 +169,7 @@ func (pk *PublicKey) ProofToHash(m, proof []byte) (index [32]byte, err error) {
 	// uHx, uHy := elliptic.Unmarshal(curve, vrf)
 	uHx, uHy := curve.Unmarshal(vrf) //////???
 	if uHx == nil {
-		return nilIndex, errorValues.InvalidVRF
+		return nilIndex, errval.InvalidVRF
 	}
 
 	// [t]G + [s]([k]G) = [t+ks]G
@@ -203,7 +203,7 @@ func (pk *PublicKey) ProofToHash(m, proof []byte) (index [32]byte, err error) {
 	buf.Write(h2.Bytes())
 
 	if !hmac.Equal(s, buf.Bytes()) {
-		return nilIndex, errorValues.InvalidVRF
+		return nilIndex, errval.InvalidVRF
 	}
 	return sha256.Sum256(vrf), nil
 }
@@ -228,10 +228,10 @@ func (pk *PublicKey) ProofToHash(m, proof []byte) (index [32]byte, err error) {
 // NewVRFSigner creates a signer object from a private key.
 func NewVRFSigner(key *ecdsa.PrivateKey) (vrf.PrivateKey, error) {
 	if *(key.Params()) != *curve.Params() {
-		return nil, errorValues.PointNotOnCurve
+		return nil, errval.PointNotOnCurve
 	}
 	if !curve.IsOnCurve(key.X, key.Y) {
-		return nil, errorValues.PointNotOnCurve
+		return nil, errval.PointNotOnCurve
 	}
 	return &PrivateKey{key}, nil
 }
@@ -244,10 +244,10 @@ func (k PrivateKey) Public() crypto.PublicKey {
 // NewVRFVerifier creates a verifier object from a public key.
 func NewVRFVerifier(pubkey *ecdsa.PublicKey) (vrf.PublicKey, error) {
 	if *(pubkey.Params()) != *curve.Params() {
-		return nil, errorValues.PointNotOnCurve
+		return nil, errval.PointNotOnCurve
 	}
 	if !curve.IsOnCurve(pubkey.X, pubkey.Y) {
-		return nil, errorValues.PointNotOnCurve
+		return nil, errval.PointNotOnCurve
 	}
 	return &PublicKey{pubkey}, nil
 }

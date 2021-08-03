@@ -22,7 +22,7 @@ import (
 
 	//"github.com/nebulasio/go-nebulas/crypto/keystore"
 	"github.com/dappley/go-dappley/crypto/keystore"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 )
 
 // Signature signature ecdsa
@@ -46,7 +46,7 @@ func (s *Signature) InitSign(priv keystore.PrivateKey) error {
 // Sign ecdsa sign
 func (s *Signature) Sign(data []byte) (out []byte, err error) {
 	if s.privateKey == nil {
-		return nil, errorValues.GetPvtKeyFirst
+		return nil, errval.GetPvtKeyFirst
 	}
 	signature, err := s.privateKey.Sign(data)
 	if err != nil {
@@ -74,7 +74,7 @@ func (s *Signature) InitVerify(pub keystore.PublicKey) error {
 // Verify ecdsa verify
 func (s *Signature) Verify(data []byte, signature []byte) (bool, error) {
 	if s.publicKey == nil {
-		return false, errorValues.GivePubKeyFirst
+		return false, errval.GivePubKeyFirst
 	}
 	return s.publicKey.Verify(data, signature)
 }

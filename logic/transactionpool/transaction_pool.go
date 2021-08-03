@@ -26,7 +26,7 @@ import (
 
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/lutxo"
 
@@ -183,7 +183,7 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *lutxo.UTXOI
 
 	txNode := txPool.getMaxTipTransaction()
 	if txNode == nil {
-		return txNode, errorValues.TxNode
+		return txNode, errval.TxNode
 	}
 	//remove the transaction from tip order
 	txPool.tipOrder = txPool.tipOrder[1:]

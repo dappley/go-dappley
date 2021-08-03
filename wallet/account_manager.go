@@ -25,7 +25,7 @@ import (
 
 	"github.com/dappley/go-dappley/core/account"
 	accountpb "github.com/dappley/go-dappley/core/account/pb"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/storage"
 	laccountpb "github.com/dappley/go-dappley/wallet/pb"
 	"github.com/golang/protobuf/proto"
@@ -144,7 +144,7 @@ func (am *AccountManager) GetAddressesWithPassphrase(password string) ([]string,
 	err := bcrypt.CompareHashAndPassword(am.PassPhrase, []byte(password))
 	if err != nil {
 		am.mutex.Unlock()
-		return nil, errorValues.PasswordIncorrect
+		return nil, errval.PasswordIncorrect
 	}
 	for _, account := range am.Accounts {
 		address := account.GetAddress().String()
@@ -179,11 +179,11 @@ func (am *AccountManager) GetAccountByAddressWithPassphrase(address account.Addr
 	if err == nil {
 		account := am.GetAccountByAddress(address)
 		if account == nil {
-			return nil, errorValues.AddressNotFound
+			return nil, errval.AddressNotFound
 		}
 		return account, nil
 	}
-	return nil, errorValues.PasswordIncorrect
+	return nil, errval.PasswordIncorrect
 
 }
 

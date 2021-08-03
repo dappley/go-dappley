@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -97,9 +97,9 @@ func TestLevelDB_BatchWrite(t *testing.T) {
 
 	// Not written to storage before flushing
 	_, err := ldb.Get([]byte("1"))
-	assert.Equal(t, errorValues.InvalidKey, err)
+	assert.Equal(t, errval.InvalidKey, err)
 	_, err = ldb.Get([]byte("2"))
-	assert.Equal(t, errorValues.InvalidKey, err)
+	assert.Equal(t, errval.InvalidKey, err)
 
 	err = ldb.Flush()
 	assert.Nil(t, err)

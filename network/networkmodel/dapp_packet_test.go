@@ -3,7 +3,7 @@ package networkmodel
 import (
 	"testing"
 
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,25 +36,25 @@ func TestDappPacket_ExtractDappPacketFromRawBytes(t *testing.T) {
 			name:    "IncorrectStartingByte",
 			input:   []byte{0x7E, 0x55, 0x44, 0x7F, 0x7F, 0x00, 0x44, 0x7F, 0x7F, 0x00, 0x44, 0x7F, 0x7F, 0x00},
 			retData: nil,
-			retErr:  errorValues.InvalidMessageFormat,
+			retErr:  errval.InvalidMessageFormat,
 		},
 		{
 			name:    "Not enough bytes for header",
 			input:   []byte{0x7E, 0x7E, 0x55, 0x44, 0x7F, 0x7F, 0x01},
 			retData: nil,
-			retErr:  errorValues.LengthTooShort,
+			retErr:  errval.LengthTooShort,
 		},
 		{
 			name:    "Not enough bytes for data",
 			input:   []byte{0x7e, 0x7e, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x5, 0x00, 0xF, 0x10, 0x1, 0x2, 0x3, 0x4},
 			retData: nil,
-			retErr:  errorValues.LengthTooShort,
+			retErr:  errval.LengthTooShort,
 		},
 		{
 			name:    "Incorrect checksum",
 			input:   []byte{0x7e, 0x7e, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x5, 0x3, 0x1, 0x2, 0x3, 0x4, 0x5},
 			retData: nil,
-			retErr:  errorValues.CheckSumIncorrect,
+			retErr:  errval.CheckSumIncorrect,
 		},
 	}
 

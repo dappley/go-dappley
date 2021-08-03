@@ -23,6 +23,7 @@ package rpc
 import (
 	"errors"
 	"fmt"
+	errval "github.com/dappley/go-dappley/errors"
 
 	"github.com/dappley/go-dappley/common/deadline"
 	"github.com/dappley/go-dappley/consensus"
@@ -176,7 +177,7 @@ func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 	}
 
 	if sum.Cmp(amount) < 0 {
-		return nil, errorValues.ErrInsufficientFund
+		return nil, errval.ErrInsufficientFund
 	}
 
 	return retUtxos, nil

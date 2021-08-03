@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common/log"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/blockproducer"
 
 	"github.com/dappley/go-dappley/common/hash"
@@ -287,12 +287,12 @@ func (downloadManager *DownloadManager) validateReturnBlocks(blocksPb *networkpb
 
 	if downloadManager.downloadingPeer == nil || downloadManager.downloadingPeer.peerid != peerId {
 		returnBlocksLogger.Info("validateReturnBlocks: downloadingPeer is empty or peerId is not match.")
-		return nil, errorValues.PeerNotFound
+		return nil, errval.PeerNotFound
 	}
 
 	if blocksPb.GetBlocks() == nil || len(blocksPb.GetBlocks()) == 0 {
 		returnBlocksLogger.Error("DownloadManager: received no block.")
-		return nil, errorValues.EmptyBlocks
+		return nil, errval.EmptyBlocks
 	}
 
 	hashes := make([]hash.Hash, len(blocksPb.GetStartBlockHashes()))
@@ -302,7 +302,7 @@ func (downloadManager *DownloadManager) validateReturnBlocks(blocksPb *networkpb
 
 	if downloadManager.isDownloadCommandFinished(hashes) {
 		returnBlocksLogger.Info("DownloadManager: response is not for waiting command.")
-		return nil, errorValues.MismatchResponse
+		return nil, errval.MismatchResponse
 	}
 
 	return downloadManager.downloadingPeer, nil

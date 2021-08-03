@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common/log"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -225,11 +225,11 @@ func (sm *StreamManager) connectPeer(peerInfo networkmodel.PeerInfo, connectionT
 	}
 
 	if sm.isStreamConnected(peerInfo.PeerId) {
-		return errorValues.StreamAlreadyConnected
+		return errval.StreamAlreadyConnected
 	}
 
 	if sm.connectionManager.IsConnectionFull(connectionType) {
-		return errorValues.ConnectionsFull
+		return errval.ConnectionsFull
 	}
 
 	sm.host.Peerstore().AddAddrs(peerInfo.PeerId, peerInfo.Addrs, peerstore.PermanentAddrTTL)

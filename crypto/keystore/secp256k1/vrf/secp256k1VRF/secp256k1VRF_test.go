@@ -26,7 +26,7 @@ import (
 	// _ "github.com/google/trillian/crypto/keys/der/proto"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 )
 
 const (
@@ -111,7 +111,7 @@ func TestVRF(t *testing.T) {
 		{m2, index2, proof2, nil},
 		{m3, index3, proof3, nil},
 		{m3, index3, proof2, nil},
-		{m3, index3, proof1, errorValues.InvalidVRF},
+		{m3, index3, proof1, errval.InvalidVRF},
 	} {
 		index, err := pk.ProofToHash(tc.m, tc.proof)
 		if got, want := err, tc.err; got != want {

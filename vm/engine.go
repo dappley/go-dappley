@@ -40,7 +40,7 @@ import (
 	"sync"
 	"unsafe"
 
-	errorValues "github.com/dappley/go-dappley/errors"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/lutxo"
 
 	"github.com/dappley/go-dappley/core/scState"
@@ -293,8 +293,8 @@ func (sc *V8Engine) Execute(function, args string) (string, error) {
 
 	result, err := sc.RunScriptSource(runnableSource, sourceLineOffset)
 
-	if sc.limitsOfExecutionInstructions == MaxLimitsOfExecutionInstructions && err == errorValues.InsufficientGas {
-		err = errorValues.ExecutionTimeout
+	if sc.limitsOfExecutionInstructions == MaxLimitsOfExecutionInstructions && err == errval.InsufficientGas {
+		err = errval.ExecutionTimeout
 		result = "null"
 	}
 	return result, err
@@ -331,16 +331,16 @@ func (sc *V8Engine) RunScriptSource(runnableSource string, sourceLineOffset int)
 	}
 
 	if ret == C.VM_EXE_TIMEOUT_ERR {
-		err = errorValues.ExecutionTimeout
+		err = errval.ExecutionTimeout
 		if TimeoutGasLimitCost > sc.limitsOfExecutionInstructions {
 			sc.actualCountOfExecutionInstructions = sc.limitsOfExecutionInstructions
 		} else {
 			sc.actualCountOfExecutionInstructions = TimeoutGasLimitCost
 		}
 	} else if ret == C.VM_UNEXPECTED_ERR {
-		err = errorValues.Unexpected
+		err = errval.Unexpected
 	} else if ret == C.VM_INNER_EXE_ERR {
-		err = errorValues.InnerExecutionFailed
+		err = errval.InnerExecutionFailed
 		if sc.limitsOfExecutionInstructions < sc.actualCountOfExecutionInstructions {
 			logger.WithFields(logger.Fields{
 				"actualGas": sc.actualCountOfExecutionInstructions,
@@ -349,16 +349,16 @@ func (sc *V8Engine) RunScriptSource(runnableSource string, sourceLineOffset int)
 		}
 	} else {
 		if ret != C.VM_SUCCESS {
-			err = errorValues.ExecutionFailed
+			err = errval.ExecutionFailed
 		}
 		if sc.limitsOfExecutionInstructions > 0 &&
 			sc.limitsOfExecutionInstructions < sc.actualCountOfExecutionInstructions {
 			// Reach instruction limits.
-			err = errorValues.InsufficientGas
+			err = errval.InsufficientGas
 			sc.actualCountOfExecutionInstructions = sc.limitsOfExecutionInstructions
 		} else if sc.limitsOfTotalMemorySize > 0 && sc.limitsOfTotalMemorySize < sc.actualTotalMemorySize {
 			// reach memory limits.
-			err = errorValues.ExceedMemoryLimits
+			err = errval.ExceedMemoryLimits
 			sc.actualCountOfExecutionInstructions = sc.limitsOfExecutionInstructions
 		}
 	}
@@ -379,7 +379,7 @@ func (sc *V8Engine) CheckContactSyntax(source string) error {
 	defer C.free(unsafe.Pointer(cSource))
 	var err error = nil
 	if C.CheckContractSyntax(cSource, sc.v8engine) > 0 {
-		err = errorValues.ContractErrorSyntax
+		err = errval.ContractErrorSyntax
 	}
 	return err
 }
@@ -431,12 +431,12 @@ func (sc *V8Engine) SetExecutionLimits(limitsOfExecutionInstructions, limitsOfTo
 
 	if limitsOfExecutionInstructions == 0 || totalMemorySize == 0 {
 		logger.Errorf("limit args has empty. limitsOfExecutionInstructions:%v,limitsOfTotalMemorySize:%d", limitsOfExecutionInstructions, totalMemorySize)
-		return errorValues.LimitHasEmpty
+		return errval.LimitHasEmpty
 	}
 	// V8 needs at least 6M heap memory.
 	if totalMemorySize > 0 && totalMemorySize < 6000000 {
 		logger.Errorf("V8 needs at least 6M (6000000) heap memory, your limitsOfTotalMemorySize (%d) is too low.", totalMemorySize)
-		return errorValues.SetMemorySmall
+		return errval.SetMemorySmall
 	}
 	return nil
 }
@@ -449,7 +449,7 @@ func (sc *V8Engine) InjectTracingInstructions(source string) (string, int, error
 	lineOffset := C.int(0)
 	traceableCSource := C.RunInjectTracingInstructionsThread(sc.v8engine, cSource, &lineOffset, C.int(sc.strictDisallowUsageOfInstructionCounter), C.uintptr_t(sc.handler))
 	if traceableCSource == nil {
-		return "", 0, errorValues.InjectTracingInstructionFailed
+		return "", 0, errval.InjectTracingInstructionFailed
 	}
 
 	defer C.free(unsafe.Pointer(traceableCSource))
