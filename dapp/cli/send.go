@@ -97,7 +97,7 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	if flags[flagGasPrice] != nil {
 		gasPrice = common.NewAmount(*(flags[flagGasPrice].(*uint64)))
 	}
-	tx_utxos, err := GetUTXOsfromAmount(inputUtxos, common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice)
+	tx_utxos, err := getUTXOsfromAmount(inputUtxos, common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice)
 	if err != nil {
 		fmt.Println("Error: ", err.Error())
 		return

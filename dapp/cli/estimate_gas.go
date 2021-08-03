@@ -71,7 +71,7 @@ func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 	tip := common.NewAmount(0)
 	gasLimit := common.NewAmount(0)
 	gasPrice := common.NewAmount(0)
-	tx_utxos, err := GetUTXOsfromAmount(InputUtxos, common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice)
+	tx_utxos, err := getUTXOsfromAmount(InputUtxos, common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice)
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		return

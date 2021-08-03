@@ -158,7 +158,7 @@ func createAccount(ctx context.Context, c interface{}, flags cmdFlags) *account.
 	return acc
 }
 
-func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) ([]*utxo.UTXO, error) {
+func getUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) ([]*utxo.UTXO, error) {
 	if tip != nil {
 		amount = amount.Add(tip)
 	}

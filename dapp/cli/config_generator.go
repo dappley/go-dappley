@@ -14,48 +14,6 @@ import (
 	crypto "github.com/libp2p/go-libp2p-crypto"
 )
 
-func setNodeType(node *Node, nodeType string) {
-	if nodeType == "minernode" {
-		node.NodeType = MinerNode
-	} else if nodeType == "fullnode" {
-		node.NodeType = FullNode
-	} else {
-		node.NodeType = InvalidNode
-	}
-}
-
-func configContent(node *Node) string {
-	val1 := ("consensus_config{\n" +
-		"	miner_address: " + "\"" + node.miner_address + "\"" + "\n" +
-		"	private_key: \"" + node.private_key + "\"\n" +
-		"}\n\n")
-	val2 := ("node_config{\n" +
-		"	port:	" + node.port + "\n" +
-		"	seed:	[\"" + node.seed + "\"]\n" +
-		"	db_path: \"" + node.db_path + node.fileName + ".db\"\n" +
-		"	rpc_port: " + node.rpc_port + "\n")
-	val3 := ("	key: \"" + node.key + "\"\n")
-	val4 := ("	tx_pool_limit: 102400\n" +
-		"	blk_size_limit: 102400\n" +
-		"	node_address: \"" + node.node_address + "\"\n" +
-		"	metrics_interval: 7200\n" +
-		"	metrics_polling_interval: 5\n}")
-	if node.NodeType == MinerNode && node.key == "" {
-		val := val1 + val2 + val4
-		return val
-	} else if node.NodeType == MinerNode && node.key != "" {
-		val := val1 + val2 + val3 + val4
-		return val
-	} else if node.NodeType == FullNode && node.key == "" {
-		val := val2 + val4
-		return val
-	} else {
-		val := val2 + val3 + val4
-		return val
-	}
-
-}
-
 func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 
 	node := new(Node)
@@ -206,4 +164,46 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 
 	fmt.Println(node.fileName + ".conf" + " is created successfully")
 	fmt.Println("Location: ../conf/" + node.fileName + ".conf")
+}
+
+func setNodeType(node *Node, nodeType string) {
+	if nodeType == "minernode" {
+		node.NodeType = MinerNode
+	} else if nodeType == "fullnode" {
+		node.NodeType = FullNode
+	} else {
+		node.NodeType = InvalidNode
+	}
+}
+
+func configContent(node *Node) string {
+	val1 := ("consensus_config{\n" +
+		"	miner_address: " + "\"" + node.miner_address + "\"" + "\n" +
+		"	private_key: \"" + node.private_key + "\"\n" +
+		"}\n\n")
+	val2 := ("node_config{\n" +
+		"	port:	" + node.port + "\n" +
+		"	seed:	[\"" + node.seed + "\"]\n" +
+		"	db_path: \"" + node.db_path + node.fileName + ".db\"\n" +
+		"	rpc_port: " + node.rpc_port + "\n")
+	val3 := ("	key: \"" + node.key + "\"\n")
+	val4 := ("	tx_pool_limit: 102400\n" +
+		"	blk_size_limit: 102400\n" +
+		"	node_address: \"" + node.node_address + "\"\n" +
+		"	metrics_interval: 7200\n" +
+		"	metrics_polling_interval: 5\n}")
+	if node.NodeType == MinerNode && node.key == "" {
+		val := val1 + val2 + val4
+		return val
+	} else if node.NodeType == MinerNode && node.key != "" {
+		val := val1 + val2 + val3 + val4
+		return val
+	} else if node.NodeType == FullNode && node.key == "" {
+		val := val2 + val4
+		return val
+	} else {
+		val := val2 + val3 + val4
+		return val
+	}
+
 }
