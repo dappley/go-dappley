@@ -140,25 +140,36 @@ func createAccount(ctx context.Context, c interface{}, flags cmdFlags) *account.
 	}
 	if empty {
 		passphrase = prompter.GetPassPhrase("Please input the password for the new account: ", true)
+
+		if passphrase == "" {
+			fmt.Println("Error: password cannot be empty!")
+			return nil
+		}
+		account, err := logic.CreateAccountWithPassphrase(passphrase)
+		if err != nil {
+			fmt.Println("Error:", err.Error())
+			return nil
+		}
+		acc = account
 	} else {
 		passphrase = prompter.GetPassPhrase("Please input the password: ", false)
-	}
-	if passphrase == "" {
-		fmt.Println("Error: password should not be empty!")
-		return nil
-	}
-	account, err := logic.CreateAccountWithPassphrase(passphrase)
-	if err != nil {
-		fmt.Println("Error:", err.Error())
-		return nil
-	}
+		if passphrase == "" {
+			fmt.Println("Error: password should not be empty!")
+			return nil
+		}
+		account, err := logic.CreateAccountWithPassphrase(passphrase)
+		if err != nil {
+			fmt.Println("Error:", err.Error())
+			return nil
+		}
 
-	acc = account
-
+		acc = account
+	}
 	return acc
 }
 
 func getUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) ([]*utxo.UTXO, error) {
+
 	if tip != nil {
 		amount = amount.Add(tip)
 	}

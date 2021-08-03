@@ -195,16 +195,11 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 				continue
 			}
 
-			// record gas used
-			if gasCount > 0 {
-				minerTA := account.NewTransactionAccountByAddress(minerAddr)
-				grtx, err := ltransaction.NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice, count)
-				if err == nil {
-					generatedTxs = append(generatedTxs, &grtx)
-				}
+			if grtx, exists := ltransaction.NewGasRewardTx(account.NewTransactionAccountByAddress(minerAddr), currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice, count); exists {
+				generatedTxs = append(generatedTxs, &grtx)
 			}
-			gctx, err := ltransaction.NewGasChangeTx(ctx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice, count)
-			if err == nil {
+
+			if gctx, exists := ltransaction.NewGasChangeTx(ctx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice, count); exists {
 				generatedTxs = append(generatedTxs, &gctx)
 			}
 			validTxs = append(validTxs, txNode.Value)

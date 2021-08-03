@@ -202,7 +202,8 @@ func (utxos *UTXOIndex) GetUTXOsAccordingToAmount(pubkeyHash account.PubKeyHash,
 	return append(utxoCache,utxoFromdb...) ,nil
 }
 
-func (utxos *UTXOIndex)getUTXOsFromCacheUTXO (pubkeyHash account.PubKeyHash,amount *common.Amount ) (*utxo.UTXOTx,[]*utxo.UTXO,*common.Amount,error){
+//get UTXOS from UTXOIndex, if the utxo already exist in remove list, the utxo will not be included.
+func (utxos *UTXOIndex) getUTXOsFromCacheUTXO(pubkeyHash account.PubKeyHash, amount *common.Amount) (*utxo.UTXOTx, []*utxo.UTXO, *common.Amount, error) {
 	utxoTxAdd := utxos.indexAdd[pubkeyHash.String()]
 	utxoTxRemove := utxos.indexRemove[pubkeyHash.String()]
 

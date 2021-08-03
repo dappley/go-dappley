@@ -134,15 +134,18 @@ func TestScState_GetStateValue(t *testing.T) {
 	scState := NewScState(cache)
 
 	scState.states = map[string]map[string]string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf": {"Account1": "399"}}
-	assert.Equal(t, "399", scState.GetStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account1"))
+	resultValue, _ := scState.GetStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account1")
+	assert.Equal(t, "399", resultValue)
 
 	scState.states = map[string]map[string]string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf": {"Account1": ScStateValueIsNotExist}}
-	assert.Equal(t, "", scState.GetStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account1"))
+	resultValue, _ = scState.GetStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account1")
+	assert.Equal(t, "", resultValue)
 
 	scState.states = map[string]map[string]string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf": {"Account2": "99"}}
 	assert.Nil(t, scState.Save(util.Str2bytes("blkHash")))
 	scState = NewScState(cache)
-	assert.Equal(t, "99", scState.GetStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account2"))
+	resultValue, _ = scState.GetStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account2")
+	assert.Equal(t, "99", resultValue)
 }
 
 func TestScState_SetStateValue(t *testing.T) {
