@@ -345,7 +345,7 @@ func TestTransaction_Execute(t *testing.T) {
 
 			db := storage.NewRamStorage()
 			defer db.Close()
-			cache:=utxo.NewUTXOCache(db)
+			cache := utxo.NewUTXOCache(db)
 			index := lutxo.NewUTXOIndex(cache)
 			if tt.scAddr != "" {
 				index.AddUTXO(scUtxo.TXOutput, nil, 0)
@@ -499,4 +499,79 @@ func TestNewCoinbaseTX(t *testing.T) {
 
 	assert.NotEqual(t, t1, t3)
 	assert.NotEqual(t, t1.ID, t3.ID)
+}
+
+func TestDescribeTransaction(t *testing.T) {
+	acc := account.NewAccount()
+	normalTx := &transaction.Transaction{
+		ID: []byte{0x88},
+		Vin: []transactionbase.TXInput{
+			{Txid: []byte{0x88}, Vout: 0, Signature: nil, PubKey: []byte{0}},
+		},
+		Vout: []transactionbase.TXOutput{
+			{Value: common.NewAmount(10), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
+		},
+		Tip:        common.NewAmount(1),
+		GasLimit:   common.NewAmount(3000),
+		GasPrice:   common.NewAmount(2),
+		CreateTime: 0,
+		Type:       transaction.TxTypeNormal,
+	}
+
+	db := storage.NewRamStorage()
+	defer db.Close()
+	cache := utxo.NewUTXOCache(db)
+	utxoIndex := lutxo.NewUTXOIndex(cache)
+
+	// invalid normalTx.Vin[0] PubKey
+	sender, recipient, amount, tip, err := DescribeTransaction(utxoIndex, normalTx)
+	assert.Nil(t, sender)
+	assert.Nil(t, recipient)
+	assert.Nil(t, amount)
+	assert.Nil(t, tip)
+	assert.Equal(t, errors.New("public key not correct"), err)
+	normalTx.Vin[0].PubKey = acc.GetKeyPair().GetPublicKey()
+
+	// utxo not in cache
+	sender, recipient, amount, tip, err = DescribeTransaction(utxoIndex, normalTx)
+	assert.Nil(t, sender)
+	assert.Nil(t, recipient)
+	assert.Nil(t, amount)
+	assert.Nil(t, tip)
+	assert.Equal(t, errors.New("key is invalid"), err)
+	utxoIndex.AddUTXO(normalTx.Vout[0], normalTx.ID, 0)
+
+	// successful normal tx
+	sender, recipient, amount, tip, err = DescribeTransaction(utxoIndex, normalTx)
+	assert.Equal(t, acc.GetAddress(), *sender)
+	assert.Equal(t, acc.GetAddress(), *recipient)
+	assert.Equal(t, common.NewAmount(10), amount)
+	assert.Equal(t, common.NewAmount(10), tip)
+	assert.Nil(t, err)
+
+	// make contractSendTx
+	contractAcc := account.NewContractTransactionAccount()
+	contractTx := &transaction.Transaction{
+		ID: []byte{0x89},
+		Vin: []transactionbase.TXInput{
+			{Txid: []byte{0x89}, Vout: 0, Signature: nil, PubKey: contractAcc.GetPubKeyHash()},
+		},
+		Vout: []transactionbase.TXOutput{
+			{Value: common.NewAmount(3), PubKeyHash: contractAcc.GetPubKeyHash(), Contract: "contract1"},
+		},
+		Tip:        common.NewAmount(1),
+		GasLimit:   common.NewAmount(3000),
+		GasPrice:   common.NewAmount(2),
+		CreateTime: 0,
+		Type:       transaction.TxTypeContractSend,
+	}
+
+	txo := transactionbase.TXOutput{common.NewAmount(5), contractAcc.GetPubKeyHash(), ""}
+	utxoIndex.AddUTXO(txo, contractTx.ID, 0)
+	sender, recipient, amount, tip, err = DescribeTransaction(utxoIndex, contractTx)
+	assert.Equal(t, contractAcc.GetAddress(), *sender)
+	assert.Equal(t, &account.Address{}, recipient)
+	assert.Equal(t, common.NewAmount(0), amount)
+	assert.Equal(t, common.NewAmount(2), tip)
+	assert.Nil(t, err)
 }

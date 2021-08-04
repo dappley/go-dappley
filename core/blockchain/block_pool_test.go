@@ -258,6 +258,63 @@ func TestBlockPool_removeTree(t *testing.T) {
 	}
 }
 
+func TestBlockPool_GetFork(t *testing.T) {
+	serializedBp := "0^1, 1#2, 1#3, 3#4, 4#5, 4#6, 4#7, 2#8, 2#9, 8#10, 3^11, 11#12, 11#13, 13#14, 2^15, 15#16, 4^17"
+	bp, _ := deserializeBlockPool(serializedBp, "1")
+	/*  Test Block Pool Structure
+		Blkgheight 				MAIN FORK:		     	ORPHANS:(3 orphan forks)
+	         0							1
+			 1						2        3
+			 2					  8  9     4                              15
+			 3					10	     5 6 7              11          16
+			 4											  12  13						17
+			 5													14
+	*/
+	tests := []struct {
+		name              string
+		inputBlkHash      string
+		expectedBlkHashes []string
+	}{
+		{
+			name:              "GetFork from blk 1",
+			inputBlkHash:      "1",
+			expectedBlkHashes: []string{"10", "8", "2", "1"},
+		},
+		{
+			name:              "GetFork from blk 3",
+			inputBlkHash:      "3",
+			expectedBlkHashes: []string{"5", "4", "3"},
+		},
+		{
+			name:              "GetFork from blk 11",
+			inputBlkHash:      "11",
+			expectedBlkHashes: []string{"14", "13", "11"},
+		},
+		{
+			name:              "GetFork from blk 16",
+			inputBlkHash:      "16",
+			expectedBlkHashes: []string{"16"},
+		},
+		{
+			name:              "GetFork from nonexistent block",
+			inputBlkHash:      "99",
+			expectedBlkHashes: []string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := bp.GetFork(hash.Hash(tt.inputBlkHash))
+			if len(tt.expectedBlkHashes) == 0 {
+				assert.Equal(t, 0, len(result))
+			} else {
+				for i, blk := range result {
+					assert.Equal(t, hash.Hash(tt.expectedBlkHashes[i]).String(), blk.GetHash().String())
+				}
+			}
+		})
+	}
+}
+
 func TestBlockPool_findLongestChain(t *testing.T) {
 	serializedBp := "0^1, 1#2, 1#3, 3#4, 4#5, 4#6, 4#7, 2#8, 2#9, 8#10, 3^11, 11#12, 11#13, 13#14, 2^15, 15#16, 4^17"
 	bp, _ := deserializeBlockPool(serializedBp, "1")

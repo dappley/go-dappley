@@ -71,6 +71,35 @@ func TestCreateBlockchain(t *testing.T) {
 	assert.Empty(t, blk.GetPrevHash())
 }
 
+func TestGetBlockchain(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	defer s.Close()
+
+	// GetBlockchain should fail when no blockchain was previously created
+	bc, err := GetBlockchain(s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	assert.Nil(t, bc)
+	assert.Equal(t, errors.New("key is invalid"), err)
+
+	libPolicy := &blockchainMock.LIBPolicy{}
+	libPolicy.On("GetProducers").Return(nil)
+	libPolicy.On("GetMinConfirmationNum").Return(6)
+	libPolicy.On("IsBypassingLibCheck").Return(true)
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	expected := CreateBlockchain(addr, s, libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
+
+	// test libPolicy error check
+	bc, err = GetBlockchain(s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	assert.Nil(t, bc)
+	assert.Equal(t, errors.New("libPolicy is nil"), err)
+
+	// successful GetBlockchain
+	bc, err = GetBlockchain(s, libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	assert.Equal(t, expected.GetTailBlockHash(), bc.GetTailBlockHash())
+	assert.Equal(t, expected.GetLIBHash(), bc.GetLIBHash())
+	assert.Nil(t, err)
+}
+
 func TestBlockchain_SetTailBlockHash(t *testing.T) {
 	s := storage.NewRamStorage()
 	defer s.Close()
