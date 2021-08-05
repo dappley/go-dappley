@@ -184,7 +184,7 @@ func getUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 	for i := 0; i < len(inputUTXOs); i++ {
 		retUtxos = append(retUtxos, inputUTXOs[i])
 		sum = sum.Add(inputUTXOs[i].Value)
-		if vinRules(sum, amount, i, len(inputUTXOs)) {
+		if vinRules(sum, amount, i, len(inputUTXOs)-i) {
 			vinRulesCheck = true
 			break
 		}
@@ -192,14 +192,12 @@ func getUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 	if vinRulesCheck {
 		return retUtxos, nil
 	}
-	if sum.Cmp(amount) > 0 {
-		return nil, ErrTooManyUtxoFund
-	}
+
 	return nil, ErrInsufficientFund
 }
 
 func vinRules(utxoSum, amount *common.Amount, utxoNum, remainUtxoNum int) bool {
-	return utxoSum.Cmp(amount) >= 0 && (utxoNum == 50 || remainUtxoNum < 100)
+	return utxoSum.Cmp(amount) >= 0 && (utxoNum == 49 || remainUtxoNum < 100)
 }
 
 func initRpcClient(port int) *grpc.ClientConn {
