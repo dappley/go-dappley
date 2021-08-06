@@ -75,6 +75,47 @@ func TestSign(t *testing.T) {
 	}
 }
 
+func TestTxNormal_Verify(t *testing.T) {
+	acc := account.NewAccount()
+	tx := &transaction.Transaction{
+		ID: []byte{},
+		Vin: []transactionbase.TXInput{
+			{Txid: []byte{0x20, 0x21}, Vout: 0, Signature: nil, PubKey: acc.GetKeyPair().GetPublicKey()},
+		},
+		Vout: []transactionbase.TXOutput{
+			{Value: common.NewAmount(10), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
+			{Value: common.NewAmount(20), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
+		},
+		Tip:      common.NewAmount(1),
+		GasLimit: common.NewAmount(3000),
+		GasPrice: common.NewAmount(2),
+		Type:     transaction.TxTypeNormal,
+	}
+	vinUTXO := &utxo.UTXO{
+		TXOutput: transactionbase.TXOutput{Value: common.NewAmount(6031), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
+		Txid:     []byte{0x20, 0x21},
+		TxIndex:  0,
+		UtxoType: 0,
+	}
+	txCopy := tx.TrimmedCopy(true)
+	tx.ID = (&txCopy).Hash()
+	err := tx.Sign(acc.GetKeyPair().GetPrivateKey(), []*utxo.UTXO{vinUTXO})
+	assert.Nil(t, err)
+
+	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+
+	// try to verify with vinUTXO not found in utxoIndex
+	normalTx := &TxNormal{tx}
+	err = normalTx.Verify(utxoIndex, 1)
+	assert.Equal(t, transaction.ErrTXInputNotFound, err)
+
+	utxoIndex.AddUTXO(vinUTXO.TXOutput, vinUTXO.Txid, vinUTXO.TxIndex)
+
+	// successful verify
+	err = normalTx.Verify(utxoIndex, 1)
+	assert.Nil(t, err)
+}
+
 func TestVerifyCoinbaseTransaction(t *testing.T) {
 	var prevTXs = map[string]transaction.Transaction{}
 
@@ -485,6 +526,56 @@ func TestTxContract_VerifyGas(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestTxContract_GetTotalBalance(t *testing.T) {
+	contractAcc := account.NewContractTransactionAccount()
+	tx := &transaction.Transaction{
+		ID:  []byte{0x88},
+		Vin: []transactionbase.TXInput{},
+		Vout: []transactionbase.TXOutput{
+			{
+				Value:      common.NewAmount(10),
+				PubKeyHash: contractAcc.GetPubKeyHash(),
+				Contract:   "0123456789abcdef",
+			},
+			{
+				Value:      common.NewAmount(5),
+				PubKeyHash: contractAcc.GetPubKeyHash(),
+				Contract:   "",
+			},
+		},
+		Tip:        common.NewAmount(1),
+		GasLimit:   common.NewAmount(20000),
+		GasPrice:   common.NewAmount(2),
+		CreateTime: 0,
+		Type:       transaction.TxTypeContract,
+	}
+	txContract := NewTxContract(tx)
+
+	prevUTXOS := []*utxo.UTXO{
+		{
+			TXOutput: transactionbase.TXOutput{Value: common.NewAmount(100), PubKeyHash: contractAcc.GetPubKeyHash(), Contract: "0123456789abcdef"},
+			Txid:     []byte{0x88},
+			TxIndex:  0,
+			UtxoType: utxo.UtxoNormal,
+		},
+		{
+			TXOutput: transactionbase.TXOutput{Value: common.NewAmount(1010), PubKeyHash: contractAcc.GetPubKeyHash(), Contract: "0123456789abcdef"},
+			Txid:     []byte{0x88},
+			TxIndex:  1,
+			UtxoType: utxo.UtxoNormal,
+		},
+	}
+
+	total, err := txContract.GetTotalBalance(prevUTXOS)
+	assert.Equal(t, common.NewAmount(1094), total)
+	assert.Nil(t, err)
+
+	tx.Vout[0].Value = common.NewAmount(9999)
+	total, err = txContract.GetTotalBalance(prevUTXOS)
+	assert.Nil(t, total)
+	assert.Equal(t, transaction.ErrInsufficientBalance, err)
+}
+
 func TestTransaction_GetContractAddress(t *testing.T) {
 
 	tests := []struct {
@@ -535,6 +626,80 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 			ctx := NewTxContract(tx)
 			if ctx != nil {
 				assert.Equal(t, account.NewAddress(tt.expectedRes), ctx.GetContractAddress())
+			}
+		})
+	}
+}
+
+func TestNewGasRewardTx(t *testing.T) {
+	tests := []struct {
+		name           string
+		actualGasCount *common.Amount
+		gasPrice       *common.Amount
+		expectedResult transaction.Transaction
+		expectedOk     bool
+	}{
+		{
+			name:           "zero actualGasCount",
+			actualGasCount: common.NewAmount(0),
+			gasPrice:       common.NewAmount(2),
+			expectedResult: transaction.Transaction{},
+			expectedOk:     false,
+		},
+		{
+			name:           "zero gasPrice",
+			actualGasCount: common.NewAmount(30),
+			gasPrice:       common.NewAmount(0),
+			expectedResult: transaction.Transaction{},
+			expectedOk:     false,
+		},
+		{
+			name:           "successful",
+			actualGasCount: common.NewAmount(30),
+			gasPrice:       common.NewAmount(2),
+			expectedResult: transaction.Transaction{
+				ID: []byte{0xee, 0x6f, 0x24, 0x67, 0xf4, 0xcb, 0xff, 0xed, 0xe5, 0x6a, 0x16, 0xbc, 0xe3, 0xa4, 0xd9, 0x72, 0x12, 0xeb, 0x32, 0xb4, 0xf0, 0x2b, 0x52, 0x2f, 0xc4, 0xdc, 0x44, 0x2, 0x95, 0x6d, 0x76, 0x78},
+				Vin: []transactionbase.TXInput{
+					{
+						Txid:      []uint8(nil),
+						Vout:      -1,
+						Signature: []uint8{0x0, 0x7b, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
+						PubKey:    []uint8{0x4d, 0x69, 0x6e, 0x65, 0x72, 0x20, 0x47, 0x61, 0x73, 0x20, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x73},
+					},
+				},
+				Vout: []transactionbase.TXOutput{
+					{
+						Value:      common.NewAmount(60),
+						PubKeyHash: account.PubKeyHash{0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80, 0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49, 0xe5, 0x27, 0xf0, 0x42, 0x5d},
+						Contract:   "",
+					},
+				},
+				Tip:        common.NewAmount(0),
+				GasLimit:   common.NewAmount(0),
+				GasPrice:   common.NewAmount(0),
+				CreateTime: 0,
+				Type:       transaction.TxTypeGasReward,
+			},
+			expectedOk: true,
+		},
+	}
+
+	to := account.NewTransactionAccountByAddress(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, ok := NewGasRewardTx(to, 3, tt.actualGasCount, tt.gasPrice, 123)
+			assert.Equal(t, tt.expectedOk, ok)
+			if tt.expectedOk {
+				assert.Equal(t, tt.expectedResult.ID, result.ID)
+				assert.Equal(t, tt.expectedResult.Vin, result.Vin)
+				assert.Equal(t, tt.expectedResult.Vout, result.Vout)
+				assert.Equal(t, common.NewAmount(0), result.Tip)
+				assert.Equal(t, common.NewAmount(0), result.GasLimit)
+				assert.Equal(t, common.NewAmount(0), result.GasPrice)
+				assert.Equal(t, transaction.TxTypeGasReward, result.Type)
+				assert.Equal(t, tt.expectedResult.Hash(), result.Hash())
+			} else {
+				assert.Equal(t, tt.expectedResult, result)
 			}
 		})
 	}
