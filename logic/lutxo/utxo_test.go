@@ -20,6 +20,7 @@ package lutxo
 
 import (
 	"errors"
+	"fmt"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/util"
 	"sync"
@@ -175,6 +176,87 @@ func TestConcurrentUTXOindexReadWrite(t *testing.T) {
 	assert.True(t, true)
 }
 
+func TestUTXOIndex_GetUpdatedUtxo(t *testing.T) {
+	index := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	acc := account.NewAccount()
+	txo := transactionbase.TXOutput{
+		Value:      common.NewAmount(10),
+		PubKeyHash: acc.GetPubKeyHash(),
+		Contract:   "",
+	}
+	txid := []byte("test1")
+
+	// utxo is not in indexAdd or cache
+	result, err := index.GetUpdatedUtxo(acc.GetPubKeyHash(), txid, 0)
+	assert.Nil(t, result)
+	assert.Equal(t, errors.New("key is invalid"), err)
+	// utxo is in indexAdd
+	index.AddUTXO(txo, txid, 0)
+	result, err = index.GetUpdatedUtxo(acc.GetPubKeyHash(), txid, 0)
+	assert.Equal(t, utxo.NewUTXO(txo, txid, 0, utxo.UtxoNormal), result)
+	assert.Nil(t, err)
+	// utxo is in cache
+	index.Save()
+	result, err = index.GetUpdatedUtxo(acc.GetPubKeyHash(), txid, 0)
+	assert.Equal(t, utxo.NewUTXO(txo, txid, 0, utxo.UtxoNormal), result)
+	assert.Nil(t, err)
+	// utxo is in indexRemove
+	err = index.removeUTXO(acc.GetPubKeyHash(), txid, 0)
+	assert.Nil(t, err)
+	result, err = index.GetUpdatedUtxo(acc.GetPubKeyHash(), txid, 0)
+	assert.Nil(t, result)
+	assert.Equal(t, errors.New("the utxo already has been removed"), err)
+	// utxo is not in indexAdd or cache
+	index.Save()
+	result, err = index.GetUpdatedUtxo(acc.GetPubKeyHash(), txid, 0)
+	assert.Nil(t, result)
+	assert.Equal(t, errors.New("key is invalid"), err)
+}
+
+func TestUTXOIndex_GetContractInvokeUTXOsByPubKeyHash(t *testing.T) {
+	index := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	acc := account.NewContractTransactionAccount()
+	txo := transactionbase.TXOutput{
+		Value:      common.NewAmount(10),
+		PubKeyHash: acc.GetPubKeyHash(),
+		Contract:   "contract",
+	}
+	txo1 := transactionbase.TXOutput{
+		Value:      common.NewAmount(20),
+		PubKeyHash: acc.GetPubKeyHash(),
+		Contract:   "contract",
+	}
+	txo2 := transactionbase.TXOutput{
+		Value:      common.NewAmount(30),
+		PubKeyHash: acc.GetPubKeyHash(),
+		Contract:   "contract",
+	}
+	txo3 := transactionbase.TXOutput{
+		Value:      common.NewAmount(40),
+		PubKeyHash: acc.GetPubKeyHash(),
+		Contract:   "contract",
+	}
+
+	txid := []byte("test")
+	index.AddUTXO(txo, txid, 0)
+	// first one added is of type UtxoCreateContract so it shouldn't be returned
+	result := index.GetContractInvokeUTXOsByPubKeyHash(acc.GetPubKeyHash())
+	assert.Nil(t, result)
+
+	index.AddUTXO(txo1, txid, 1)
+	index.AddUTXO(txo2, txid, 2)
+	index.AddUTXO(txo3, txid, 3)
+
+	expected := []*utxo.UTXO{
+		utxo.NewUTXO(txo1, txid, 1, utxo.UtxoInvokeContract),
+		utxo.NewUTXO(txo2, txid, 2, utxo.UtxoInvokeContract),
+		utxo.NewUTXO(txo3, txid, 3, utxo.UtxoInvokeContract),
+	}
+
+	result = index.GetContractInvokeUTXOsByPubKeyHash(acc.GetPubKeyHash())
+	assert.Equal(t, expected, result)
+}
+
 func TestUTXOIndex_GetUTXOsAccordingToAmount(t *testing.T) {
 	contractAccount := account.NewContractTransactionAccount()
 	contractPkh := contractAccount.GetPubKeyHash()
@@ -241,7 +323,57 @@ func TestUTXOIndex_GetUTXOsAccordingToAmount(t *testing.T) {
 			assert.True(t, sum.Cmp(tt.amount) >= 0)
 		})
 	}
+}
 
+func TestUTXOIndex_UpdateUtxo(t *testing.T) {
+	index := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	acc1 := account.NewAccount()
+	acc2 := account.NewAccount()
+
+	// current transaction
+	tx := &transaction.Transaction{
+		ID: []byte("current"),
+		Vin: []transactionbase.TXInput{
+			{
+				Txid:      []byte("previous"),
+				Vout:      0,
+				Signature: nil,
+				PubKey:    []byte{},
+			},
+		},
+		Vout: []transactionbase.TXOutput{
+			{
+				Value:      common.NewAmount(10),
+				PubKeyHash: acc2.GetPubKeyHash(),
+				Contract:   "",
+			},
+		},
+		Tip:        common.NewAmount(2),
+		GasLimit:   common.NewAmount(30000),
+		GasPrice:   common.NewAmount(1),
+		CreateTime: 0,
+		Type:       transaction.TxTypeNormal,
+	}
+
+	// tx has invalid Vin PubKey
+	ok := index.UpdateUtxo(tx)
+	assert.False(t, ok)
+	tx.Vin[0].PubKey = acc1.GetKeyPair().GetPublicKey()
+
+	// utxo to remove does not exist
+	ok = index.UpdateUtxo(tx)
+	assert.False(t, ok)
+
+	// add previous utxo for tx.Vin
+	prevTxOut := transactionbase.TXOutput{
+		Value:      common.NewAmount(25),
+		PubKeyHash: acc1.GetPubKeyHash(),
+		Contract:   "",
+	}
+	index.AddUTXO(prevTxOut, []byte("previous"), 0)
+
+	ok = index.UpdateUtxo(tx)
+	assert.True(t, ok)
 }
 
 func TestUTXOIndex_DeepCopy(t *testing.T) {
@@ -661,3 +793,77 @@ func TestUTXOIndex_AddAndRmoveUTXO(t *testing.T) {
 	assert.Equal(t, errors.New("key is invalid"), err)
 }
 
+func TestUTXOIndex_SelfCheckingUTXO(t *testing.T) {
+	index := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+
+	var txos []transactionbase.TXOutput
+	var utxoTxs []utxo.UTXOTx
+	for i := 0; i < 4; i++ {
+		pkhString := fmt.Sprintf("hash%d", i)
+		txo := transactionbase.TXOutput{
+			Value:      common.NewAmount(10),
+			PubKeyHash: []byte(pkhString),
+			Contract:   "",
+		}
+		txos = append(txos, txo)
+
+		txid := fmt.Sprintf("tx%d", i)
+		utxoToAdd := utxo.NewUTXO(txo, []byte(txid), 0, utxo.UtxoNormal)
+		utxoTx := utxo.NewUTXOTx()
+		utxoTx.PutUtxo(utxoToAdd)
+		utxoTxs = append(utxoTxs, utxoTx)
+	}
+	index.indexAdd[txos[0].PubKeyHash.String()] = &utxoTxs[0]
+	index.indexAdd[txos[1].PubKeyHash.String()] = &utxoTxs[1]
+	index.cache.AddUtxos(&utxoTxs[1], txos[1].PubKeyHash.String())
+	index.cache.AddUtxos(&utxoTxs[2], txos[2].PubKeyHash.String())
+	index.indexRemove[txos[2].PubKeyHash.String()] = &utxoTxs[2]
+	index.indexRemove[txos[3].PubKeyHash.String()] = &utxoTxs[3]
+
+	index.SelfCheckingUTXO()
+	// expected outcome:
+	// utxo 0 not removed
+	// utxo 1 is removed from indexAdd (already in cache)
+	// utxo 2 not removed
+	// utxo 3 is removed from indexRemove (not in cache)
+	tests := []struct {
+		name        string
+		pkh         account.PubKeyHash
+		indexAdd    bool
+		indexRemove bool
+	}{
+		{
+			name:        "not removed from indexAdd",
+			pkh:         txos[0].PubKeyHash,
+			indexAdd:    true,
+			indexRemove: false,
+		},
+		{
+			name:        "removed from indexAdd",
+			pkh:         txos[1].PubKeyHash,
+			indexAdd:    false,
+			indexRemove: false,
+		},
+		{
+			name:        "not removed from indexRemove",
+			pkh:         txos[2].PubKeyHash,
+			indexAdd:    false,
+			indexRemove: true,
+		},
+		{
+			name:        "removed from indexRemove",
+			pkh:         txos[3].PubKeyHash,
+			indexAdd:    false,
+			indexRemove: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, ok := index.indexAdd[tt.pkh.String()]
+			assert.Equal(t, tt.indexAdd, ok)
+
+			_, ok = index.indexRemove[tt.pkh.String()]
+			assert.Equal(t, tt.indexRemove, ok)
+		})
+	}
+}
