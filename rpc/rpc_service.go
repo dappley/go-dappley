@@ -20,10 +20,6 @@ package rpc
 import (
 	"context"
 
-	"github.com/dappley/go-dappley/consensus"
-	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
-	"github.com/dappley/go-dappley/logic/lutxo"
-	"github.com/pkg/errors"
 	"io"
 	"strings"
 	"sync"
@@ -519,7 +515,7 @@ func (rpcService *RpcService) RpcContractQuery(ctx context.Context, in *rpcpb.Co
 	scState := scState.NewScState(rpcService.GetBlockchain().GetUtxoCache())
 	resultValue, exist := scState.GetStateValue(contractAddr, queryKey)
 	if !exist {
-		return nil, errors.New("key does not exist.")
+		return nil, errval.InvalidKey
 	}
 	return &rpcpb.ContractQueryResponse{Key: queryKey, Value: resultValue}, nil
 }
