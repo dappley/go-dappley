@@ -19,7 +19,6 @@
 package common
 
 import (
-	"github.com/dappley/go-dappley/err"
 	errval "github.com/dappley/go-dappley/errors"
 )
 
@@ -32,7 +31,7 @@ type TreeNode struct {
 //NewTreeNode creates a new tree node
 func NewTreeNode(value interface{}) (*TreeNode, error) {
 	if value == nil {
-		return nil, err.CantCreateEmptyNode
+		return nil, errval.CantCreateEmptyNode
 	}
 	return &TreeNode{value, nil, nil}, nil
 }
