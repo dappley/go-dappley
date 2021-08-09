@@ -23,6 +23,7 @@ import (
 	"sync"
 	"testing"
 
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,7 +61,7 @@ func TestRamStorage_GetandPut(t *testing.T) {
 	_, err := r.Get([]byte("d"))
 
 	//there should be an error returned
-	assert.Equal(t, ErrKeyInvalid, err)
+	assert.Equal(t, errval.InvalidKey, err)
 }
 
 //test close method
@@ -77,7 +78,7 @@ func TestRamStorage_Close(t *testing.T) {
 	v, err := r.Get([]byte("1"))
 
 	//there should be an error returned
-	assert.Equal(t, ErrKeyInvalid, err)
+	assert.Equal(t, errval.InvalidKey, err)
 	//there should be not value returned
 	assert.Nil(t, v)
 }
@@ -111,9 +112,9 @@ func TestRamStorage_BatchWrite(t *testing.T) {
 
 	// Not written to storage before flushing
 	_, err := rs.Get([]byte("1"))
-	assert.Equal(t, ErrKeyInvalid, err)
+	assert.Equal(t, errval.InvalidKey, err)
 	_, err = rs.Get([]byte("2"))
-	assert.Equal(t, ErrKeyInvalid, err)
+	assert.Equal(t, errval.InvalidKey, err)
 
 	err = rs.Flush()
 	assert.Nil(t, err)

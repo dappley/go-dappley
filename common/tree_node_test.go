@@ -20,9 +20,11 @@ package common
 
 import (
 	"fmt"
-	logger "github.com/sirupsen/logrus"
 	"strconv"
 	"testing"
+
+	errval "github.com/dappley/go-dappley/errors"
+	logger "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -35,7 +37,7 @@ func Test_SetParent(t *testing.T) {
 	err1 := childNode.SetParent(parentNode1)
 	assert.Equal(t, nil, err1)
 	err2 := childNode.SetParent(parentNode2)
-	assert.Equal(t, ErrNodeAlreadyHasParent, err2)
+	assert.Equal(t, errval.NodeAlreadyHasParent, err2)
 
 	assert.Equal(t, parentNode1, childNode.Parent)
 }

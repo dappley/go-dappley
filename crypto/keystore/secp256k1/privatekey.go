@@ -21,6 +21,7 @@ package secp256k1
 import (
 	"github.com/dappley/go-dappley/crypto/keystore"
 	"github.com/dappley/go-dappley/crypto/utils"
+	errval "github.com/dappley/go-dappley/errors"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -50,7 +51,7 @@ func (k *PrivateKey) Encoded() ([]byte, error) {
 // Decode decode data to key
 func (k *PrivateKey) Decode(data []byte) error {
 	if SeckeyVerify(data) == false {
-		return ErrInvalidPrivateKey
+		return errval.InvalidPrivateKey
 	}
 	k.seckey = data
 	return nil

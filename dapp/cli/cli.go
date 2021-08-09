@@ -25,6 +25,8 @@ import (
 	"fmt"
 	"os"
 
+	errval "github.com/dappley/go-dappley/errors"
+
 	"github.com/dappley/go-dappley/core/utxo"
 
 	"github.com/dappley/go-dappley/common"
@@ -38,8 +40,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
-
-//command names
 
 func main() {
 
@@ -193,9 +193,9 @@ func getUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 		return retUtxos, nil
 	}
 	if sum.Cmp(amount) >= 0 {
-		return nil, ErrTooManyUtxoFund
+		return nil, errval.TooManyUtxoFund
 	}
-	return nil, ErrInsufficientFund
+	return nil, errval.InsufficientFund
 }
 
 func vinRules(utxoSum, amount *common.Amount, utxoNum, totalUtxoNum int) bool {

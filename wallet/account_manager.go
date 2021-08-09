@@ -20,12 +20,12 @@ package wallet
 
 import (
 	"bytes"
-	"errors"
 	"os"
 	"sync"
 
 	"github.com/dappley/go-dappley/core/account"
 	accountpb "github.com/dappley/go-dappley/core/account/pb"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/storage"
 	laccountpb "github.com/dappley/go-dappley/wallet/pb"
 	"github.com/golang/protobuf/proto"
@@ -34,11 +34,6 @@ import (
 )
 
 const accountDataPath = "../bin/accounts.dat"
-
-var (
-	ErrPasswordIncorrect = errors.New("password is incorrect")
-	ErrAddressNotFound   = errors.New("address not found in local accounts")
-)
 
 type AccountManager struct {
 	Accounts   []*account.Account
@@ -149,7 +144,7 @@ func (am *AccountManager) GetAddressesWithPassphrase(password string) ([]string,
 	err := bcrypt.CompareHashAndPassword(am.PassPhrase, []byte(password))
 	if err != nil {
 		am.mutex.Unlock()
-		return nil, ErrPasswordIncorrect
+		return nil, errval.PasswordIncorrect
 	}
 	for _, account := range am.Accounts {
 		address := account.GetAddress().String()
@@ -184,11 +179,11 @@ func (am *AccountManager) GetAccountByAddressWithPassphrase(address account.Addr
 	if err == nil {
 		account := am.GetAccountByAddress(address)
 		if account == nil {
-			return nil, ErrAddressNotFound
+			return nil, errval.AddressNotFound
 		}
 		return account, nil
 	}
-	return nil, ErrPasswordIncorrect
+	return nil, errval.PasswordIncorrect
 
 }
 

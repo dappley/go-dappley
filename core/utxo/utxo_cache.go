@@ -20,12 +20,13 @@ package utxo
 
 import (
 	"bytes"
-	"errors"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/stateLog"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
@@ -83,7 +84,7 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkeyHash string) error {
 	lastestUtxoKey := utxoCache.getLastUTXOKey(pubkeyHash)
 	for key, utxo := range utxoTx.Indices {
 		if bytes.Equal(util.Str2bytes(key), lastestUtxoKey) {
-			return errors.New("add utxo failed: the utxo is same as the last utxo")
+			return errval.AddSameUtxo
 		}
 
 		if !bytes.Equal([]byte{}, lastestUtxoKey) { //this pubkeyHash already has a UTXO
@@ -142,7 +143,7 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkeyHash string) error
 			}
 		} else {
 			if bytes.Equal(utxo.NextUtxoKey, util.Str2bytes(preUTXO.GetUTXOKey())) {
-				return errors.New("remove utxo error: find duplicate utxo in db")
+				return errval.RemoveDuplicateUtxo
 			}
 			preUTXO.NextUtxoKey = utxo.NextUtxoKey
 			err = utxoCache.putUTXOToDB(preUTXO)
@@ -327,7 +328,7 @@ func (utxoCache *UTXOCache) deleteUTXOInfo(pubkeyHash string) error {
 
 func (utxoCache *UTXOCache) putCreateContractUTXOKey(pubkeyHash string, createContractUTXOKey []byte) error {
 	if _, err := utxoCache.db.Get(util.Str2bytes(pubkeyHash)); err == nil {
-		return errors.New("this utxoInfo already exists")
+		return errval.UtxoInfoExists
 	}
 
 	utxoInfo := NewUTXOInfo()
@@ -427,7 +428,7 @@ func (utxoCache *UTXOCache) DelStateLog(scStateLogKey string) error {
 	return nil
 }
 
-//get UTXOS from db, if the utxo already exist in UTXOIndex remove list, then the utxo will not be included.
+
 func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash account.PubKeyHash, amount *common.Amount, utxoTxRemove *UTXOTx) ([]*UTXO, error) {
 	lastUtxokey := utxoCache.getLastUTXOKey(pubKeyHash.String())
 	var utxoSlice []*UTXO
@@ -456,7 +457,7 @@ func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash accou
 
 		utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
 	}
-	return nil, errors.New("transaction: insufficient balance")
+	return nil, errval.InsufficientFund
 }
 
 func GetscStateKey(address, key string) string {

@@ -25,9 +25,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dappley/go-dappley/common/trie/pb"
+	triepb "github.com/dappley/go-dappley/common/trie/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/hash"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/storage"
 	proto "github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
@@ -81,7 +82,7 @@ func TestNewTrie(t *testing.T) {
 func TestTrieNodeProto(t *testing.T) {
 	n := new(node)
 	var pn *triepb.Node
-	assert.Equal(t, n.FromProto(pn), ErrInvalidProtoToNode)
+	assert.Equal(t, n.FromProto(pn), errval.InvalidProtoToNode)
 }
 
 func TestTrie_Empty(t *testing.T) {
