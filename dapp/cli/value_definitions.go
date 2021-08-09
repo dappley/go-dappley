@@ -104,7 +104,7 @@ var cmdList = []string{
 
 var (
 	ErrInsufficientFund = errors.New("cli: the balance is insufficient")
-	ErrTooManyUtxoFund  = errors.New("cli: utxo is too many should to merge")
+	ErrTooManyUtxoFund  = errors.New("cli: too many UTXOs, please merge first")
 )
 
 //configure input parameters/flags for each command
