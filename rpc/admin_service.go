@@ -60,8 +60,9 @@ func (adminRpcService *AdminRpcService) RpcChangeProducer(ctx context.Context, i
 
 	addresses := in.GetAddresses()
 	height := in.GetHeight()
+	kind := in.GetKind()
 	adminRpcService.mutex.Lock()
-	_, err := logic.SendProducerChangeTX(addresses, height, adminRpcService.bm.Getblockchain())
+	_, err := logic.SendProducerModifyTX(addresses, height, adminRpcService.bm.Getblockchain(), kind)
 	adminRpcService.mutex.Unlock()
 	if err != nil {
 		switch err {
@@ -74,49 +75,8 @@ func (adminRpcService *AdminRpcService) RpcChangeProducer(ctx context.Context, i
 		}
 	}
 
-	logic.ChangeProducers(addresses, height, adminRpcService.bm)
+	logic.ChangeProducers(addresses, height, adminRpcService.bm, int(kind))
 	return &rpcpb.ChangeProducerResponse{}, nil
-}
-
-func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
-
-	addresses := in.GetAddresses()
-	height := in.GetHeight()
-	adminRpcService.mutex.Lock()
-	_, err := logic.SendProducerAddTX(addresses, height, adminRpcService.bm.Getblockchain())
-	adminRpcService.mutex.Unlock()
-	if err != nil {
-		switch err {
-		case errval.InvalidSenderAddress, errval.InvalidRcverAddress, errval.InvalidAmount:
-			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case errval.InsufficientFund:
-			return nil, status.Error(codes.FailedPrecondition, err.Error())
-		default:
-			return nil, status.Error(codes.Unknown, err.Error())
-		}
-	}
-
-	logic.ChangeProducers(addresses, height, adminRpcService.bm)
-	return &rpcpb.AddProducerResponse{}, nil
-}
-
-func (adminRpcService *AdminRpcService) RpcDeleteProducer(ctx context.Context, in *rpcpb.DeleteProducerRequest) (*rpcpb.DeleteProducerResponse, error) {
-	height := in.GetHeight()
-	adminRpcService.mutex.Lock()
-	_, err := logic.SendProducerDeleteTX(height, adminRpcService.bm.Getblockchain())
-	adminRpcService.mutex.Unlock()
-	if err != nil {
-		switch err {
-		case errval.InvalidSenderAddress, errval.InvalidRcverAddress, errval.InvalidAmount:
-			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case errval.InsufficientFund:
-			return nil, status.Error(codes.FailedPrecondition, err.Error())
-		default:
-			return nil, status.Error(codes.Unknown, err.Error())
-		}
-	}
-	logic.ChangeProducers("", height, adminRpcService.bm)
-	return &rpcpb.DeleteProducerResponse{}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {

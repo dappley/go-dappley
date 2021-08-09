@@ -48,7 +48,7 @@ const (
 type Dynasty struct {
 	Height   uint64 `json:"height"`
 	Producer string `json:"addresses"`
-	Type     int    `json:"type"`
+	Kind     int    `json:"kind"`
 }
 
 var (
@@ -90,8 +90,8 @@ func (bm *BlockchainManager) SetNewDynastyByString(info, original string) {
 	if err != nil {
 		logger.Warn(err.Error())
 	}
-	bm.consensus.AddReplacement(original, dynasty.Producer, dynasty.Height, dynasty.Type)
-	logger.Info("change", dynasty.Type)
+	bm.consensus.AddReplacement(original, dynasty.Producer, dynasty.Height, dynasty.Kind)
+	logger.Info("change", dynasty.Kind)
 }
 
 func (bm *BlockchainManager) CheckDynast(height uint64) {
@@ -306,12 +306,14 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		}
 
 		ctx := BlockContext{forkBlks[i], utxo, contractStates}
+
+		err = bm.blockchain.AddBlockContextToTail(&ctx)
+
 		for _, tx := range ctx.Block.GetTransactions() {
 			if tx.IsChangeProducter() {
 				bm.SetNewDynastyByString(tx.Vout[0].Contract, tx.Vout[0].PubKeyHash.GenerateAddress().String())
 			}
 		}
-		err = bm.blockchain.AddBlockContextToTail(&ctx)
 		bm.CheckDynast(ctx.Block.GetHeight())
 		if err != nil {
 			logger.WithFields(logger.Fields{

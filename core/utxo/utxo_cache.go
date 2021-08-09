@@ -88,7 +88,7 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkeyHash string) error {
 		}
 
 		if !bytes.Equal([]byte{}, lastestUtxoKey) { //this pubkeyHash already has a UTXO
-			_, err := utxoCache.UpdateNextUTXO(lastestUtxoKey, key)
+			_, err := utxoCache.SetPrevUtxoKey(lastestUtxoKey, key)
 			if err != nil {
 				return err
 			}
@@ -133,7 +133,7 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkeyHash string) error
 					return err
 				}
 
-				nextUTXO, err := utxoCache.UpdateNextUTXO(utxo.NextUtxoKey, "")
+				nextUTXO, err := utxoCache.SetPrevUtxoKey(utxo.NextUtxoKey, "")
 				if err != nil {
 					return err
 				}
@@ -156,7 +156,7 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkeyHash string) error
 			}
 
 			if !bytes.Equal(utxo.NextUtxoKey, []byte{}) {
-				nextUTXO, err := utxoCache.UpdateNextUTXO(utxo.NextUtxoKey, preUTXO.GetUTXOKey())
+				nextUTXO, err := utxoCache.SetPrevUtxoKey(utxo.NextUtxoKey, preUTXO.GetUTXOKey())
 				if err != nil {
 					return err
 				}
@@ -353,7 +353,7 @@ func (utxoCache *UTXOCache) GetUtxoCreateContract(pubKeyHash string) *UTXO {
 	return utxo
 }
 
-func (utxoCache *UTXOCache) UpdateNextUTXO(nextUTXOKey []byte, preUTXOKey string) (*UTXO, error) {
+func (utxoCache *UTXOCache) SetPrevUtxoKey(nextUTXOKey []byte, preUTXOKey string) (*UTXO, error) {
 	nextUTXO, err := utxoCache.GetUtxo(util.Bytes2str(nextUTXOKey))
 	if err != nil {
 		return nil, err
@@ -428,6 +428,7 @@ func (utxoCache *UTXOCache) DelStateLog(scStateLogKey string) error {
 	return nil
 }
 
+
 func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash account.PubKeyHash, amount *common.Amount, utxoTxRemove *UTXOTx) ([]*UTXO, error) {
 	lastUtxokey := utxoCache.getLastUTXOKey(pubKeyHash.String())
 	var utxoSlice []*UTXO
@@ -444,6 +445,7 @@ func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash accou
 		}
 		if utxoTxRemove != nil {
 			if _, ok := utxoTxRemove.Indices[utxo.GetUTXOKey()]; ok {
+				utxoKey = util.Bytes2str(utxo.NextUtxoKey)
 				continue
 			}
 		}

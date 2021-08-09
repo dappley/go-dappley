@@ -578,17 +578,9 @@ func TestAddBalance(t *testing.T) {
 
 			// Add `addAmount` to the balance of the new account
 			_, _, err := logic.SendFromMiner(testAddr, tc.addAmount, bm.Getblockchain())
+			height := bm.Getblockchain().GetMaxHeight()
 			assert.Equal(t, err, tc.expectedErr)
-
-			uHash, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
-			assert.Nil(t, err)
-			for {
-				uHashNew, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
-				assert.Nil(t, err)
-				if !bytes.Equal(uHash, uHashNew) {
-					uHash = uHashNew
-					break
-				}
+			for bm.Getblockchain().GetMaxHeight()-height <= 1 {
 			}
 
 			bp.Stop()

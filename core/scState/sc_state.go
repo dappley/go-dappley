@@ -13,14 +13,13 @@ import (
 type ScState struct {
 	states map[string]map[string]string //address key, value
 	events []*Event
-	cache *utxo.UTXOCache
+	cache  *utxo.UTXOCache
 	mutex  *sync.RWMutex
 }
 
 const (
 	ScStateValueIsNotExist = ""
 )
-
 
 func NewScState(cache *utxo.UTXOCache) *ScState {
 	return &ScState{
@@ -67,7 +66,7 @@ func (ss *ScState) Save(blkHash hash.Hash) error {
 		}
 	}
 
-	err :=ss.cache.AddStateLog(utxo.GetscStateLogKey(blkHash), stLog)
+	err := ss.cache.AddStateLog(utxo.GetscStateLogKey(blkHash), stLog)
 	if err != nil {
 		return err
 	}
@@ -76,8 +75,8 @@ func (ss *ScState) Save(blkHash hash.Hash) error {
 }
 
 func (ss *ScState) RevertState(blkHash hash.Hash) {
-	stlog,err := ss.cache.GetStateLog(utxo.GetscStateLogKey(blkHash))
-	if err!=nil{
+	stlog, err := ss.cache.GetStateLog(utxo.GetscStateLogKey(blkHash))
+	if err != nil {
 		logger.Warn("get state log failed: ", err)
 	}
 
@@ -88,13 +87,13 @@ func (ss *ScState) RevertState(blkHash hash.Hash) {
 	}
 }
 
-func (ss *ScState) GetStateValue(address, key string) string {
+func (ss *ScState) GetStateValue(address, key string) (string, bool) {
 	if _, ok := ss.states[address]; ok {
 		if value, ok := ss.states[address][key]; ok {
 			if value == ScStateValueIsNotExist {
-				return ""
+				return "", false
 			} else {
-				return value
+				return value, true
 			}
 		}
 	} else {
@@ -102,10 +101,12 @@ func (ss *ScState) GetStateValue(address, key string) string {
 	}
 	value, err := ss.cache.GetScStates(utxo.GetscStateKey(address, key))
 	if err != nil {
-		logger.Warn("get state value failed: ", err)
+		logger.Debug("get state value failed: ", err)
+		ss.states[address][key] = ScStateValueIsNotExist
+		return "", false
 	}
 	ss.states[address][key] = value
-	return value
+	return value, true
 }
 
 func (ss *ScState) SetStateValue(address, key, value string) {
@@ -115,7 +116,7 @@ func (ss *ScState) SetStateValue(address, key, value string) {
 	ss.states[address][key] = value
 }
 
-func (ss *ScState) DelStateValue( address, key string) {
+func (ss *ScState) DelStateValue(address, key string) {
 	if _, ok := ss.states[address]; ok {
 		if _, ok := ss.states[address][key]; ok {
 			ss.states[address][key] = ScStateValueIsNotExist
