@@ -14,6 +14,7 @@ const (
 	cliSend              = "send"
 	cliAddPeer           = "addPeer"
 	clicreateAccount     = "createAccount"
+	cliAddAccount        = "addAccount"
 	cliListAddresses     = "listAddresses"
 	clisendFromMiner     = "sendFromMiner"
 	clichangeProducer    = "changeProducer"
@@ -87,6 +88,7 @@ var cmdList = []string{
 	cliSend,
 	cliAddPeer,
 	clicreateAccount,
+	cliAddAccount,
 	cliListAddresses,
 	clisendFromMiner,
 	clichangeProducer,
@@ -104,7 +106,6 @@ var cmdList = []string{
 
 var (
 	ErrInsufficientFund = errors.New("cli: the balance is insufficient")
-	ErrTooManyUtxoFund  = errors.New("cli: too many UTXOs, please merge first")
 )
 
 //configure input parameters/flags for each command
@@ -227,6 +228,12 @@ var cmdFlagsMap = map[string][]flagPars{
 			"Gas price of smart contract execution.",
 		},
 	},
+	cliAddAccount: {flagPars{
+		flagKey,
+		"",
+		valueTypeString,
+		"Private key of account to be added.",
+	}},
 	cliAddPeer: {flagPars{
 		flagPeerFullAddr,
 		"",
@@ -331,6 +338,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliSend:              {rpcService, sendCommandHandler},
 	cliAddPeer:           {adminRpcService, addPeerCommandHandler},
 	clicreateAccount:     {adminRpcService, createAccountCommandHandler},
+	cliAddAccount:        {rpcService, addAccountCommandHandler},
 	cliListAddresses:     {adminRpcService, listAddressesCommandHandler},
 	clisendFromMiner:     {adminRpcService, sendFromMinerCommandHandler},
 	clichangeProducer:    {adminRpcService, clichangeProducerCommandHandler},
