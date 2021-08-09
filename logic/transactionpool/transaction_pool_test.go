@@ -25,6 +25,7 @@ import (
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/storage"
+	"reflect"
 	"testing"
 
 	"github.com/dappley/go-dappley/core/account"
@@ -95,6 +96,20 @@ var popInputOrder = []struct {
 	{[]*transaction.Transaction{&tx1, &tx2, &tx3, &tx4}},
 	{[]*transaction.Transaction{&tx2, &tx1, &tx4, &tx3}},
 	{[]*transaction.Transaction{&tx4, &tx1, &tx3, &tx2}},
+}
+
+func TestTransactionPool_GetTopicHandler(t *testing.T) {
+	txPool := NewTransactionPool(nil, 128000)
+
+	broadcastTxExpected := reflect.ValueOf(txPool.BroadcastTxHandler).Pointer()
+	broadcastTxActual := reflect.ValueOf(txPool.GetTopicHandler(BroadcastTx)).Pointer()
+	assert.Equal(t, broadcastTxExpected, broadcastTxActual)
+
+	broadcastBatchExpected := reflect.ValueOf(txPool.BroadcastBatchTxsHandler).Pointer()
+	broadcastBatchActual := reflect.ValueOf(txPool.GetTopicHandler(BroadcastBatchTxs)).Pointer()
+	assert.Equal(t, broadcastBatchExpected, broadcastBatchActual)
+
+	assert.Nil(t, txPool.GetTopicHandler("not a topic"))
 }
 
 func TestTransactionPool_Push(t *testing.T) {
@@ -324,6 +339,63 @@ func TestTransactionPool_Rollback(t *testing.T) {
 	assert.Equal(t, 2, len(txPool.txs[tx0Id].Children))
 }
 
+func TestTransactionPool_GetTransactionById(t *testing.T) {
+	txPool := NewTransactionPool(nil, 128000)
+	txPool.Push(tx1)
+	txPool.Push(tx2)
+
+	result := txPool.GetTransactionById(tx1.ID)
+	assert.Equal(t, &tx1, result)
+
+	result = txPool.GetTransactionById(tx2.ID)
+	assert.Equal(t, &tx2, result)
+
+	result = txPool.GetTransactionById([]byte("invalid"))
+	assert.Nil(t, result)
+}
+
+func TestTransactionPool_GetParentTxidsInTxPool(t *testing.T) {
+	parent1 := &transaction.Transaction{
+		ID:   []byte("parent1"),
+		Vin:  GenerateFakeTxInputs(),
+		Vout: GenerateFakeTxOutputs(),
+		Tip:  common.NewAmount(1000),
+	}
+	parent2 := &transaction.Transaction{
+		ID:   []byte("parent2"),
+		Vin:  GenerateFakeTxInputs(),
+		Vout: GenerateFakeTxOutputs(),
+		Tip:  common.NewAmount(2000),
+	}
+	tx := &transaction.Transaction{
+		ID:   []byte("tx"),
+		Vin:  []transactionbase.TXInput{{Txid: parent1.ID}, {Txid: parent2.ID}},
+		Vout: GenerateFakeTxOutputs(),
+		Tip:  common.NewAmount(3000),
+	}
+	child := &transaction.Transaction{
+		ID:   []byte("child"),
+		Vin:  []transactionbase.TXInput{{Txid: tx.ID}},
+		Vout: GenerateFakeTxOutputs(),
+		Tip:  common.NewAmount(4000),
+	}
+
+	txPool := NewTransactionPool(nil, 128)
+	txPool.addTransactionAndSort(transaction.NewTransactionNode(parent1))
+	txPool.addTransactionAndSort(transaction.NewTransactionNode(parent2))
+	txPool.addTransactionAndSort(transaction.NewTransactionNode(tx))
+	txPool.addTransactionAndSort(transaction.NewTransactionNode(child))
+
+	result := txPool.GetParentTxidsInTxPool(parent1)
+	assert.Equal(t, []string{}, result)
+
+	result = txPool.GetParentTxidsInTxPool(tx)
+	assert.Equal(t, []string{"706172656e7431", "706172656e7432"}, result)
+
+	result = txPool.GetParentTxidsInTxPool(child)
+	assert.Equal(t, []string{"7478"}, result)
+}
+
 func generateDependentTxs() []*transaction.Transaction {
 
 	//generate 7 txs that has dependency relationships like the graph below
@@ -416,4 +488,24 @@ func TestNewTransactionNode(t *testing.T) {
 	assert.Equal(t, ttx1, txNode.Value)
 	assert.Equal(t, 0, len(txNode.Children))
 	assert.Equal(t, len(rawBytes), txNode.Size)
+}
+
+func TestCheckDependTxInMap(t *testing.T) {
+	parent1 := &transaction.Transaction{
+		ID:   []byte("parent1"),
+		Vin:  GenerateFakeTxInputs(),
+		Vout: GenerateFakeTxOutputs(),
+		Tip:  common.NewAmount(10),
+	}
+	tx := &transaction.Transaction{
+		ID:   []byte("tx"),
+		Vin:  []transactionbase.TXInput{{Txid: []byte("nonexistent")}, {Txid: []byte("parent1")}},
+		Vout: GenerateFakeTxOutputs(),
+		Tip:  common.NewAmount(10),
+	}
+	txNodeMap := map[string]*transaction.TransactionNode{}
+	assert.False(t, checkDependTxInMap(tx, txNodeMap))
+
+	txNodeMap[hex.EncodeToString(parent1.ID)] = transaction.NewTransactionNode(parent1)
+	assert.True(t, checkDependTxInMap(tx, txNodeMap))
 }

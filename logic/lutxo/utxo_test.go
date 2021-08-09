@@ -325,6 +325,52 @@ func TestUTXOIndex_GetUTXOsAccordingToAmount(t *testing.T) {
 	}
 }
 
+func TestUTXOIndex_getUTXOsFromCacheUTXO(t *testing.T) {
+	acc := account.NewAccount()
+	index := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+
+	outputContract := transactionbase.TXOutput{Value: common.NewAmount(1), PubKeyHash: acc.GetPubKeyHash(), Contract: "contract"}
+	output1 := transactionbase.TXOutput{Value: common.NewAmount(20), PubKeyHash: acc.GetPubKeyHash(), Contract: ""}
+	output2 := transactionbase.TXOutput{Value: common.NewAmount(10), PubKeyHash: acc.GetPubKeyHash(), Contract: ""}
+	output3 := transactionbase.TXOutput{Value: common.NewAmount(5), PubKeyHash: acc.GetPubKeyHash(), Contract: ""}
+
+	utxoContract := utxo.NewUTXO(outputContract, []byte{0x87}, 0, utxo.UtxoCreateContract)
+	utxo1 := utxo.NewUTXO(output1, []byte{0x88}, 0, utxo.UtxoNormal)
+	utxo2 := utxo.NewUTXO(output2, []byte{0x88}, 1, utxo.UtxoNormal)
+	utxo3 := utxo.NewUTXO(output3, []byte{0x88}, 2, utxo.UtxoNormal)
+
+	indexAddUtxoTx := utxo.NewUTXOTx()
+	indexAddUtxoTx.PutUtxo(utxoContract)
+	indexAddUtxoTx.PutUtxo(utxo1)
+	indexAddUtxoTx.PutUtxo(utxo2)
+	indexAddUtxoTx.PutUtxo(utxo3)
+
+	indexRemoveUtxoTx := utxo.NewUTXOTx()
+	indexRemoveUtxoTx.PutUtxo(utxo1)
+	index.indexAdd[acc.GetPubKeyHash().String()] = &indexAddUtxoTx
+	index.indexRemove[acc.GetPubKeyHash().String()] = &indexRemoveUtxoTx
+
+	// amount only requires one utxo
+	remove, utxos, amount, err := index.getUTXOsFromCacheUTXO(acc.GetPubKeyHash(), common.NewAmount(1))
+	assert.Equal(t, &indexRemoveUtxoTx, remove)
+	assert.Equal(t, 1, len(utxos))
+	// map access is random so either utxo2 or utxo3 is valid
+	if common.NewAmount(10).Cmp(amount) == 0 {
+		assert.Equal(t, []*utxo.UTXO{utxo2}, utxos)
+	} else {
+		assert.Equal(t, []*utxo.UTXO{utxo3}, utxos)
+		assert.Equal(t, common.NewAmount(5), amount)
+	}
+	assert.Nil(t, err)
+
+	// amount requires all utxos
+	remove, utxos, amount, err = index.getUTXOsFromCacheUTXO(acc.GetPubKeyHash(), common.NewAmount(200))
+	assert.Equal(t, &indexRemoveUtxoTx, remove)
+	assert.ElementsMatch(t, []*utxo.UTXO{utxo2, utxo3}, utxos)
+	assert.Equal(t, common.NewAmount(15), amount)
+	assert.Nil(t, err)
+}
+
 func TestUTXOIndex_UpdateUtxo(t *testing.T) {
 	index := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 	acc1 := account.NewAccount()
@@ -866,4 +912,59 @@ func TestUTXOIndex_SelfCheckingUTXO(t *testing.T) {
 			assert.Equal(t, tt.indexRemove, ok)
 		})
 	}
+}
+
+func TestFindVinUtxosInUtxoPool(t *testing.T) {
+	acc := account.NewAccount()
+	contractAcc := account.NewContractTransactionAccount()
+	index := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+
+	tx := &transaction.Transaction{
+		ID: []byte{0x89},
+		Vin: []transactionbase.TXInput{
+			{Txid: []byte{0x88}, Vout: 0, Signature: nil, PubKey: contractAcc.GetPubKeyHash()},
+			{Txid: []byte{0x88}, Vout: 1, Signature: nil, PubKey: []byte("invalid")},
+			{Txid: []byte{0x88}, Vout: 2, Signature: nil, PubKey: acc.GetKeyPair().GetPublicKey()},
+		},
+		Vout:       []transactionbase.TXOutput{},
+		Tip:        common.NewAmount(1),
+		GasLimit:   common.NewAmount(30000),
+		GasPrice:   common.NewAmount(2),
+		CreateTime: 0,
+		Type:       transaction.TxTypeCoinbase,
+	}
+
+	// reject coinbase tx
+	utxos, err := FindVinUtxosInUtxoPool(index, tx)
+	assert.Nil(t, utxos)
+	assert.Equal(t, transaction.ErrTXInputNotFound, err)
+	tx.Type = transaction.TxTypeNormal
+
+	output1 := transactionbase.TXOutput{Value: common.NewAmount(20), PubKeyHash: contractAcc.GetPubKeyHash(), Contract: ""}
+	output2 := transactionbase.TXOutput{Value: common.NewAmount(10), PubKeyHash: acc.GetPubKeyHash(), Contract: ""}
+	index.AddUTXO(output1, []byte{0x88}, 0)
+	index.AddUTXO(output2, []byte{0x88}, 1)
+
+	// vin has invalid pubkey
+	utxos, err = FindVinUtxosInUtxoPool(index, tx)
+	assert.Nil(t, utxos)
+	assert.Equal(t, transaction.ErrNewUserPubKeyHash, err)
+	tx.Vin[1].PubKey = acc.GetKeyPair().GetPublicKey()
+
+	// index does not contain all vins in tx
+	utxos, err = FindVinUtxosInUtxoPool(index, tx)
+	assert.Nil(t, utxos)
+	assert.Equal(t, transaction.ErrTXInputNotFound, err)
+
+	// all vins are in index
+	output3 := transactionbase.TXOutput{Value: common.NewAmount(5), PubKeyHash: acc.GetPubKeyHash(), Contract: ""}
+	index.AddUTXO(output3, []byte{0x88}, 2)
+	expectedUtxos := []*utxo.UTXO{
+		index.indexAdd[contractAcc.GetPubKeyHash().String()].GetUtxo([]byte{0x88}, 0),
+		index.indexAdd[acc.GetPubKeyHash().String()].GetUtxo([]byte{0x88}, 1),
+		index.indexAdd[acc.GetPubKeyHash().String()].GetUtxo([]byte{0x88}, 2),
+	}
+	utxos, err = FindVinUtxosInUtxoPool(index, tx)
+	assert.ElementsMatch(t, expectedUtxos, utxos)
+	assert.Nil(t, err)
 }

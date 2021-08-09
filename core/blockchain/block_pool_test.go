@@ -22,6 +22,7 @@ import (
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/block"
 	logger "github.com/sirupsen/logrus"
+	"reflect"
 	"strconv"
 	"testing"
 
@@ -511,7 +512,7 @@ func TestBlockPool_linkOrphan(t *testing.T) {
 	}
 	bp.linkOrphan(root)
 	assert.Equal(t, expectedOrphans, bp.orphans)
-	assert.Equal(t, []*common.TreeNode{orphan1, orphan2}, root.Children)
+	assert.True(t, reflect.DeepEqual([]*common.TreeNode{orphan1, orphan2}, root.Children))
 }
 
 func TestBlockPool_linkParent(t *testing.T) {
