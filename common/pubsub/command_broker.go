@@ -1,12 +1,7 @@
 package pubsub
 
 import (
-	"errors"
-)
-
-var (
-	ErrTopicOccupied      = errors.New("Topic already occupied")
-	ErrNoSubscribersFound = errors.New("No command handlers")
+	errval "github.com/dappley/go-dappley/errors"
 )
 
 type TopicHandler func(input interface{})
@@ -35,7 +30,7 @@ func NewCommandBroker(reservedTopic []string) *CommandBroker {
 func (cb *CommandBroker) AddSubscriber(subscriber Subscriber) error {
 	for _, topic := range subscriber.GetSubscribedTopics() {
 		if cb.isTopicSubscribed(topic) && !cb.isReservedTopic(topic) {
-			return ErrTopicOccupied
+			return errval.TopicOccupied
 		}
 		cb.subscribers[topic] = append(cb.subscribers[topic], subscriber)
 	}
@@ -55,7 +50,7 @@ func (cb *CommandBroker) isTopicSubscribed(topic string) bool {
 //Dispatch publishes a topic and run the topic handler
 func (cb *CommandBroker) Dispatch(topic string, content interface{}) error {
 	if _, ok := cb.subscribers[topic]; !ok {
-		return ErrNoSubscribersFound
+		return errval.NoSubscribersFound
 	}
 
 	for _, subscriber := range cb.subscribers[topic] {

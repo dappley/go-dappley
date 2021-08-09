@@ -19,9 +19,10 @@
 package keystore
 
 import (
-	"errors"
 	"sync"
 	"time"
+
+	errval "github.com/dappley/go-dappley/errors"
 )
 
 var (
@@ -33,17 +34,6 @@ var (
 
 	// YearUnlockDuration lock 1 year time
 	YearUnlockDuration = time.Duration(365 * 24 * 60 * 60 * time.Second)
-)
-
-var (
-	// ErrUninitialized uninitialized provider error.
-	ErrUninitialized = errors.New("uninitialized the provider")
-
-	// ErrNotUnlocked key not unlocked
-	ErrNotUnlocked = errors.New("key not unlocked")
-
-	// ErrInvalidPassphrase invalid passphrase
-	ErrInvalidPassphrase = errors.New("passphrase is invalid")
 )
 
 // unlock item
@@ -84,7 +74,7 @@ func (ks *Keystore) Aliases() []string {
 // ContainsAlias checks if the given alias exists in this keystore.
 func (ks *Keystore) ContainsAlias(a string) (bool, error) {
 	if ks.p == nil {
-		return false, ErrUninitialized
+		return false, errval.UninitializedProvider
 	}
 
 	return ks.p.ContainsAlias(a)
@@ -122,7 +112,7 @@ func (ks *Keystore) Lock(alias string) error {
 		return nil
 	}
 
-	return ErrNotUnlocked
+	return errval.KeyNotUnlocked
 }
 
 func (ks *Keystore) expire(alias string) {
@@ -144,7 +134,7 @@ func (ks *Keystore) expire(alias string) {
 // GetUnlocked returns a unlocked key
 func (ks *Keystore) GetUnlocked(alias string) (Key, error) {
 	if len(alias) == 0 {
-		return nil, ErrNeedAlias
+		return nil, errval.NeedAlias
 	}
 
 	ks.mu.RLock()
@@ -152,7 +142,7 @@ func (ks *Keystore) GetUnlocked(alias string) (Key, error) {
 
 	key, ok := ks.unlocked[alias]
 	if ok == false {
-		return nil, ErrNotUnlocked
+		return nil, errval.KeyNotUnlocked
 	}
 
 	return key.key, nil
@@ -161,7 +151,7 @@ func (ks *Keystore) GetUnlocked(alias string) (Key, error) {
 // SetKey assigns the given key to the given alias, protecting it with the given passphrase.
 func (ks *Keystore) SetKey(a string, k Key, passphrase []byte) error {
 	if ks.p == nil {
-		return ErrUninitialized
+		return errval.UninitializedProvider
 	}
 
 	return ks.p.SetKey(a, k, passphrase)
@@ -171,7 +161,7 @@ func (ks *Keystore) SetKey(a string, k Key, passphrase []byte) error {
 // password to recover it.
 func (ks *Keystore) GetKey(a string, passphrase []byte) (Key, error) {
 	if ks.p == nil {
-		return nil, ErrUninitialized
+		return nil, errval.UninitializedProvider
 	}
 
 	key, err := ks.p.GetKey(a, passphrase)
@@ -184,7 +174,7 @@ func (ks *Keystore) GetKey(a string, passphrase []byte) (Key, error) {
 // Delete the entry identified by the given alias from this keystore.
 func (ks *Keystore) Delete(a string, passphrase []byte) error {
 	if ks.p == nil {
-		return ErrUninitialized
+		return errval.UninitializedProvider
 	}
 
 	key, err := ks.p.GetKey(a, passphrase)

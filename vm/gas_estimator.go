@@ -4,8 +4,7 @@ import (
 	"encoding/hex"
 
 	"github.com/dappley/go-dappley/core/scState"
-
-	"errors"
+	errval "github.com/dappley/go-dappley/errors"
 
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/transaction"
@@ -17,10 +16,6 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-var (
-	ErrTransactionVerifyFailed = errors.New("transaction verification failed")
-)
-
 // EstimateGas returns estimated gas value of contract deploy and execution.
 func EstimateGas(tx *transaction.Transaction, tailBlk *block.Block, utxoCache *utxo.UTXOCache, db storage.Storage) (uint64, error) {
 	utxoIndex := lutxo.NewUTXOIndex(utxoCache)
@@ -29,7 +24,7 @@ func EstimateGas(tx *transaction.Transaction, tailBlk *block.Block, utxoCache *u
 	rewards := make(map[string]string)
 	ctx := ltransaction.NewTxContract(tx)
 	if ctx == nil {
-		return 0, ErrTransactionVerifyFailed
+		return 0, errval.TransactionVerifyFailed
 	}
 	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, ctx.Transaction)
 	if err != nil {
@@ -39,7 +34,7 @@ func EstimateGas(tx *transaction.Transaction, tailBlk *block.Block, utxoCache *u
 		return 0, err
 	}
 	isContractDeployed := ctx.IsContractDeployed(utxoIndex)
-	contractState:=scState.NewScState(utxoCache)
+	contractState := scState.NewScState(utxoCache)
 	gasCount, _, err := ctx.Execute(prevUtxos, isContractDeployed, utxoIndex, contractState, rewards, engine, tailBlk.GetHeight()+1, tailBlk)
 	return gasCount, err
 }

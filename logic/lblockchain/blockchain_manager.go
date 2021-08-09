@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 
 	"github.com/dappley/go-dappley/common"
+	errval "github.com/dappley/go-dappley/errors"
 
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/common/log"
@@ -35,7 +36,6 @@ import (
 	"github.com/dappley/go-dappley/network/networkmodel"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
-	"github.com/pkg/errors"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -56,10 +56,6 @@ var (
 		SendBlock,
 		RequestBlock,
 	}
-)
-
-var (
-	ErrParentBlockNotFound = errors.New("Not able to find parent block in blockchain")
 )
 
 type BlockchainManager struct {
@@ -295,7 +291,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 
 	for i := len(forkBlks) - 1; i >= 0; i-- {
 		if !bm.Getblockchain().CheckMinProducerPolicy(forkBlks[i]) {
-			return ErrProducerNotEnough
+			return errval.ProducerNotEnough
 		}
 
 		logger.WithFields(logger.Fields{
@@ -306,7 +302,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		contractStates := scState.NewScState(bm.blockchain.GetUtxoCache())
 
 		if !lblock.VerifyTransactions(forkBlks[i], utxo, contractStates, parentBlk, bm.Getblockchain().GetDb()) {
-			return ErrTransactionVerifyFailed
+			return errval.TransactionVerifyFailed
 		}
 
 		ctx := BlockContext{forkBlks[i], utxo, contractStates}
@@ -416,7 +412,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 		}
 
 		if blk.GetHash().Equals(bc.GetLIBHash()) {
-			return nil, nil, ErrBlockDoesNotFound
+			return nil, nil, errval.BlockDoesNotFound
 		}
 
 		err = index.UndoTxsInBlock(blk, db)

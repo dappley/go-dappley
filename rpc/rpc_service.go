@@ -19,6 +19,7 @@ package rpc
 
 import (
 	"context"
+
 	"github.com/dappley/go-dappley/consensus"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/lutxo"
@@ -28,14 +29,19 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dappley/go-dappley/consensus"
+	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
+	errval "github.com/dappley/go-dappley/errors"
+	"github.com/dappley/go-dappley/logic/lutxo"
+
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction/pb"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/block/pb"
+	blockpb "github.com/dappley/go-dappley/core/block/pb"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 
 	"github.com/dappley/go-dappley/core/account"
@@ -49,7 +55,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/rpc/pb"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/vm"
 )
 
@@ -98,13 +104,13 @@ func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 	address := in.GetAddress()
 	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(address))
 	if !addressAccount.IsValid() {
-		return nil, status.Error(codes.InvalidArgument, account.ErrInvalidAddress.Error())
+		return nil, status.Error(codes.InvalidArgument, errval.InvalidAddress.Error())
 	}
 
 	amount, err := logic.GetBalance(addressAccount.GetAddress(), rpcService.GetBlockchain())
 	if err != nil {
 		switch err {
-		case logic.ErrInvalidAddress:
+		case errval.InvalidAddress:
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		default:
 			return nil, status.Error(codes.Unknown, err.Error())
@@ -117,7 +123,7 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 	tailBlock, err := rpcService.GetBlockchain().GetTailBlock()
 	if err != nil {
 		switch err {
-		case lblockchain.ErrBlockDoesNotExist:
+		case errval.BlockDoesNotExist:
 			return nil, status.Error(codes.Internal, err.Error())
 		default:
 			return nil, status.Error(codes.Unknown, err.Error())
@@ -151,7 +157,7 @@ func (rpcService *RpcService) RpcGetUTXO(server rpcpb.RpcService_RpcGetUTXOServe
 
 	acc := account.NewTransactionAccountByAddress(account.NewAddress(req.Address))
 	if !acc.IsValid() {
-		return status.Error(codes.InvalidArgument, logic.ErrInvalidAddress.Error())
+		return status.Error(codes.InvalidArgument, errval.InvalidAddress.Error())
 	}
 	response := rpcpb.GetUTXOResponse{}
 	//TODO Race condition Blockchain update after GetUTXO
@@ -318,7 +324,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 
 	if err := ltransaction.VerifyTransaction(rpcService.utxoIndex, tx, 0); err != nil {
 		logger.Warn(err.Error())
-		return nil, status.Error(codes.FailedPrecondition, lblockchain.ErrTransactionVerifyFailed.Error())
+		return nil, status.Error(codes.FailedPrecondition, errval.TransactionVerifyFailed.Error())
 	}
 
 	rpcService.mutex.Lock()
@@ -381,7 +387,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 			respon = append(respon, &rpcpb.SendTransactionStatus{
 				Txid:    tx.ID,
 				Code:    uint32(codes.FailedPrecondition),
-				Message: lblockchain.ErrTransactionVerifyFailed.Error(),
+				Message: errval.TransactionVerifyFailed.Error(),
 			})
 			continue
 		}

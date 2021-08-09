@@ -19,10 +19,10 @@
 package byteutils
 
 import (
-	"errors"
 	"reflect"
 	"testing"
 
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,7 +33,7 @@ func (o *testStringEncoderAndDecoder) EncodeToBytes(s interface{}) ([]byte, erro
 	str := s.(string)
 
 	if len(str) == 0 {
-		return nil, errors.New("s must be string")
+		return nil, errval.ValueNotString
 	}
 
 	return []byte(str), nil

@@ -1,25 +1,5 @@
 package vm
 
-import (
-	"errors"
-)
-
-// Error Types
-var (
-	ErrExecutionTimeout               = errors.New("execution timeout")
-	ErrInsufficientGas                = errors.New("insufficient gas")
-	ErrExceedMemoryLimits             = errors.New("exceed memory limits")
-	ErrInjectTracingInstructionFailed = errors.New("inject tracing instructions failed")
-	ErrLimitHasEmpty                  = errors.New("limit args has empty")
-	ErrSetMemorySmall                 = errors.New("set memory small than v8 limit")
-
-	// vm error
-	ErrExecutionFailed = errors.New("execution failed")
-	ErrUnexpected      = errors.New("Unexpected sys error")
-	// multi vm error
-	ErrInnerExecutionFailed = errors.New("multi execution failed")
-)
-
 // define gas consume
 const (
 	//In blockChain

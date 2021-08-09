@@ -1,18 +1,19 @@
 package utxo
 
 import (
-	"errors"
+	"testing"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/stateLog"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 var (
@@ -73,7 +74,7 @@ func TestUTXO_DelStateLog(t *testing.T) {
 	_, ok := cache.stateLogCache.Get(GetscStateLogKey(blkHash))
 	assert.Equal(t, false, ok)
 	_, err := cache.db.Get(util.Str2bytes(GetscStateLogKey(blkHash)))
-	assert.Equal(t, errors.New("key is invalid"), err)
+	assert.Equal(t, errval.InvalidKey, err)
 
 }
 
@@ -120,7 +121,7 @@ func TestUTXO_DelScStates(t *testing.T) {
 	assert.Equal(t, false, ok)
 
 	_, err := cache.db.Get(util.Str2bytes(GetscStateKey(address, key)))
-	assert.Equal(t, errors.New("key is invalid"), err)
+	assert.Equal(t, errval.InvalidKey, err)
 }
 
 func TestNewScStateCache(t *testing.T) {
@@ -184,7 +185,7 @@ func TestUTXOCache_getUTXOFromDB(t *testing.T) {
 
 	result, err = cache.getUTXOFromDB("invalid key")
 	assert.Nil(t, result)
-	assert.Equal(t, errors.New("key is invalid"), err)
+	assert.Equal(t, errval.InvalidKey, err)
 }
 
 func TestUTXOCache_GetUtxo(t *testing.T) {
@@ -215,7 +216,7 @@ func TestUTXOCache_GetUtxo(t *testing.T) {
 
 	result, err := cache.GetUtxo(utxo1.GetUTXOKey())
 	assert.Nil(t, result)
-	assert.Equal(t, errors.New("key is invalid"), err)
+	assert.Equal(t, errval.InvalidKey, err)
 
 	utxoBytes, err := proto.Marshal(utxo1.ToProto().(*utxopb.Utxo))
 	assert.Nil(t, err)

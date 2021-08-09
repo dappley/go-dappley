@@ -19,11 +19,6 @@ package storage
 
 import (
 	"bytes"
-	"errors"
-)
-
-var (
-	ErrKeyInvalid = errors.New("key is invalid")
 )
 
 type Storage interface {

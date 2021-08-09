@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"testing"
 
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/lblockchain/mocks"
 	networkpb "github.com/dappley/go-dappley/network/pb"
 	"github.com/stretchr/testify/mock"
@@ -213,12 +214,12 @@ func TestValidateReturnBlocks(t *testing.T) {
 
 	// test invalid peer id
 	_, err := downloadManager.validateReturnBlocks(nil, "foo")
-	assert.Equal(t, ErrPeerNotFound, err)
+	assert.Equal(t, errval.PeerNotFound, err)
 
 	// test empty blocks
 	fakeReturnMsg := &networkpb.ReturnBlocks{Blocks: nil, StartBlockHashes: nil}
 	_, err = downloadManager.validateReturnBlocks(fakeReturnMsg, peerNode.GetHostPeerInfo().PeerId)
-	assert.Equal(t, ErrEmptyBlocks, err)
+	assert.Equal(t, errval.EmptyBlocks, err)
 }
 
 func TestDownloadManager_DisconnectPeer(t *testing.T) {

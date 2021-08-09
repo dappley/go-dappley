@@ -18,21 +18,17 @@
 package storage
 
 import (
-	"errors"
 	"os"
 	"sync"
 
+	errval "github.com/dappley/go-dappley/errors"
 	logger "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-var (
-	ErrLevelDbNotAbleToOpenFile = errors.New("leveldb failed to open file")
-)
-
 type LevelDB struct {
-	db    *leveldb.DB
-	batch *leveldb.Batch
+	db        *leveldb.DB
+	batch     *leveldb.Batch
 	batchPool *sync.Pool
 }
 
@@ -43,13 +39,13 @@ func OpenDatabase(dbFilePath string) *LevelDB {
 
 	db1, err := leveldb.OpenFile(fp, nil)
 	if err != nil {
-		logger.Panic(ErrLevelDbNotAbleToOpenFile)
+		logger.Panic(errval.LevelDbNotAbleToOpenFile)
 	}
 
 	return &LevelDB{
 		db:    db1,
 		batch: nil,
-		batchPool:&sync.Pool{New: func() interface{} {
+		batchPool: &sync.Pool{New: func() interface{} {
 			return &leveldb.Batch{}
 		}},
 	}
@@ -63,15 +59,15 @@ func (ldb *LevelDB) Close() error {
 func (ldb *LevelDB) Get(key []byte) ([]byte, error) {
 	val, err := ldb.db.Get(key, nil)
 	if err != nil && err == leveldb.ErrNotFound {
-		return nil, ErrKeyInvalid
+		return nil, errval.InvalidKey
 	}
 	return val, err
 }
 
 func (ldb *LevelDB) Put(key []byte, val []byte) error {
 	logger.WithFields(logger.Fields{
-		"key length"  : len(key),
-		"data length" : len(val),
+		"key length":  len(key),
+		"data length": len(val),
 	}).Debug("Leveldb put")
 
 	if ldb.batch != nil {
