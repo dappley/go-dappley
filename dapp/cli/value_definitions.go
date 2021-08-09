@@ -338,7 +338,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliSend:              {rpcService, sendCommandHandler},
 	cliAddPeer:           {adminRpcService, addPeerCommandHandler},
 	clicreateAccount:     {adminRpcService, createAccountCommandHandler},
-	cliAddAccount:        {adminRpcService, addAccountCommandHandler},
+	cliAddAccount:        {rpcService, addAccountCommandHandler},
 	cliListAddresses:     {adminRpcService, listAddressesCommandHandler},
 	clisendFromMiner:     {adminRpcService, sendFromMinerCommandHandler},
 	clichangeProducer:    {adminRpcService, clichangeProducerCommandHandler},
