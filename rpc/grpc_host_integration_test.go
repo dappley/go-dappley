@@ -21,7 +21,6 @@
 package rpc
 
 import (
-	"errors"
 	"fmt"
 	errval "github.com/dappley/go-dappley/errors"
 
@@ -177,7 +176,7 @@ func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 	}
 
 	if sum.Cmp(amount) < 0 {
-		return nil, errval.ErrInsufficientFund
+		return nil, errval.InsufficientFund
 	}
 
 	return retUtxos, nil
@@ -619,7 +618,7 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	response, err = c.RpcGetBlockByHash(context.Background(), &rpcpb.GetBlockByHashRequest{Hash: []byte("noexists")})
 	assert.Nil(t, response)
 	assert.Equal(t, codes.NotFound, status.Code(err))
-	assert.Equal(t, lblockchain.ErrBlockDoesNotExist.Error(), status.Convert(err).Message())
+	assert.Equal(t, errval.BlockDoesNotExist.Error(), status.Convert(err).Message())
 }
 
 func TestRpcGetBlockByHeight(t *testing.T) {
@@ -663,7 +662,7 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	response, err = c.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: tailBlock.GetHeight() + 1})
 	assert.Nil(t, response)
 	assert.Equal(t, codes.NotFound, status.Code(err))
-	assert.Equal(t, lblockchain.ErrBlockDoesNotExist.Error(), status.Convert(err).Message())
+	assert.Equal(t, errval.BlockDoesNotExist.Error(), status.Convert(err).Message())
 }
 
 func TestRpcVerifyTransaction(t *testing.T) {
@@ -682,7 +681,7 @@ func TestRpcVerifyTransaction(t *testing.T) {
 	}
 	//
 	utxoIndex := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache())
-	if gctx, exists := ltransaction.NewGasChangeTx(account.NewTransactionAccountByAddress(fromAcc.GetAddress()), 0, common.NewAmount(uint64(0)), common.NewAmount(uint64(3000)), common.NewAmount(uint64(1)), 1);exists{
+	if gctx, exists := ltransaction.NewGasChangeTx(account.NewTransactionAccountByAddress(fromAcc.GetAddress()), 0, common.NewAmount(uint64(0)), common.NewAmount(uint64(3000)), common.NewAmount(uint64(1)), 1); exists {
 		utxoIndex.UpdateUtxo(&gctx)
 		utxoIndex.Save()
 	}
@@ -825,7 +824,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	failedResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: errTransaction.ToProto().(*transactionpb.Transaction)})
 	assert.Nil(t, failedResponse)
 	assert.Equal(t, codes.FailedPrecondition, status.Code(err))
-	assert.Equal(t, lblockchain.ErrTransactionVerifyFailed.Error(), status.Convert(err).Message())
+	assert.Equal(t, errval.TransactionVerifyFailed.Error(), status.Convert(err).Message())
 
 	maxHeight = rpcContext.bm.Getblockchain().GetMaxHeight()
 	for (rpcContext.bm.Getblockchain().GetMaxHeight() - maxHeight) < 2 {

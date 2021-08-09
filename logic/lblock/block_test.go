@@ -3,10 +3,11 @@ package lblock
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	"github.com/dappley/go-dappley/logic/ltransaction"
 	"testing"
 	"time"
+
+	errval "github.com/dappley/go-dappley/errors"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
@@ -267,7 +268,7 @@ func TestGenerateSignature(t *testing.T) {
 			key:         "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71",
 			data:        hash.Hash{0xde, 0xad, 0xbe, 0xef},
 			expectedRes: hash.Hash{},
-			expectedErr: secp256k1.ErrInvalidMsgLen,
+			expectedErr: errval.InvalidMsgLen,
 		},
 	}
 	for _, tt := range tests {

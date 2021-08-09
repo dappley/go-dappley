@@ -271,7 +271,7 @@ func TestUTXOCache_GetPreUtxo(t *testing.T) {
 
 	result, err := cache.GetPreUtxo("invalid")
 	assert.Nil(t, result)
-	assert.Equal(t, errors.New("key is invalid"), err)
+	assert.Equal(t, errval.InvalidKey, err)
 
 	result, err = cache.GetPreUtxo(utxo1.GetUTXOKey())
 	assert.Nil(t, result)
@@ -326,7 +326,7 @@ func TestUTXOCache_getUTXOInfo(t *testing.T) {
 
 	result, err = cache.getUTXOInfo("invalid key")
 	assert.Equal(t, &UTXOInfo{lastUTXOKey: []uint8{}, createContractUTXOKey: []uint8{}}, result)
-	assert.Equal(t, errors.New("key is invalid"), err)
+	assert.Equal(t, errval.InvalidKey, err)
 }
 
 func TestUTXOCache_deleteUTXOInfo(t *testing.T) {
@@ -350,7 +350,7 @@ func TestUTXOCache_deleteUTXOInfo(t *testing.T) {
 	assert.Nil(t, err)
 	result, err = cache.getUTXOInfo(pubKeyHash)
 	assert.Equal(t, &UTXOInfo{lastUTXOKey: []uint8{}, createContractUTXOKey: []uint8{}}, result)
-	assert.Equal(t, errors.New("key is invalid"), err)
+	assert.Equal(t, errval.InvalidKey, err)
 }
 
 func TestUTXOCache_deleteUTXOFromDB(t *testing.T) {
@@ -379,7 +379,7 @@ func TestUTXOCache_deleteUTXOFromDB(t *testing.T) {
 	assert.Nil(t, err)
 	result, err = cache.getUTXOFromDB(utxo.GetUTXOKey())
 	assert.Nil(t, result)
-	assert.Equal(t, errors.New("key is invalid"), err)
+	assert.Equal(t, errval.InvalidKey, err)
 }
 
 func TestUTXOCache_putLastUTXOKey(t *testing.T) {
@@ -459,7 +459,7 @@ func TestUTXOCache_putCreateContractUTXOKey(t *testing.T) {
 
 	// attempt to put to existing UTXOInfo
 	err = cache.putCreateContractUTXOKey(pubKeyHash, []byte("test_2"))
-	assert.Equal(t, errors.New("this utxoInfo already exists"), err)
+	assert.Equal(t, errval.UtxoInfoExists, err)
 }
 
 func TestUTXOCache_GetUtxoCreateContract(t *testing.T) {
@@ -561,7 +561,7 @@ func TestUTXOCache_SetPrevUtxoKey(t *testing.T) {
 	// utxo not in db
 	result, err := cache.SetPrevUtxoKey(util.Str2bytes(utxo.GetUTXOKey()), "test_0")
 	assert.Nil(t, result)
-	assert.Equal(t, errors.New("key is invalid"), err)
+	assert.Equal(t, errval.InvalidKey, err)
 
 	// successful update
 	err = cache.putUTXOToDB(utxo)
@@ -672,7 +672,7 @@ func TestUTXOCache_GetUTXOsByAmountWithOutRemovedUTXOs(t *testing.T) {
 			amount:         common.NewAmount(51),
 			utxoTxRemove:   nil,
 			expectedResult: nil,
-			expectedErr:    errors.New("transaction: insufficient balance"),
+			expectedErr:    errval.InsufficientFund,
 		},
 	}
 
