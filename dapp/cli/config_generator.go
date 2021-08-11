@@ -12,10 +12,10 @@ import (
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 )
-​
+
 func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	node := new(Node)
-​
+
 	// Select node configuration file type
 	for {
 		fmt.Println("Select node type - FullNode or MinerNode:")
@@ -27,14 +27,14 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 			fmt.Println("Error: Node type must be either \"FullNode\" or \"MinerNode\"!")
 		}
 	}
-​
+
 	// Input name of the configuration file
 	fmt.Println("Input file name - Input nothing for default name \"new_node\":")
 	fmt.Scanln(&node.fileName)
 	if node.fileName == "" {
 		node.fileName = "new_node"
 	}
-​
+
 	// When the node type is MinerNode, create the "consensus_config" section
 	if node.NodeType == MinerNode {
 		fmt.Println("Miner address and keypair - Input nothing to generate new address and keypair:")
@@ -72,7 +72,7 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 		}
 		node.node_address = node.miner_address
 	}
-​
+
 	// Input node port info
 	for {
 		fmt.Println("Input port info - Input nothing for default port \"12341\":")
@@ -86,7 +86,7 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 			break
 		}
 	}
-​
+
 	// Input node seed info
 	for {
 		fmt.Println("Input seed:")
@@ -97,14 +97,14 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 			break
 		}
 	}
-​
+
 	// Input db_path info
 	fmt.Println("Input database path - Input nothing for default path \"../bin/" + node.fileName + ".db\"")
 	fmt.Scanln(&node.db_path)
 	if node.db_path == "" {
 		node.db_path = "../bin/"
 	}
-​
+
 	// Input rpc_port info
 	for {
 		fmt.Println("Input rpc port - Input nothing for default port \"50051\"")
@@ -118,7 +118,7 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 			break
 		}
 	}
-​
+
 	// Input key info
 	fmt.Println("Input key - Input nothing to generate a new key:")
 	fmt.Scanln(&node.key)
@@ -138,7 +138,7 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 		node.key = str
 		fmt.Println("Key:", node.key)
 	}
-​
+
 	// Create file
 	f, err := os.Create("../conf/" + node.fileName + ".conf")
 	if err != nil {
@@ -153,12 +153,12 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 		fmt.Println(err)
 		return
 	}
-​
+
 	// Finish
 	fmt.Println(node.fileName + ".conf is created successfully!")
 	fmt.Println("Location: ../conf/" + node.fileName + ".conf")
 }
-​
+
 // Set node type to either MinerNode or FullNode
 func setNodeType(node *Node, nodeType string) {
 	if nodeType == "minernode" {
@@ -169,7 +169,7 @@ func setNodeType(node *Node, nodeType string) {
 		node.NodeType = InvalidNode
 	}
 }
-​
+
 // Creates the node configuration file content following its syntax rules
 func configContent(node *Node) string {
 	var final_content string
