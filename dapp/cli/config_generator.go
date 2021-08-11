@@ -1,48 +1,45 @@
 package main
 
 import (
-	"context"
-	"encoding/base64"
-	"encoding/hex"
-	"fmt"
 	"os"
+	"fmt"
+	"context"
 	"strconv"
 	"strings"
-
+	"encoding/hex"
+	"encoding/base64"
+	crypto "github.com/libp2p/go-libp2p-crypto"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	crypto "github.com/libp2p/go-libp2p-crypto"
 )
-
+​
 func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
-
 	node := new(Node)
-
-	//Check and set the node type
+​
+	// Select node configuration file type
 	for {
-		fmt.Println("Choose config type (FullNode or MinerNode):")
+		fmt.Println("Select node type - FullNode or MinerNode:")
 		fmt.Scanln(&node.nodeType)
 		setNodeType(node, strings.ToLower(node.nodeType))
-
 		if node.NodeType == MinerNode || node.NodeType == FullNode {
 			break
 		} else {
-			fmt.Println("Invalid input. To choose node type, input FullNode or MinerNode")
+			fmt.Println("Error: Node type must be either \"FullNode\" or \"MinerNode\"!")
 		}
 	}
-
-	//Name file
-	fmt.Println("File name, don't include extension: (Input nothing for default: \"node\")")
-
+​
+	// Input name of the configuration file
+	fmt.Println("Input file name - Input nothing for default name \"new_node\":")
 	fmt.Scanln(&node.fileName)
 	if node.fileName == "" {
-		node.fileName = "node"
+		node.fileName = "new_node"
 	}
-
+​
+	// When the node type is MinerNode, create the "consensus_config" section
 	if node.NodeType == MinerNode {
-		fmt.Println("Miner address info: (Input nothing to generate new key pair or input valueable key pair)")
+		fmt.Println("Miner address and keypair - Input nothing to generate new address and keypair:")
 		for {
-			fmt.Print("miner_address: ")
+			fmt.Println("Input miner address:")
 			fmt.Scanln(&node.miner_address)
 			if node.miner_address == "" {
 				acc := createAccount(ctx, c, flags)
@@ -57,81 +54,81 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 					return
 				}
 				node.private_key = hex.EncodeToString(hex_private_key)
-				fmt.Println("New miner_address & private_key generated")
-				fmt.Println("miner_address: ", node.miner_address)
-				fmt.Println("private_key: ", node.private_key)
+				fmt.Println("New miner address and private keypair has been generated!")
+				fmt.Println("Miner address:", node.miner_address)
+				fmt.Println("Private keypair:", node.private_key)
 				break
 			} else {
-				fmt.Print("private_key: ")
+				fmt.Println("Input private keypair:")
 				fmt.Scanln(&node.private_key)
 				fmt.Println("Verifying account information....")
 				acc := account.NewAccountByPrivateKey(node.private_key)
 				if acc.GetAddress().String() == node.miner_address {
 					break
 				} else {
-					fmt.Println("miner_address and private_key doesn't match")
+					fmt.Println("Error: Miner address and private keypair do not match!")
 				}
 			}
 		}
 		node.node_address = node.miner_address
 	}
-
+​
+	// Input node port info
 	for {
-		fmt.Println("Port info: (Input nothing for default setting: 12341)")
+		fmt.Println("Input port info - Input nothing for default port \"12341\":")
 		fmt.Scanln(&node.port)
 		if node.port == "" {
 			node.port = "12341"
 			break
 		} else if _, err := strconv.Atoi(node.port); err != nil {
-			fmt.Println("Input must be integer")
+			fmt.Println("Error: Input must be an integer value!")
 		} else {
 			break
 		}
 	}
-
+​
+	// Input node seed info
 	for {
-
-		fmt.Println("Seed: ")
-
+		fmt.Println("Input seed:")
 		fmt.Scanln(&node.seed)
 		if len(node.seed) <= 32 {
-			fmt.Println("Please input a valid seed")
+			fmt.Println("Error: Invalid seed!")
 		} else {
 			break
 		}
 	}
-	fmt.Println("db_path: (Input nothing for default: ../bin/" + node.fileName + ".db)")
-
+​
+	// Input db_path info
+	fmt.Println("Input database path - Input nothing for default path \"../bin/" + node.fileName + ".db\"")
 	fmt.Scanln(&node.db_path)
 	if node.db_path == "" {
 		node.db_path = "../bin/"
 	}
-
+​
+	// Input rpc_port info
 	for {
-		fmt.Println("Rpc_port: (Input nothing for default setting : 50051)")
-
+		fmt.Println("Input rpc port - Input nothing for default port \"50051\"")
 		fmt.Scanln(&node.rpc_port)
 		if node.rpc_port == "" {
 			node.rpc_port = "50051"
 			break
 		} else if _, err := strconv.Atoi(node.rpc_port); err != nil {
-			fmt.Println("Input must be integer")
+			fmt.Println("Error: Input must be integer!")
 		} else {
 			break
 		}
 	}
-
-	fmt.Println("Key: (Input nothing to generate new key)")
+​
+	// Input key info
+	fmt.Println("Input key - Input nothing to generate a new key:")
 	fmt.Scanln(&node.key)
 	if strings.ToLower(node.key) == "" {
 		//generate key
 		KeyPair, _, err := crypto.GenerateKeyPair(crypto.Secp256k1, 256)
-
 		if err != nil {
 			fmt.Printf("Generate key error %v\n", err)
 			return
 		}
-
 		bytes, err := crypto.MarshalPrivateKey(KeyPair)
 		if err != nil {
 			fmt.Printf("MarshalPrivateKey error %v\n", err)
@@ -139,33 +136,30 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 		}
 		str := base64.StdEncoding.EncodeToString(bytes)
 		node.key = str
-		fmt.Println("Key: " + node.key)
+		fmt.Println("Key:", node.key)
 	}
-
-	//write file name
+​
+	// Create file
 	f, err := os.Create("../conf/" + node.fileName + ".conf")
-
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
 	defer f.Close()
-
 	val := configContent(node)
-
 	data := []byte(val)
 	_, err = f.Write(data)
-
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
-	fmt.Println(node.fileName + ".conf" + " is created successfully")
+​
+	// Finish
+	fmt.Println(node.fileName + ".conf is created successfully!")
 	fmt.Println("Location: ../conf/" + node.fileName + ".conf")
 }
-
+​
+// Set node type to either MinerNode or FullNode
 func setNodeType(node *Node, nodeType string) {
 	if nodeType == "minernode" {
 		node.NodeType = MinerNode
@@ -175,35 +169,33 @@ func setNodeType(node *Node, nodeType string) {
 		node.NodeType = InvalidNode
 	}
 }
-
+​
+// Creates the node configuration file content following its syntax rules
 func configContent(node *Node) string {
-	val1 := ("consensus_config{\n" +
+	var final_content string
+	consensus_config := ("consensus_config{\n" +
 		"	miner_address: " + "\"" + node.miner_address + "\"" + "\n" +
 		"	private_key: \"" + node.private_key + "\"\n" +
 		"}\n\n")
-	val2 := ("node_config{\n" +
+	node_config_1 := ("node_config{\n" +
 		"	port:	" + node.port + "\n" +
 		"	seed:	[\"" + node.seed + "\"]\n" +
 		"	db_path: \"" + node.db_path + node.fileName + ".db\"\n" +
 		"	rpc_port: " + node.rpc_port + "\n")
-	val3 := ("	key: \"" + node.key + "\"\n")
-	val4 := ("	tx_pool_limit: 102400\n" +
+	node_config_2 := ("	key: \"" + node.key + "\"\n")
+	node_config_3 := ("	tx_pool_limit: 102400\n" +
 		"	blk_size_limit: 102400\n" +
 		"	node_address: \"" + node.node_address + "\"\n" +
 		"	metrics_interval: 7200\n" +
-		"	metrics_polling_interval: 5\n}")
+		"	metrics_polling_interval: 5\n}\n\n\n")
 	if node.NodeType == MinerNode && node.key == "" {
-		val := val1 + val2 + val4
-		return val
+		final_content = consensus_config + node_config_1 + node_config_3
 	} else if node.NodeType == MinerNode && node.key != "" {
-		val := val1 + val2 + val3 + val4
-		return val
+		final_content = consensus_config + node_config_1 + node_config_2 + node_config_3
 	} else if node.NodeType == FullNode && node.key == "" {
-		val := val2 + val4
-		return val
+		final_content = node_config_1 + node_config_3
 	} else {
-		val := val2 + val3 + val4
-		return val
+		final_content = node_config_1 + node_config_2 + node_config_3
 	}
-
+	return final_content
 }
