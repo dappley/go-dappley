@@ -396,6 +396,97 @@ func TestTransactionPool_GetParentTxidsInTxPool(t *testing.T) {
 	assert.Equal(t, []string{"7478"}, result)
 }
 
+func TestTransactionPool_insertIntoTipOrder(t *testing.T) {
+	txPool := NewTransactionPool(nil, 128000)
+	txs := generateDependentTxs()
+
+	// add while txPool.txs is empty
+	for _, tx := range txs {
+		node := transaction.NewTransactionNode(tx)
+		txPool.insertIntoTipOrder(node)
+	}
+	// tipOrder matches the order in which they were added
+	for i, tx := range txs {
+		assert.Equal(t, hex.EncodeToString(tx.ID), txPool.tipOrder[i])
+	}
+
+	txPool.tipOrder = []string{}
+	txsToAdd := []*transaction.Transaction{txs[0], txs[4], txs[6], txs[7]}
+	for _, tx := range txsToAdd {
+		node := transaction.NewTransactionNode(tx)
+		txPool.addTransaction(node)
+		txPool.insertIntoTipOrder(node)
+	}
+	// sorted in order of descending tips per byte
+	expected := []string{
+		hex.EncodeToString(txs[6].ID),
+		hex.EncodeToString(txs[4].ID),
+		hex.EncodeToString(txs[7].ID),
+		hex.EncodeToString(txs[0].ID),
+	}
+	assert.Equal(t, expected, txPool.tipOrder)
+}
+
+func TestTransactionPool_removeFromTipOrder(t *testing.T) {
+	txPool := NewTransactionPool(nil, 128000)
+	txs := generateDependentTxs()
+
+	for _, tx := range txs {
+		txPool.Push(*tx)
+	}
+	expected := []string{
+		hex.EncodeToString(txs[6].ID),
+		hex.EncodeToString(txs[4].ID),
+		hex.EncodeToString(txs[7].ID),
+		hex.EncodeToString(txs[0].ID),
+	}
+	assert.Equal(t, expected, txPool.tipOrder)
+
+	txPool.removeFromTipOrder([]byte("nonexistent"))
+	assert.Equal(t, expected, txPool.tipOrder)
+
+	txPool.removeFromTipOrder(txs[7].ID)
+	expected = []string{
+		hex.EncodeToString(txs[6].ID),
+		hex.EncodeToString(txs[4].ID),
+		hex.EncodeToString(txs[0].ID),
+	}
+	assert.Equal(t, expected, txPool.tipOrder)
+
+	txPool.removeFromTipOrder(txs[6].ID)
+	expected = []string{
+		hex.EncodeToString(txs[4].ID),
+		hex.EncodeToString(txs[0].ID),
+	}
+	assert.Equal(t, expected, txPool.tipOrder)
+
+	txPool.removeFromTipOrder(txs[0].ID)
+	expected = []string{
+		hex.EncodeToString(txs[4].ID),
+	}
+	assert.Equal(t, expected, txPool.tipOrder)
+
+	txPool.removeFromTipOrder(txs[4].ID)
+	assert.Equal(t, []string{}, txPool.tipOrder)
+}
+
+func TestTransactionPool_getMaxTipTxid(t *testing.T) {
+	txPool := NewTransactionPool(nil, 128000)
+	txs := generateDependentTxs()
+
+	assert.Equal(t, "", txPool.getMaxTipTxid())
+
+	for _, tx := range txs {
+		txPool.Push(*tx)
+	}
+	// txs[6] has the highest tips per byte
+	assert.Equal(t, hex.EncodeToString(txs[6].ID), txPool.getMaxTipTxid())
+
+	txPool.removeFromTipOrder(txs[6].ID)
+	// txs[4] has the next highest tips per byte
+	assert.Equal(t, hex.EncodeToString(txs[4].ID), txPool.getMaxTipTxid())
+}
+
 func generateDependentTxs() []*transaction.Transaction {
 
 	//generate 7 txs that has dependency relationships like the graph below
