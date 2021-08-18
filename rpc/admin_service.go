@@ -86,40 +86,6 @@ func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *
 	}, nil
 }
 
-func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in *rpcpb.SendFromMinerRequest) (*rpcpb.SendFromMinerResponse, error) {
-	start := time.Now().UnixNano() / 1e6
-	txRequestFromMinerStats.concurrentCounter.Inc(1)
-	defer func() {
-		if txRequestFromMinerStats.responseTime.Count()/100 == 0 {
-			txRequestFromMinerStats.responseTime.Clear()
-		}
-		txRequestFromMinerStats.responseTime.Update(time.Now().UnixNano()/1e6 - start)
-	}()
-	defer txRequestFromMinerStats.requestPerSec.Mark(1)
-	defer txRequestFromMinerStats.concurrentCounter.Dec(1)
-
-	sendToAddress := account.NewAddress(in.GetTo())
-	sendAmount := common.NewAmountFromBytes(in.GetAmount())
-	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return nil, status.Error(codes.InvalidArgument, errval.InvalidAmount.Error())
-	}
-
-	adminRpcService.mutex.Lock()
-	_, _, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.bm.Getblockchain())
-	adminRpcService.mutex.Unlock()
-	if err != nil {
-		switch err {
-		case errval.InvalidSenderAddress, errval.InvalidRcverAddress, errval.InvalidAmount:
-			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case errval.InsufficientFund:
-			return nil, status.Error(codes.FailedPrecondition, err.Error())
-		default:
-			return nil, status.Error(codes.Unknown, err.Error())
-		}
-	}
-	return &rpcpb.SendFromMinerResponse{}, nil
-}
-
 func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
 	start := time.Now().UnixNano() / 1e6
 	txRequestStats.concurrentCounter.Inc(1)

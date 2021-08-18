@@ -31,7 +31,6 @@ service AdminService{
   rpc RpcAddPeer(AddPeerRequest) returns (AddPeerResponse) {}
   rpc RpcSend (SendRequest) returns (SendResponse) {}
   rpc RpcGetPeerInfo (GetPeerInfoRequest) returns (GetPeerInfoResponse) {}
-  rpc RpcSendFromMiner (SendFromMinerRequest) returns (SendFromMinerResponse) {}
   rpc RpcChangeProducer (ChangeProducerRequest) returns (ChangeProducerResponse) {}
 }
 
