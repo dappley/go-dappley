@@ -330,6 +330,66 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 	assert.Equal(t, &executionTx, txs[1])
 }
 
+func TestTransactionPool_GetAllTransactions(t *testing.T) {
+	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa99"
+	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
+	var contractAccount = account.NewContractTransactionAccount()
+
+	var deploymentTx = transaction.Transaction{
+		ID: nil,
+		Vin: []transactionbase.TXInput{
+			{tx1.ID, 1, nil, pubkey1},
+		},
+		Vout: []transactionbase.TXOutput{
+			{common.NewAmount(5), contractAccount.GetPubKeyHash(), "CreateContractTx"},
+		},
+		Tip:      common.NewAmount(1),
+		GasLimit: common.NewAmount(0),
+		GasPrice: common.NewAmount(0),
+		Type:     transaction.TxTypeContract,
+	}
+	deploymentTx.ID = deploymentTx.Hash()
+
+	var executionTx = transaction.Transaction{
+		ID:  nil,
+		Vin: GenerateFakeTxInputs(),
+		Vout: []transactionbase.TXOutput{
+			{common.NewAmount(5), contractAccount.GetPubKeyHash(), "InvokeContractTx"},
+		},
+		Tip:      common.NewAmount(2),
+		GasLimit: common.NewAmount(0),
+		GasPrice: common.NewAmount(0),
+		Type:     transaction.TxTypeContract,
+	}
+	executionTx.ID = executionTx.Hash()
+
+	db := storage.NewRamStorage()
+	defer db.Close()
+	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
+	index := make(map[string]*utxo.UTXOTx)
+	newUtxos := utxo.NewUTXOTx()
+	index[contractAccount.GetPubKeyHash().String()] = &newUtxos
+
+	txPool := NewTransactionPool(nil, 100000)
+	txPool.Push(deploymentTx)
+	utxoIndex.SetIndexAdd(index)
+
+	txPool.Push(executionTx)
+
+	txs := generateDependentTxs()
+	for i := 0; i < 3; i++ {
+		txPool.pendingTxs = append(txPool.pendingTxs, txs[i])
+	}
+
+	expected := []*transaction.Transaction{
+		txs[0], txs[1], txs[2], &deploymentTx, &executionTx,
+	}
+	result := txPool.GetAllTransactions(utxoIndex)
+	for i, tx := range result {
+		assert.Equal(t, expected[i], tx)
+	}
+}
+
 func TestTransactionPool_Rollback(t *testing.T) {
 	txs := generateDependentTxs()
 
