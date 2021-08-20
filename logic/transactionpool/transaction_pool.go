@@ -290,39 +290,18 @@ func (txPool *TransactionPool) removeFromTipOrder(txID []byte) {
 }
 
 func (txPool *TransactionPool) getSortedTransactions(utxoIndex *lutxo.UTXOIndex) []*transaction.Transaction {
-
 	nodes := make(map[string]*transaction.TransactionNode)
-	scDeploymentTxExists := make(map[string]bool)
 
 	for key, node := range txPool.txs {
 		nodes[key] = node
-		ctx := ltransaction.NewTxContract(node.Value)
-		if ctx != nil && !ctx.IsInvokeContract(utxoIndex) {
-			scDeploymentTxExists[ctx.GetContractPubKeyHash().GenerateAddress().String()] = true
-		}
 	}
 
 	var sortedTxs []*transaction.Transaction
 	for len(nodes) > 0 {
 		for key, node := range nodes {
 			if !checkDependTxInMap(node.Value, nodes) {
-				ctx := ltransaction.NewTxContract(node.Value)
-				if ctx != nil {
-					ctxPkhStr := ctx.GetContractPubKeyHash().GenerateAddress().String()
-					if ctx.IsInvokeContract(utxoIndex) {
-						if !scDeploymentTxExists[ctxPkhStr] {
-							sortedTxs = append(sortedTxs, node.Value)
-							delete(nodes, key)
-						}
-					} else {
-						sortedTxs = append(sortedTxs, node.Value)
-						delete(nodes, key)
-						scDeploymentTxExists[ctxPkhStr] = false
-					}
-				} else {
-					sortedTxs = append(sortedTxs, node.Value)
-					delete(nodes, key)
-				}
+				sortedTxs = append(sortedTxs, node.Value)
+				delete(nodes, key)
 			}
 		}
 	}

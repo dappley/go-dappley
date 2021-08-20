@@ -199,12 +199,6 @@ func NewTxContract(tx *transaction.Transaction) *TxContract {
 	return nil
 }
 
-// IsInvokeContract returns if the contract is invoke Contract
-func (ctx *TxContract) IsInvokeContract(utxoIndex *lutxo.UTXOIndex) bool {
-	return utxoIndex.IsIndexAddExist(ctx.Vout[transaction.ContractTxouputIndex].PubKeyHash) ||
-		utxoIndex.IsLastUtxoKeyExist(ctx.Vout[transaction.ContractTxouputIndex].PubKeyHash)
-}
-
 //GetContract returns the smart contract code in a transaction
 func (ctx *TxContract) GetContract() string {
 	return ctx.Vout[transaction.ContractTxouputIndex].Contract
