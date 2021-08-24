@@ -27,6 +27,7 @@ const (
 	cliGetBlockByHeight  = "getBlockByHeight"
 	cliGenerateSeed      = "generateSeed"
 	cliConfigGenerator   = "generateConfig"
+	cliCreateDID         = "createDID"
 )
 
 //flag names
@@ -101,6 +102,7 @@ var cmdList = []string{
 	cliGetBlockByHeight,
 	cliGenerateSeed,
 	cliConfigGenerator,
+	cliCreateDID,
 }
 
 //configure input parameters/flags for each command
@@ -349,6 +351,8 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGenerateSeed:      {adminRpcService, generateSeedCommandHandler},
 
 	cliConfigGenerator: {adminRpcService, configGeneratorCommandHandler},
+
+	cliCreateDID: {rpcService, createDIDCommandHandler},
 }
 
 type commandHandlersWithType struct {
