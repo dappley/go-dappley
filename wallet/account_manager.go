@@ -125,6 +125,19 @@ func (am *AccountManager) AddAccount(account *account.Account) {
 	am.mutex.Unlock()
 }
 
+func (am *AccountManager) DeleteAccount(address account.Address) bool {
+	am.mutex.Lock()
+	defer am.mutex.Unlock()
+	for i, account := range am.Accounts {
+		if account.GetAddress() == address {
+			am.Accounts[i] = am.Accounts[len(am.Accounts)-1]
+			am.Accounts = am.Accounts[:len(am.Accounts)-1]
+			return true
+		}
+	}
+	return false
+}
+
 func (am *AccountManager) GetAddresses() []account.Address {
 	var addresses []account.Address
 

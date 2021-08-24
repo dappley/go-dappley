@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 )
 
 const version = "v0.5.0"
@@ -13,10 +12,10 @@ const (
 	cliGetPeerInfo       = "getPeerInfo"
 	cliSend              = "send"
 	cliAddPeer           = "addPeer"
-	clicreateAccount     = "createAccount"
+	cliCreateAccount     = "createAccount"
 	cliAddAccount        = "addAccount"
+	cliDeleteAccount     = "deleteAccount"
 	cliListAddresses     = "listAddresses"
-	clisendFromMiner     = "sendFromMiner"
 	clichangeProducer    = "changeProducer"
 	cliaddProducer       = "addProducer"
 	clideleteProducer    = "deleteProducer"
@@ -87,10 +86,10 @@ var cmdList = []string{
 	cliGetPeerInfo,
 	cliSend,
 	cliAddPeer,
-	clicreateAccount,
+	cliCreateAccount,
 	cliAddAccount,
+	cliDeleteAccount,
 	cliListAddresses,
-	clisendFromMiner,
 	clichangeProducer,
 	cliaddProducer,
 	clideleteProducer,
@@ -103,10 +102,6 @@ var cmdList = []string{
 	cliGenerateSeed,
 	cliConfigGenerator,
 }
-
-var (
-	ErrInsufficientFund = errors.New("cli: the balance is insufficient")
-)
 
 //configure input parameters/flags for each command
 var cmdFlagsMap = map[string][]flagPars{
@@ -165,19 +160,6 @@ var cmdFlagsMap = map[string][]flagPars{
 			"height. Eg. 1",
 		},
 	},
-	clisendFromMiner: {
-		flagPars{
-			flagAddressBalance,
-			"",
-			valueTypeString,
-			"Reciever's address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7"},
-		flagPars{
-			flagAmountBalance,
-			0,
-			valueTypeInt,
-			"The amount to be sent to the receiver.",
-		},
-	},
 	cliSend: {
 		flagPars{
 			flagFromAddress,
@@ -234,6 +216,20 @@ var cmdFlagsMap = map[string][]flagPars{
 		valueTypeString,
 		"Private key of account to be added.",
 	}},
+	cliDeleteAccount: {
+		flagPars{
+			flagKey,
+			"",
+			valueTypeString,
+			"Private key of account to be deleted. Do not use alongside address.",
+		},
+		flagPars{
+			flagAddress,
+			"",
+			valueTypeString,
+			"Address of account to be deleted. Do not use alongside key.",
+		},
+	},
 	cliAddPeer: {flagPars{
 		flagPeerFullAddr,
 		"",
@@ -337,10 +333,10 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGetPeerInfo:       {adminRpcService, getPeerInfoCommandHandler},
 	cliSend:              {rpcService, sendCommandHandler},
 	cliAddPeer:           {adminRpcService, addPeerCommandHandler},
-	clicreateAccount:     {adminRpcService, createAccountCommandHandler},
+	cliCreateAccount:     {rpcService, createAccountCommandHandler},
 	cliAddAccount:        {rpcService, addAccountCommandHandler},
+	cliDeleteAccount:     {rpcService, deleteAccountCommandHandler},
 	cliListAddresses:     {adminRpcService, listAddressesCommandHandler},
-	clisendFromMiner:     {adminRpcService, sendFromMinerCommandHandler},
 	clichangeProducer:    {adminRpcService, clichangeProducerCommandHandler},
 	cliaddProducer:       {adminRpcService, cliaddProducerCommandHandler},
 	clideleteProducer:    {adminRpcService, clideleteProducerCommandHandler},

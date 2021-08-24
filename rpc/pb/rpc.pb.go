@@ -3027,7 +3027,6 @@ type AdminServiceClient interface {
 	RpcAddPeer(ctx context.Context, in *AddPeerRequest, opts ...grpc.CallOption) (*AddPeerResponse, error)
 	RpcSend(ctx context.Context, in *SendRequest, opts ...grpc.CallOption) (*SendResponse, error)
 	RpcGetPeerInfo(ctx context.Context, in *GetPeerInfoRequest, opts ...grpc.CallOption) (*GetPeerInfoResponse, error)
-	RpcSendFromMiner(ctx context.Context, in *SendFromMinerRequest, opts ...grpc.CallOption) (*SendFromMinerResponse, error)
 	RpcChangeProducer(ctx context.Context, in *ChangeProducerRequest, opts ...grpc.CallOption) (*ChangeProducerResponse, error)
 }
 
@@ -3066,15 +3065,6 @@ func (c *adminServiceClient) RpcGetPeerInfo(ctx context.Context, in *GetPeerInfo
 	return out, nil
 }
 
-func (c *adminServiceClient) RpcSendFromMiner(ctx context.Context, in *SendFromMinerRequest, opts ...grpc.CallOption) (*SendFromMinerResponse, error) {
-	out := new(SendFromMinerResponse)
-	err := c.cc.Invoke(ctx, "/rpcpb.AdminService/RpcSendFromMiner", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *adminServiceClient) RpcChangeProducer(ctx context.Context, in *ChangeProducerRequest, opts ...grpc.CallOption) (*ChangeProducerResponse, error) {
 	out := new(ChangeProducerResponse)
 	err := c.cc.Invoke(ctx, "/rpcpb.AdminService/RpcChangeProducer", in, out, opts...)
@@ -3089,7 +3079,6 @@ type AdminServiceServer interface {
 	RpcAddPeer(context.Context, *AddPeerRequest) (*AddPeerResponse, error)
 	RpcSend(context.Context, *SendRequest) (*SendResponse, error)
 	RpcGetPeerInfo(context.Context, *GetPeerInfoRequest) (*GetPeerInfoResponse, error)
-	RpcSendFromMiner(context.Context, *SendFromMinerRequest) (*SendFromMinerResponse, error)
 	RpcChangeProducer(context.Context, *ChangeProducerRequest) (*ChangeProducerResponse, error)
 }
 
@@ -3151,24 +3140,6 @@ func _AdminService_RpcGetPeerInfo_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AdminService_RpcSendFromMiner_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendFromMinerRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AdminServiceServer).RpcSendFromMiner(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpcpb.AdminService/RpcSendFromMiner",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminServiceServer).RpcSendFromMiner(ctx, req.(*SendFromMinerRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _AdminService_RpcChangeProducer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ChangeProducerRequest)
 	if err := dec(in); err != nil {
@@ -3202,10 +3173,6 @@ var _AdminService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RpcGetPeerInfo",
 			Handler:    _AdminService_RpcGetPeerInfo_Handler,
-		},
-		{
-			MethodName: "RpcSendFromMiner",
-			Handler:    _AdminService_RpcSendFromMiner_Handler,
 		},
 		{
 			MethodName: "RpcChangeProducer",
