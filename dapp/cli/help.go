@@ -32,6 +32,10 @@ func helpCommandHandler(ctx context.Context, account interface{}, flags cmdFlags
 				fmt.Printf(" /ip4/127.0.0.1/tcp/12345/ipfs/QmT5oB6xHSunc64Aojoxa6zg9uH31ajiAVyNfCdBZiwFTV ")
 				continue
 			}
+			if par.name == flagKey {
+				fmt.Printf(" 8496edae83b178db051e2a33ec84899c9686a38291863ef2d8009044014930c9 ")
+				continue
+			}
 			switch par.valueType {
 			case valueTypeInt:
 				fmt.Printf(" 10 ")
