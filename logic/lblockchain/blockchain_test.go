@@ -144,6 +144,56 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 
 }
 
+func TestBlockchain_GetUpdatedUTXOIndex(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	defer s.Close()
+
+	acc := account.NewAccount()
+	libPolicy := &blockchainMock.LIBPolicy{}
+	libPolicy.On("GetProducers").Return(nil)
+	libPolicy.On("GetMinConfirmationNum").Return(6)
+	libPolicy.On("IsBypassingLibCheck").Return(true)
+	bc := CreateBlockchain(acc.GetAddress(), s, libPolicy, transactionpool.NewTransactionPool(nil, 128000), 1000000)
+	genesis, err := bc.GetTailBlock()
+	assert.Nil(t, err)
+
+	var txs []*transaction.Transaction
+	for i := 0; i < 5; i++ {
+		newTx := &transaction.Transaction{
+			ID:  []byte(fmt.Sprintf("tx%d", i)),
+			Vin: []transactionbase.TXInput{},
+			Vout: []transactionbase.TXOutput{
+				{Value: common.NewAmount(10), PubKeyHash: acc.GetPubKeyHash(), Contract: ""},
+			},
+			Tip:        common.NewAmount(1),
+			GasLimit:   common.NewAmount(1),
+			GasPrice:   common.NewAmount(1),
+			CreateTime: 0,
+			Type:       transaction.TxTypeNormal,
+		}
+		txs = append(txs, newTx)
+	}
+	// add a block to blockchain
+	blk1 := block.NewBlockWithRawInfo(hash.Hash("hash1"), genesis.GetHash(), 1, 0, 2, txs)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk1))
+	assert.Nil(t, err)
+	for _, tx := range txs {
+		bc.GetTxPool().Push(*tx)
+	}
+
+	result, ok := bc.GetUpdatedUTXOIndex()
+	assert.True(t, ok)
+	utxoTx := result.GetAllUTXOsByPubKeyHash(acc.GetPubKeyHash())
+	// txs + tail
+	assert.Equal(t, len(txs)+1, len(utxoTx.Indices))
+	for _, tx := range txs {
+		key := utxo.GetUTXOKey(tx.ID, 0)
+		_, ok := utxoTx.Indices[key]
+		assert.True(t, ok)
+	}
+}
+
 func TestBlockchain_IsInBlockchain(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
@@ -490,6 +540,80 @@ func TestBlockchain_setTailBlockHash(t *testing.T) {
 	assert.Nil(t, err)
 	// check bc.tailBlockHash
 	assert.Equal(t, hash.Hash(testHash), bc.GetTailBlockHash())
+}
+
+func TestBlockchain_isAliveProducerSufficient(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	defer s.Close()
+
+	addr := account.NewAccount().GetAddress()
+	libPolicy := &blockchainMock.LIBPolicy{}
+	libPolicy.On("GetProducers").Return(nil)
+	libPolicy.On("GetMinConfirmationNum").Return(3)
+	libPolicy.On("IsBypassingLibCheck").Return(true)
+	libPolicy.On("GetTotalProducersNum").Return(3)
+	bc := CreateBlockchain(addr, s, libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	genesis, err := bc.GetTailBlock()
+	assert.Nil(t, err)
+	assert.True(t, bc.isAliveProducerSufficient(genesis))
+
+	// Add block to blockchain
+	blk0 := block.NewBlock([]*transaction.Transaction{}, genesis, "")
+	blk0.SetHash([]byte("hash0"))
+	blk0.SetHeight(1)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk0))
+	assert.Nil(t, err)
+	// producer is same as parent's producer and maxHeight of bc is less than minProducerNum
+	assert.False(t, bc.isAliveProducerSufficient(blk0))
+
+	// block with invalid parent hash
+	blkInvalidParent := block.NewBlockWithRawInfo([]byte("hash"), []byte("nonexistent"), 0, 0, 2, []*transaction.Transaction{})
+	assert.False(t, bc.isAliveProducerSufficient(blkInvalidParent))
+
+	// reset tail block to genesis block
+	bc.DeleteBlockByHash(blk0.GetHash())
+	bc.SetTailBlockHash(genesis.GetHash())
+
+	// Add blocks to blockchain
+	blk1 := block.NewBlock([]*transaction.Transaction{}, genesis, addr.String())
+	blk1.SetHash([]byte("hash1"))
+	blk1.SetHeight(1)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk1))
+	assert.Nil(t, err)
+
+	addr2 := account.NewAccount().GetAddress()
+	blk2 := block.NewBlock([]*transaction.Transaction{}, blk1, addr2.String())
+	blk2.SetHash([]byte("hash2"))
+	blk2.SetHeight(2)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk2))
+	assert.Nil(t, err)
+
+	// maxHeight of bc is less than minProducerNum and all blocks have different producers
+	assert.True(t, bc.isAliveProducerSufficient(blk2))
+
+	// add more blocks to blockchain
+	blk3 := block.NewBlock([]*transaction.Transaction{}, blk2, addr.String())
+	blk3.SetHash([]byte("hash3"))
+	blk3.SetHeight(3)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk3))
+	assert.Nil(t, err)
+	// producer is same as a previous producer and maxHeight of bc == minProducerNum
+	assert.False(t, bc.isAliveProducerSufficient(blk3))
+
+	// reset tail block to blk2
+	bc.DeleteBlockByHash(blk3.GetHash())
+	bc.SetTailBlockHash(blk2.GetHash())
+
+	// add blk3 again, with unique producer this time
+	addr3 := account.NewAccount().GetAddress()
+	blk3 = block.NewBlock([]*transaction.Transaction{}, blk2, addr3.String())
+	blk3.SetHash([]byte("hash3"))
+	blk3.SetHeight(3)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk3))
+	assert.Nil(t, err)
+	// maxHeight of bc == minProducerNum and num of unique producers = 3
+	assert.True(t, bc.isAliveProducerSufficient(blk3))
 }
 
 func TestBlockchain_IsLIB(t *testing.T) {
