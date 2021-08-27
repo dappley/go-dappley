@@ -53,7 +53,6 @@ func TestBlockProducer_Start(t *testing.T) {
 	assert.True(t, blockProducer.isRunning)
 
 	blockProducer.stopCh <- true
-	//blockProducer.con.(*consensus.DPOS).Stop()
 	util.WaitDoneOrTimeout(func() bool {
 		return !blockProducer.isRunning
 	}, 5)

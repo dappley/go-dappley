@@ -13,19 +13,29 @@ import (
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/lblock"
+	blockchainMock "github.com/dappley/go-dappley/logic/lblockchain/mocks"
+	lblockchainpb "github.com/dappley/go-dappley/logic/lblockchain/pb"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
+	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/network/networkmodel"
+	"github.com/dappley/go-dappley/util"
+	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/require"
+	"time"
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
 )
+
+const confDir = "../../storage/fakeFileLoaders/"
+const senderNodePort = 10298
+const requesterNodePort = 10299
 
 func TestBlockChainManager_NumForks(t *testing.T) {
 	// create BlockChain
@@ -433,6 +443,116 @@ func TestBlockchainManager_VerifyBlock(t *testing.T) {
 	success = lblock.SignBlock(b4, signKey)
 	assert.True(t, success)
 	assert.False(t, bcm.VerifyBlock(b4))
+}
+
+func TestBlockchainManager_RequestBlockHandler(t *testing.T) {
+
+	// there are two blockchains, "sender" and "requester"
+	// "sender" has a block, and "requester" does not
+	// "requester" is the source of the RequestBlock command
+	// "sender" handles the command, and sends the block to "requester"
+
+	rfl := storage.NewRamFileLoader(confDir, "test.conf")
+	defer rfl.DeleteFolder()
+
+	senderNode := network.NewNode(rfl.File, nil)
+	senderNode.Start(senderNodePort, "")
+	defer senderNode.Stop()
+	requesterNode := network.NewNode(rfl.File, nil)
+	requesterNode.Start(requesterNodePort, "")
+	defer requesterNode.Stop()
+	senderNode.GetNetwork().ConnectToSeed(requesterNode.GetHostPeerInfo())
+	// create BlockChains
+	libPolicy := &blockchainMock.LIBPolicy{}
+	libPolicy.On("GetProducers").Return(nil)
+	libPolicy.On("GetMinConfirmationNum").Return(6)
+	libPolicy.On("IsBypassingLibCheck").Return(true)
+	bcSender := CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), libPolicy, transactionpool.NewTransactionPool(senderNode, 100), 100)
+	bcRequester := CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), libPolicy, transactionpool.NewTransactionPool(requesterNode, 100), 100)
+	genesis, err := bcSender.GetTailBlock()
+	require.Nil(t, err)
+
+	bp := blockchain.NewBlockPool(nil)
+
+	acc := account.NewAccount()
+	producerInfo := blockproducerinfo.NewBlockProducerInfo(acc.GetAddress().String())
+	conss := consensus.NewDPOS(producerInfo)
+	conss.SetDynasty(consensus.NewDynasty([]string{"dc6YApYeNS2MLyrKKvFVDYMGTy7RGQmRzm"}, 1, 1))
+	signKey := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	conss.SetKey(signKey)
+	bcmSender := NewBlockchainManager(bcSender, bp, senderNode, conss)
+	bcmRequester := NewBlockchainManager(bcRequester, bp, requesterNode, conss)
+	transaction.SetSubsidy(0)
+
+	txs := []*transaction.Transaction{
+		{
+			ID: []byte{0x74},
+			Vin: []transactionbase.TXInput{
+				{
+					Txid:      []byte{0x0},
+					Vout:      0,
+					Signature: []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+					PubKey:    acc.GetKeyPair().GetPublicKey(),
+				},
+			},
+			Vout: []transactionbase.TXOutput{
+				{
+					Value:      common.NewAmount(10),
+					PubKeyHash: account.PubKeyHash{0x5a, 0xf8, 0xbf, 0x23, 0x39, 0x70, 0xf0, 0x9b, 0x65, 0x31, 0x98, 0xca, 0xed, 0x6c, 0xb6, 0x13, 0xb, 0x77, 0xd, 0x6f, 0x5},
+					Contract:   "",
+				},
+			},
+			Tip:        common.NewAmount(10),
+			GasLimit:   common.NewAmount(1),
+			GasPrice:   common.NewAmount(30000),
+			CreateTime: 0,
+			Type:       transaction.TxTypeCoinbase,
+		},
+	}
+	blk := block.NewBlockWithRawInfo([]byte{}, genesis.GetHash(), 0, 0, 2, txs)
+	blk.SetHash(lblock.CalculateHash(blk))
+	ok := lblock.SignBlock(blk, signKey)
+	assert.True(t, ok)
+	bcmSender.blockchain.AddBlockContextToTail(PrepareBlockContext(bcSender, blk))
+	// check that block was properly added to sender blockchain
+	result, err := bcmSender.blockchain.GetBlockByHash(blk.GetHash())
+	assert.Nil(t, err)
+	if err == nil {
+		assert.Equal(t, result.GetHeader(), blk.GetHeader())
+		assert.Equal(t, len(result.GetTransactions()), len(blk.GetTransactions()))
+		for i, tx := range result.GetTransactions() {
+			assert.Equal(t, tx, blk.GetTransactions()[i])
+		}
+	}
+	// check that requester blockchain does not have the block yet
+	result, err = bcmRequester.blockchain.GetBlockByHash(blk.GetHash())
+	assert.Nil(t, result)
+	assert.Equal(t, ErrBlockDoesNotExist, err)
+
+	// create and handle RequestBlock command
+	requestBlock := &lblockchainpb.RequestBlock{Hash: blk.GetHash()}
+	requestBlockBytes, err := proto.Marshal(requestBlock)
+	assert.Nil(t, err)
+	cmd := networkmodel.NewDappRcvdCmdContext(networkmodel.NewDappCmd(RequestBlock, requestBlockBytes, false), requesterNode.GetHostPeerInfo())
+	requesterNode.StartRequestLoop()
+	requesterNode.StartListenLoop()
+	time.Sleep(time.Millisecond * 500)
+	bcmSender.RequestBlockHandler(cmd)
+	util.WaitDoneOrTimeout(func() bool {
+		_, err := bcmRequester.blockchain.GetBlockByHash(blk.GetHash())
+		return err == nil
+	}, 10)
+
+	// check that the block was successfully sent to the requester
+	result, err = bcmRequester.blockchain.GetBlockByHash(blk.GetHash())
+	assert.Nil(t, err)
+	if err == nil {
+		assert.Equal(t, result.GetHeader(), blk.GetHeader())
+		assert.Equal(t, len(result.GetTransactions()), len(blk.GetTransactions()))
+		for i, tx := range result.GetTransactions() {
+			assert.Equal(t, tx, blk.GetTransactions()[i])
+		}
+	}
 }
 
 func TestCopyAndRevertUtxos(t *testing.T) {
