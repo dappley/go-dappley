@@ -24,3 +24,8 @@ message Address{
 message AccountConfig{
     string file_path = 1;
 }
+
+message DIDSet{
+    string DID = 1;
+    bytes privateKey = 2;
+}

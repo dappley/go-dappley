@@ -44,11 +44,11 @@ type AccountManager struct {
 
 //GetAccountFilePath return account file Path
 func GetAccountFilePath() string {
-	createAccountFile(accountDataPath)
+	createWalletFile(accountDataPath)
 	return accountDataPath
 }
 
-func createAccountFile(path string) {
+func createWalletFile(path string) {
 	binFolder := "../bin"
 	if !Exists(binFolder) {
 		err := os.Mkdir(binFolder, os.ModePerm)

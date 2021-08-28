@@ -194,6 +194,16 @@ func GetAccountManager(path string) (*wallet.AccountManager, error) {
 	return am, nil
 }
 
+func GetDIDManager(path string) (*wallet.DIDManager, error) {
+	fl := storage.NewFileLoader(path)
+	dm := wallet.NewDIDManager(fl)
+	err := dm.LoadFromFile()
+	if err != nil {
+		return nil, err
+	}
+	return dm, nil
+}
+
 func sendProducerChange(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]byte, error) {
 	fromAccount := account.NewTransactionAccountByAddress(sendTxParam.From)
 	if !fromAccount.IsValid() {
