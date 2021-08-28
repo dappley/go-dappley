@@ -42,16 +42,17 @@ import (
 )
 
 const (
-	multiPortEqualStart            int = 10301
-	multiPortSuccessStart          int = 10310
-	multiPortDisconnectStart       int = 10320
-	multiPortNotEqualStart         int = 10330
-	multiPortReturnBlocks          int = 10340
-	multiPortDisconnectPeer        int = 10350
-	multiPortCommonBlocks          int = 10360
-	multiPortGetTopicHandler       int = 10370
-	multiPortAddPeerBlockChainInfo int = 10380
-	confDir                            = "../../storage/fakeFileLoaders/"
+	multiPortEqualStart              int = 10301
+	multiPortSuccessStart            int = 10310
+	multiPortDisconnectStart         int = 10320
+	multiPortNotEqualStart           int = 10330
+	multiPortReturnBlocks            int = 10340
+	multiPortDisconnectPeer          int = 10350
+	multiPortCommonBlocks            int = 10360
+	multiPortGetTopicHandler         int = 10370
+	multiPortAddPeerBlockChainInfo   int = 10380
+	multiPortDownloadRequestListener int = 10390
+	confDir                              = "../../storage/fakeFileLoaders/"
 )
 
 func createTestBlockchains(size int, portStart int) ([]*lblockchain.BlockchainManager, []*network.Node) {
@@ -443,7 +444,7 @@ func TestDownloadManager_FindCommonBlock(t *testing.T) {
 }
 
 func TestDownloadManager_StartDownloadRequestListener(t *testing.T) {
-	bms, nodes := createTestBlockchains(5, multiPortCommonBlocks)
+	bms, nodes := createTestBlockchains(5, multiPortDownloadRequestListener)
 	defer deleteConfFolderFiles()
 	//setup download manager for the first node
 	bm := bms[0]
