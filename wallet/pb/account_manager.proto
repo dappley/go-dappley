@@ -2,11 +2,17 @@ syntax = "proto3";
 package laccountpb;
 import "github.com/dappley/go-dappley/core/account/pb/account.proto";
 
-
 message AccountManager{
     repeated accountpb.Account accounts = 1;
     bytes passPhrase = 2;
     bool locked = 3;
+}
+
+message DIDManager{
+    repeated accountpb.DIDSet dids = 1;
+    bytes passPhrase = 2;
+    bool locked = 3;
+    accountpb.Address systemAddress = 4;
 }
 
 
