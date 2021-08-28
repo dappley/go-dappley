@@ -534,8 +534,6 @@ func TestBlockchainManager_RequestBlockHandler(t *testing.T) {
 	requestBlockBytes, err := proto.Marshal(requestBlock)
 	assert.Nil(t, err)
 	cmd := networkmodel.NewDappRcvdCmdContext(networkmodel.NewDappCmd(RequestBlock, requestBlockBytes, false), requesterNode.GetHostPeerInfo())
-	requesterNode.StartRequestLoop()
-	requesterNode.StartListenLoop()
 	time.Sleep(time.Millisecond * 500)
 	bcmSender.RequestBlockHandler(cmd)
 	util.WaitDoneOrTimeout(func() bool {

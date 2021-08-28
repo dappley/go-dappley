@@ -20,16 +20,18 @@ package downloadmanager
 
 import (
 	blockpb "github.com/dappley/go-dappley/core/block/pb"
+	"github.com/dappley/go-dappley/logic/lblockchain/mocks"
+	networkpb "github.com/dappley/go-dappley/network/pb"
+	"github.com/dappley/go-dappley/util"
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/mock"
 	"io/ioutil"
 	"os"
 	"path"
 	"reflect"
 	"strconv"
 	"testing"
-
-	"github.com/dappley/go-dappley/logic/lblockchain/mocks"
-	networkpb "github.com/dappley/go-dappley/network/pb"
-	"github.com/stretchr/testify/mock"
+	"time"
 
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/lblockchain"
@@ -438,6 +440,47 @@ func TestDownloadManager_FindCommonBlock(t *testing.T) {
 	index, block = downloadManager.FindCommonBlock(blockHeaderPbs)
 	assert.Equal(t, expectedIndex, index)
 	assert.Equal(t, expectedBlock, block)
+}
+
+func TestDownloadManager_StartDownloadRequestListener(t *testing.T) {
+	bms, nodes := createTestBlockchains(5, multiPortCommonBlocks)
+	defer deleteConfFolderFiles()
+	//setup download manager for the first node
+	bm := bms[0]
+	bm.Getblockchain().SetState(blockchain.BlockchainInit)
+	node := nodes[0]
+
+	downloadManager := NewDownloadManager(node, bm, 0, nil)
+	downloadManager.Start()
+
+	//Connect all other nodes to the first node
+	for i := 1; i < len(nodes); i++ {
+		node.GetNetwork().ConnectToSeed(nodes[i].GetHostPeerInfo())
+	}
+
+	downloadManager.StartDownloadRequestListener()
+	time.Sleep(time.Millisecond * 500)
+
+	// should stay idle until finishCh is passed to the bm
+	assert.Equal(t, DownloadStatusIdle, downloadManager.status)
+	finishCh := make(chan bool)
+	downloadManager.bm.GetDownloadRequestCh() <- finishCh
+
+	logger.Info("waiting for DownloadStatusInit")
+	util.WaitDoneOrTimeout(func() bool {
+		return downloadManager.status == DownloadStatusIdle
+	}, 5)
+	logger.Info("waiting for DownloadStatusIdle")
+	util.WaitDoneOrTimeout(func() bool {
+		return downloadManager.status == DownloadStatusIdle
+	}, 10)
+
+	// check that download was finished
+	result := <-finishCh
+	assert.Equal(t, DownloadStatusIdle, downloadManager.status)
+	assert.Nil(t, downloadManager.downloadingPeer)
+	assert.Nil(t, downloadManager.currentCmd)
+	assert.True(t, result)
 }
 
 func deleteConfFolderFiles() error {
