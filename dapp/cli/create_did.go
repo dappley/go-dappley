@@ -159,8 +159,6 @@ func createDIDCommandHandler(ctx context.Context, account interface{}, flags cmd
 	}
 	contract += `]"]}`
 
-	fmt.Println(toAddress)
-
 	sendTxParam := transaction.NewSendTxParam(acc.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
 		toAddress, amount, tip, gasLimit, gasPrice, contract)
 
