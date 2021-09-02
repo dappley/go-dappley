@@ -3,6 +3,7 @@ package account
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"os"
 	"strings"
 
 	accountpb "github.com/dappley/go-dappley/core/account/pb"
@@ -24,9 +25,8 @@ type VerificationMethod struct {
 }
 
 type DIDDocument struct {
-	ID                    string
-	VerificationMethods   []*VerificationMethod
-	AuthenticationMethods []*VerificationMethod
+	Name   string
+	Values map[string]string
 }
 
 func NewDID() *DIDSet {
@@ -41,23 +41,38 @@ func NewDID() *DIDSet {
 	return didSet
 }
 
-func CreateDIDDocument(didSet *DIDSet) *DIDDocument {
+func CreateDIDDocument(didSet *DIDSet, name string) *DIDDocument {
 	didDoc := &DIDDocument{}
-	didDoc.ID = didSet.DID
+	didDoc.Name = name
+	didDoc.Values = make(map[string]string)
+	didDoc.Values["id"] = didSet.DID
 
+	docFile, err := os.Create(didDoc.Name + ".txt")
+	if err != nil {
+		logger.Error("Failed to create file")
+		return nil
+	}
+	defer docFile.Close()
 	verMethod := CreateVerificationMethod(didSet)
-	didDoc.VerificationMethods = append(didDoc.VerificationMethods, verMethod)
-	didDoc.AuthenticationMethods = didDoc.VerificationMethods
+	didDoc.Values["verificationMethod"] = verMethod.ToString()
+	didDoc.Values["authentication"] = verMethod.ToString()
+	docFile.Write([]byte("id:" + didDoc.Values["id"] + ",\n"))
+	docFile.Write([]byte("verificationMethod:" + didDoc.Values["verificationMethod"] + ",\n"))
+	docFile.Write([]byte("authentication:" + didDoc.Values["authentication"]))
 	return didDoc
 }
 
 func CreateVerificationMethod(didSet *DIDSet) *VerificationMethod {
 	verMethod := &VerificationMethod{}
 	verMethod.ID = didSet.DID + "#verification"
-	verMethod.MethodType = "placholder"
+	verMethod.MethodType = "placeholder"
 	verMethod.Controller = didSet.DID
 	verMethod.Key = "placeholder"
 	return verMethod
+}
+
+func (verMethod *VerificationMethod) ToString() string {
+	return "[\n{\n\tid:" + verMethod.ID + ",\n\ttype:" + verMethod.MethodType + ",\n\tcontroller:" + verMethod.Controller + ",\n\tkey:" + verMethod.Key + ",\n},\n]"
 }
 
 func GetDIDAddress(did string) Address {
