@@ -325,14 +325,7 @@ var cmdFlagsMap = map[string][]flagPars{
 		},
 	},
 	cliGenerateSeed: {},
-	cliCreateDID: {
-		flagPars{
-			flagFromAddress,
-			"",
-			valueTypeString,
-			"Account billed for creating the DID. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
-		},
-	},
+	cliCreateDID:    {},
 }
 
 //map the callback function to each command
