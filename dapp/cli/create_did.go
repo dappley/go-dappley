@@ -40,46 +40,7 @@ func createDIDCommandHandler(ctx context.Context, account interface{}, flags cmd
 		fmt.Println("Could not create file.")
 		return
 	}
-	docFile, err := os.OpenFile(didDoc.Name+".txt", os.O_APPEND|os.O_WRONLY, 0600)
-	if err != nil {
-		fmt.Println("Error opening file.")
-		return
-	}
-	defer docFile.Close()
 	fmt.Println("Document created. New did is", didSet.DID)
-	for {
-		addItem, err := prompter.PromptConfirm("Add a value to the document?")
-		if err != nil {
-			fmt.Println("Error: ", err.Error())
-			return
-		}
-		if !addItem {
-			break
-		}
-
-		newKey, err := prompter.Prompt("Enter the key for the new value: ")
-		if err != nil {
-			fmt.Println("Error: ", err.Error())
-			return
-		}
-		if _, found := didDoc.Values[newKey]; found {
-			fmt.Println("Error: key already exists in document.")
-			continue
-		}
-
-		newValue, err := prompter.Prompt("Enter the value to be added: ")
-		if err != nil {
-			fmt.Println("Error: ", err.Error())
-			return
-		}
-		didDoc.Values[newKey] = newValue
-		newEntry := ",\n" + newKey + ":" + newValue
-		if _, err = docFile.WriteString(newEntry); err != nil {
-			fmt.Println("Error writing to file.")
-			return
-		}
-		fmt.Println("Value added successfully.")
-	}
 
 	dm.AddDID(didSet)
 	dm.SaveDIDsToFile()

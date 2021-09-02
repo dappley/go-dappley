@@ -2,6 +2,7 @@ package account
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -15,6 +16,7 @@ import (
 type DIDSet struct {
 	DID        string
 	PrivateKey ecdsa.PrivateKey
+	PublicKey  []byte
 }
 
 type VerificationMethod struct {
@@ -33,7 +35,8 @@ func NewDID() *DIDSet {
 	didSet := &DIDSet{}
 	keys := NewKeyPair()
 	didSet.PrivateKey = keys.GetPrivateKey()
-	pubKeyHash := PubKeyHash(generatePubKeyHash(keys.GetPublicKey()))
+	didSet.PublicKey = keys.GetPublicKey()
+	pubKeyHash := PubKeyHash(generatePubKeyHash(didSet.PublicKey))
 	pubKeyHash = append([]byte{versionContract}, pubKeyHash...)
 	address := pubKeyHash.GenerateAddress()
 	didSet.DID = "did:dappley:" + address.address
@@ -55,7 +58,7 @@ func CreateDIDDocument(didSet *DIDSet, name string) *DIDDocument {
 	defer docFile.Close()
 	verMethod := CreateVerificationMethod(didSet)
 	didDoc.Values["verificationMethod"] = verMethod.ToString()
-	didDoc.Values["authentication"] = verMethod.ToString()
+	didDoc.Values["authentication"] = "[#verification]"
 	docFile.Write([]byte("id:" + didDoc.Values["id"] + ",\n"))
 	docFile.Write([]byte("verificationMethod:" + didDoc.Values["verificationMethod"] + ",\n"))
 	docFile.Write([]byte("authentication:" + didDoc.Values["authentication"]))
@@ -64,15 +67,15 @@ func CreateDIDDocument(didSet *DIDSet, name string) *DIDDocument {
 
 func CreateVerificationMethod(didSet *DIDSet) *VerificationMethod {
 	verMethod := &VerificationMethod{}
-	verMethod.ID = didSet.DID + "#verification"
-	verMethod.MethodType = "placeholder"
+	verMethod.ID = "#verification"
+	verMethod.MethodType = "Secp256k1"
 	verMethod.Controller = didSet.DID
-	verMethod.Key = "placeholder"
+	verMethod.Key = hex.EncodeToString(didSet.PublicKey)
 	return verMethod
 }
 
 func (verMethod *VerificationMethod) ToString() string {
-	return "[\n{\n\tid:" + verMethod.ID + ",\n\ttype:" + verMethod.MethodType + ",\n\tcontroller:" + verMethod.Controller + ",\n\tkey:" + verMethod.Key + ",\n},\n]"
+	return "[\n{\n\tid:" + verMethod.ID + ",\n\ttype:" + verMethod.MethodType + ",\n\tcontroller:" + verMethod.Controller + ",\n\tpublicKeyHex:" + verMethod.Key + ",\n},\n]"
 }
 
 func GetDIDAddress(did string) Address {
