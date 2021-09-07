@@ -3,6 +3,7 @@ package account
 import (
 	"crypto/ecdsa"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -141,17 +142,34 @@ func ReadBasicDocFile(path string) (*BasicDIDDocument, error) {
 	return &newDoc, nil
 }
 
-func (doc *DIDDocument) SaveDocFile() {
-	/*var content bytes.Buffer
-	dm.mutex.Lock()
-	defer dm.mutex.Unlock()
-	rawBytes, err := proto.Marshal(dm.ToProto())
+func SaveDocFile(doc *DIDDocument) {
+
+	jsonBytes, err := json.Marshal(doc.ToProto())
 	if err != nil {
-		logger.WithError(err).Error("AccountManager: Save account to file failed")
+		fmt.Println("json.Marshal error: ", err)
+	}
+	if err := os.WriteFile(doc.Name, jsonBytes, 0666); err != nil {
+		logger.Warn("Save ", doc.Name, " failed.")
 		return
 	}
-	content.Write(rawBytes)
-	dm.fileLoader.SaveToFile(content)*/
+}
+
+func ReadDocFile(path string) (*DIDDocument, error) {
+	jsonBytes, err := os.ReadFile(path)
+	if err != nil {
+		logger.Warn(err.Error())
+		return nil, err
+	}
+
+	doc := &accountpb.DIDDocFile{}
+	err = json.Unmarshal(jsonBytes, doc)
+	if err != nil {
+		logger.Warn("json.Unmarshal error: ", err.Error())
+		return nil, err
+	}
+	newDoc := DIDDocument{}
+	newDoc.FromProto(doc)
+	return &newDoc, nil
 }
 
 func (d *DIDSet) ToProto() proto.Message {

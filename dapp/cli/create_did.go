@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"os"
 
-	acc "github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/util"
 	"github.com/dappley/go-dappley/wallet"
 )
 
-func createDIDCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
+func createDIDCommandHandler(ctx context.Context, a interface{}, flags cmdFlags) {
 	dm, err := logic.GetDIDManager(wallet.GetDIDFilePath())
 	if err != nil {
 		fmt.Println("Error: ", err.Error())
@@ -30,7 +30,7 @@ func createDIDCommandHandler(ctx context.Context, account interface{}, flags cmd
 		return
 	}
 
-	didDoc, didSet := acc.CreateDIDDocument(name)
+	didDoc, didSet := account.CreateDIDDocument(name)
 	if didDoc == nil {
 		fmt.Println("Could not create file.")
 		return
