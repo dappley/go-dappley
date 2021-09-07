@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"os"
 
-	acc "github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/util"
 	"github.com/dappley/go-dappley/wallet"
 )
 
-func createDIDCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
+func createDIDCommandHandler(ctx context.Context, a interface{}, flags cmdFlags) {
 	dm, err := logic.GetDIDManager(wallet.GetDIDFilePath())
 	if err != nil {
 		fmt.Println("Error: ", err.Error())
@@ -24,18 +24,19 @@ func createDIDCommandHandler(ctx context.Context, account interface{}, flags cmd
 		fmt.Println("Error: ", err.Error())
 		return
 	}
-	if _, err := os.Stat(name + ".txt"); err == nil {
+	name += (".json")
+	if _, err := os.Stat(name); err == nil {
 		fmt.Println("Error: file already exists.")
 		return
 	}
 
-	didSet := acc.NewDID(name)
-	if !acc.CheckDIDFormat(didSet.DID) {
+	didSet := account.NewDID(name)
+	if !account.CheckDIDFormat(didSet.DID) {
 		fmt.Println("DID formatted incorrectly.")
 		return
 	}
 
-	didDoc := acc.CreateDIDDocument(didSet, name)
+	didDoc := account.CreateDIDDocument(didSet, name)
 	if didDoc == nil {
 		fmt.Println("Could not create file.")
 		return

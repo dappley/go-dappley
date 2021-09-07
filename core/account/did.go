@@ -3,6 +3,7 @@ package account
 import (
 	"crypto/ecdsa"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -28,8 +29,9 @@ type VerificationMethod struct {
 }
 
 type DIDDocument struct {
-	Name                string
-	Values              map[string]string
+	Name string
+	ID   string
+	//Values              map[string]string
 	VerificationMethods []VerificationMethod
 	Authentication      []string
 }
@@ -43,7 +45,7 @@ func NewDID(name string) *DIDSet {
 	pubKeyHash = append([]byte{versionContract}, pubKeyHash...)
 	address := pubKeyHash.GenerateAddress()
 	didSet.DID = "did:dappley:" + address.address
-	didSet.FileName = name + ".txt"
+	didSet.FileName = name
 
 	return didSet
 }
@@ -51,24 +53,39 @@ func NewDID(name string) *DIDSet {
 func CreateDIDDocument(didSet *DIDSet, name string) *DIDDocument {
 	didDoc := &DIDDocument{}
 	didDoc.Name = name
-	didDoc.Values = make(map[string]string)
-	didDoc.Values["id"] = didSet.DID
+	didDoc.ID = didSet.DID
 
-	docFile, err := os.Create(didDoc.Name + ".txt")
-	if err != nil {
-		logger.Error("Failed to create file")
-		return nil
-	}
-	defer docFile.Close()
 	verMethod := CreateVerificationMethod(didSet)
 	didDoc.VerificationMethods = append(didDoc.VerificationMethods, *verMethod)
 	didDoc.Authentication = append(didDoc.Authentication, verMethod.ID)
-	didDoc.Values["verificationMethod"] = verMethod.ToString()
-	didDoc.Values["authentication"] = "[#verification]"
-	docFile.Write([]byte("id:" + didDoc.Values["id"] + ",\n"))
-	docFile.Write([]byte("verificationMethod:" + didDoc.Values["verificationMethod"] + ",\n"))
-	docFile.Write([]byte("authentication:" + didDoc.Values["authentication"]))
+	SaveDocFile(didDoc)
 	return didDoc
+}
+
+func DisplayDIDDocument(doc DIDDocument) {
+	fmt.Println("{")
+	fmt.Println("\"id\": \"" + doc.ID + "\"")
+	fmt.Println("\"verificationMethod\": [")
+	omitComma := true
+	for _, method := range doc.VerificationMethods {
+		if !omitComma {
+			fmt.Println(",")
+		}
+		omitComma = false
+		fmt.Print(method.ToString())
+	}
+	fmt.Println("\n]")
+	fmt.Print("\"authentication\": [")
+	omitComma = true
+	for _, authMethod := range doc.Authentication {
+		if !omitComma {
+			fmt.Print(",")
+		}
+		omitComma = false
+		fmt.Print("\"" + authMethod + "\"")
+	}
+	fmt.Println("]")
+	fmt.Println("}")
 }
 
 func CreateVerificationMethod(didSet *DIDSet) *VerificationMethod {
@@ -81,7 +98,7 @@ func CreateVerificationMethod(didSet *DIDSet) *VerificationMethod {
 }
 
 func (verMethod *VerificationMethod) ToString() string {
-	return "[\n{\n\tid:" + verMethod.ID + ",\n\ttype:" + verMethod.MethodType + ",\n\tcontroller:" + verMethod.Controller + ",\n\tpublicKeyHex:" + verMethod.Key + ",\n},\n]"
+	return "{\n\t\"id\": \"" + verMethod.ID + "\",\n\t\"type\": \"" + verMethod.MethodType + "\",\n\t\"controller\": \"" + verMethod.Controller + "\",\n\t\"publicKeyHex\": \"" + verMethod.Key + "\"\n}"
 }
 
 func GetDIDAddress(did string) Address {
@@ -107,17 +124,34 @@ func CheckDIDFormat(did string) bool {
 	return true
 }
 
-func (doc *DIDDocument) SaveDocFile() {
-	/*var content bytes.Buffer
-	dm.mutex.Lock()
-	defer dm.mutex.Unlock()
-	rawBytes, err := proto.Marshal(dm.ToProto())
+func SaveDocFile(doc *DIDDocument) {
+
+	jsonBytes, err := json.Marshal(doc.ToProto())
 	if err != nil {
-		logger.WithError(err).Error("AccountManager: Save account to file failed")
+		fmt.Println("json.Marshal error: ", err)
+	}
+	if err := os.WriteFile(doc.Name, jsonBytes, 0666); err != nil {
+		logger.Warn("Save ", doc.Name, " failed.")
 		return
 	}
-	content.Write(rawBytes)
-	dm.fileLoader.SaveToFile(content)*/
+}
+
+func ReadDocFile(path string) (*DIDDocument, error) {
+	jsonBytes, err := os.ReadFile(path)
+	if err != nil {
+		logger.Warn(err.Error())
+		return nil, err
+	}
+
+	doc := &accountpb.DIDDocFile{}
+	err = json.Unmarshal(jsonBytes, doc)
+	if err != nil {
+		logger.Warn("json.Unmarshal error: ", err.Error())
+		return nil, err
+	}
+	newDoc := DIDDocument{}
+	newDoc.FromProto(doc)
+	return &newDoc, nil
 }
 
 func (d *DIDSet) ToProto() proto.Message {
@@ -148,14 +182,14 @@ func (d *DIDDocument) ToProto() proto.Message {
 		methods = append(methods, method.ToProto().(*accountpb.VerificationMethod))
 	}
 	return &accountpb.DIDDocFile{
-		Id:                 d.Values["id"],
+		Id:                 d.ID,
 		VerificationMethod: methods,
 		Authentication:     d.Authentication,
 	}
 }
 
 func (d *DIDDocument) FromProto(pb proto.Message) {
-	d.Values["id"] = pb.(*accountpb.DIDDocFile).Id
+	d.ID = pb.(*accountpb.DIDDocFile).Id
 
 	methods := []VerificationMethod{}
 

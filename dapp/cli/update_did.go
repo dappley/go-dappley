@@ -3,16 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+
+	"github.com/dappley/go-dappley/core/account"
 )
 
-func updateDIDCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
+func updateDIDCommandHandler(ctx context.Context, a interface{}, flags cmdFlags) {
 	filepath := *(flags[flagFilePath].(*string))
 
-	bytes, err := ioutil.ReadFile(filepath)
+	doc, err := account.ReadDocFile(filepath)
 	if err != nil {
-		fmt.Println("Failed to read the DID document!")
+		fmt.Println("Error reading DID document.")
 		return
 	}
-	fmt.Println(string(bytes))
+	account.DisplayDIDDocument(*doc)
 }
