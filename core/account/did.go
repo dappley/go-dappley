@@ -58,10 +58,16 @@ func CreateDIDDocument(didSet *DIDSet, name string) *DIDDocument {
 	defer docFile.Close()
 	verMethod := CreateVerificationMethod(didSet)
 	didDoc.Values["verificationMethod"] = verMethod.ToString()
-	didDoc.Values["authentication"] = "[#verification]"
-	docFile.Write([]byte("id:" + didDoc.Values["id"] + ",\n"))
-	docFile.Write([]byte("verificationMethod:" + didDoc.Values["verificationMethod"] + ",\n"))
-	docFile.Write([]byte("authentication:" + didDoc.Values["authentication"]))
+	didDoc.Values["authentication"] = "[\"#verification\"]"
+	didDoc.Values["capabilityInvocation"] = "[\"#verification\"]"
+	didDoc.Values["capabilityDelegation"] = "[\"#verification\"]"
+	didDoc.Values["assertionMethod"] = "[\"#verification\"]"
+	docFile.Write([]byte("\"id\": \"" + didDoc.Values["id"] + "\",\n"))
+	docFile.Write([]byte("\"verificationMethod\": " + didDoc.Values["verificationMethod"] + ",\n"))
+	docFile.Write([]byte("\"authentication\": " + didDoc.Values["authentication"] + ",\n"))
+	docFile.Write([]byte("\"capabilityInvocation\": " + didDoc.Values["capabilityInvocation"] + ",\n"))
+	docFile.Write([]byte("\"capabilityDelegation\": " + didDoc.Values["capabilityDelegation"] + ",\n"))
+	docFile.Write([]byte("\"assertionMethod\": " + didDoc.Values["assertionMethod"]))
 	return didDoc
 }
 
@@ -75,7 +81,7 @@ func CreateVerificationMethod(didSet *DIDSet) *VerificationMethod {
 }
 
 func (verMethod *VerificationMethod) ToString() string {
-	return "[\n{\n\tid:" + verMethod.ID + ",\n\ttype:" + verMethod.MethodType + ",\n\tcontroller:" + verMethod.Controller + ",\n\tpublicKeyHex:" + verMethod.Key + ",\n},\n]"
+	return "[\n{\n\t\"id\": \"" + verMethod.ID + "\",\n\t\"type\": \"" + verMethod.MethodType + "\",\n\t\"controller\": \"" + verMethod.Controller + "\",\n\t\"publicKeyHex\": \"" + verMethod.Key + "\",\n}\n]"
 }
 
 func GetDIDAddress(did string) Address {

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	acc "github.com/dappley/go-dappley/core/account"
@@ -40,9 +41,17 @@ func createDIDCommandHandler(ctx context.Context, account interface{}, flags cmd
 		fmt.Println("Could not create file.")
 		return
 	}
-	fmt.Println("Document created. New did is", didSet.DID)
+	fmt.Println("Document created and stored in "+name+".txt. New did is", didSet.DID)
 
 	dm.AddDID(didSet)
 	dm.SaveDIDsToFile()
-	fmt.Println("Operation complete!")
+	fmt.Println("Operation complete! New DID document below:")
+	fmt.Println()
+
+	doc, err := ioutil.ReadFile(name + ".txt")
+	if err != nil {
+		fmt.Println("Error reading DID document.")
+		return
+	}
+	fmt.Println(string(doc))
 }
