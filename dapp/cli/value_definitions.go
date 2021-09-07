@@ -54,6 +54,7 @@ const (
 	flagValue            = "value"
 	flagBlockHeight      = "height"
 	flagGenerateConfig   = "generateConfig"
+	flagDID              = "did"
 )
 
 type valueType int
@@ -333,7 +334,13 @@ var cmdFlagsMap = map[string][]flagPars{
 			flagFilePath,
 			"",
 			valueTypeString,
-			"The path to the DID document to be edited.",
+			"The path to the DID document to be edited. Do not include alongside a DID.",
+		},
+		flagPars{
+			flagDID,
+			"",
+			valueTypeString,
+			"DID associated with the DID document to be edited. Do not include alongside a file path.",
 		},
 	},
 }
