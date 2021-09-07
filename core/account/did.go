@@ -17,6 +17,7 @@ type DIDSet struct {
 	DID        string
 	PrivateKey ecdsa.PrivateKey
 	PublicKey  []byte
+	FileName   string
 }
 
 type VerificationMethod struct {
@@ -27,11 +28,13 @@ type VerificationMethod struct {
 }
 
 type DIDDocument struct {
-	Name   string
-	Values map[string]string
+	Name                string
+	Values              map[string]string
+	VerificationMethods []VerificationMethod
+	Authentication      []string
 }
 
-func NewDID() *DIDSet {
+func NewDID(name string) *DIDSet {
 	didSet := &DIDSet{}
 	keys := NewKeyPair()
 	didSet.PrivateKey = keys.GetPrivateKey()
@@ -40,6 +43,7 @@ func NewDID() *DIDSet {
 	pubKeyHash = append([]byte{versionContract}, pubKeyHash...)
 	address := pubKeyHash.GenerateAddress()
 	didSet.DID = "did:dappley:" + address.address
+	didSet.FileName = name + ".txt"
 
 	return didSet
 }
@@ -57,6 +61,8 @@ func CreateDIDDocument(didSet *DIDSet, name string) *DIDDocument {
 	}
 	defer docFile.Close()
 	verMethod := CreateVerificationMethod(didSet)
+	didDoc.VerificationMethods = append(didDoc.VerificationMethods, *verMethod)
+	didDoc.Authentication = append(didDoc.Authentication, verMethod.ID)
 	didDoc.Values["verificationMethod"] = verMethod.ToString()
 	didDoc.Values["authentication"] = "[#verification]"
 	docFile.Write([]byte("id:" + didDoc.Values["id"] + ",\n"))
@@ -101,6 +107,19 @@ func CheckDIDFormat(did string) bool {
 	return true
 }
 
+func (doc *DIDDocument) SaveDocFile() {
+	/*var content bytes.Buffer
+	dm.mutex.Lock()
+	defer dm.mutex.Unlock()
+	rawBytes, err := proto.Marshal(dm.ToProto())
+	if err != nil {
+		logger.WithError(err).Error("AccountManager: Save account to file failed")
+		return
+	}
+	content.Write(rawBytes)
+	dm.fileLoader.SaveToFile(content)*/
+}
+
 func (d *DIDSet) ToProto() proto.Message {
 	rawBytes, err := secp256k1.FromECDSAPrivateKey(&d.PrivateKey)
 	if err != nil {
@@ -109,6 +128,7 @@ func (d *DIDSet) ToProto() proto.Message {
 	return &accountpb.DIDSet{
 		DID:        d.DID,
 		PrivateKey: rawBytes,
+		FilePath:   d.FileName,
 	}
 }
 
@@ -119,4 +139,47 @@ func (d *DIDSet) FromProto(pb proto.Message) {
 		logger.Error("DIDSet: FromProto: Can not convert bytes to private key")
 	}
 	d.PrivateKey = *privKey
+	d.FileName = pb.(*accountpb.DIDSet).FilePath
+}
+
+func (d *DIDDocument) ToProto() proto.Message {
+	methods := []*accountpb.VerificationMethod{}
+	for _, method := range d.VerificationMethods {
+		methods = append(methods, method.ToProto().(*accountpb.VerificationMethod))
+	}
+	return &accountpb.DIDDocFile{
+		Id:                 d.Values["id"],
+		VerificationMethod: methods,
+		Authentication:     d.Authentication,
+	}
+}
+
+func (d *DIDDocument) FromProto(pb proto.Message) {
+	d.Values["id"] = pb.(*accountpb.DIDDocFile).Id
+
+	methods := []VerificationMethod{}
+
+	for _, methodpb := range pb.(*accountpb.DIDDocFile).VerificationMethod {
+		vmethod := VerificationMethod{}
+		vmethod.FromProto(methodpb)
+		methods = append(methods, vmethod)
+	}
+	d.VerificationMethods = methods
+	d.Authentication = pb.(*accountpb.DIDDocFile).Authentication
+}
+
+func (v *VerificationMethod) ToProto() proto.Message {
+	return &accountpb.VerificationMethod{
+		Id:           v.ID,
+		Type:         v.MethodType,
+		Controller:   v.Controller,
+		PublicKeyHex: v.Key,
+	}
+}
+
+func (v *VerificationMethod) FromProto(pb proto.Message) {
+	v.ID = pb.(*accountpb.VerificationMethod).Id
+	v.MethodType = pb.(*accountpb.VerificationMethod).Type
+	v.Controller = pb.(*accountpb.VerificationMethod).Controller
+	v.Key = pb.(*accountpb.VerificationMethod).PublicKeyHex
 }

@@ -19,12 +19,6 @@ func createDIDCommandHandler(ctx context.Context, account interface{}, flags cmd
 	}
 	prompter := util.NewTerminalPrompter()
 
-	didSet := acc.NewDID()
-	if !acc.CheckDIDFormat(didSet.DID) {
-		fmt.Println("DID formatted incorrectly.")
-		return
-	}
-
 	name, err := prompter.Prompt("Enter the name to be used for the new DID document: ")
 	if err != nil {
 		fmt.Println("Error: ", err.Error())
@@ -32,6 +26,12 @@ func createDIDCommandHandler(ctx context.Context, account interface{}, flags cmd
 	}
 	if _, err := os.Stat(name + ".txt"); err == nil {
 		fmt.Println("Error: file already exists.")
+		return
+	}
+
+	didSet := acc.NewDID(name)
+	if !acc.CheckDIDFormat(didSet.DID) {
+		fmt.Println("DID formatted incorrectly.")
 		return
 	}
 
