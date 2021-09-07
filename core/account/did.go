@@ -141,6 +141,19 @@ func ReadBasicDocFile(path string) (*BasicDIDDocument, error) {
 	return &newDoc, nil
 }
 
+func (doc *DIDDocument) SaveDocFile() {
+	/*var content bytes.Buffer
+	dm.mutex.Lock()
+	defer dm.mutex.Unlock()
+	rawBytes, err := proto.Marshal(dm.ToProto())
+	if err != nil {
+		logger.WithError(err).Error("AccountManager: Save account to file failed")
+		return
+	}
+	content.Write(rawBytes)
+	dm.fileLoader.SaveToFile(content)*/
+}
+
 func (d *DIDSet) ToProto() proto.Message {
 	rawBytes, err := secp256k1.FromECDSAPrivateKey(&d.PrivateKey)
 	if err != nil {
@@ -204,7 +217,6 @@ func (d *FullDIDDocument) ToProto() proto.Message {
 func (d *FullDIDDocument) FromProto(pb proto.Message) {
 	d.Context = pb.(*accountpb.DIDDocFile).Context
 	d.ID = pb.(*accountpb.DIDDocFile).Id
-
 	methods := []VerificationMethod{}
 
 	for _, methodpb := range pb.(*accountpb.DIDDocFile).VerificationMethod {

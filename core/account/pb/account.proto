@@ -1,5 +1,6 @@
 syntax = "proto3";
 package accountpb;
+option go_package = "go/src/go-dappley/core/account/accountpb";
 
 message Account{
     KeyPair keyPair = 1;
