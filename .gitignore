@@ -8,3 +8,4 @@ bin
 Gopkg.lock
 .DS_Store
 dapp/conf/producer.conf
+dapp/conf/peer.conf
