@@ -28,4 +28,33 @@ message AccountConfig{
 message DIDSet{
     string DID = 1;
     bytes privateKey = 2;
+    string file_path = 3;
 }
+
+message VerificationMethod{
+    string id = 1;
+    string type = 2;
+    string controller = 3;
+    string publicKeyHex = 4;
+}
+
+message BasicKey{
+    string id = 1;
+    string type = 2;
+    string publicKeyHex = 3;
+}
+
+message DIDDocFile{
+    string context = 1 [json_name = "@context"];
+    string id = 2;
+    repeated VerificationMethod verificationMethod = 3;
+    repeated string authentication = 4;
+}
+
+message BasicDIDDocFile{
+    string context = 1 [json_name = "@context"];
+    repeated BasicKey publicKey = 2;
+    repeated string authentication = 3;
+}
+
+

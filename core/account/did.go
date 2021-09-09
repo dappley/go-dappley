@@ -5,18 +5,19 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"strings"
 
 	accountpb "github.com/dappley/go-dappley/core/account/pb"
+	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type DIDSet struct {
-	DID        string
 	PrivateKey ecdsa.PrivateKey
-	PublicKey  []byte
+	FileName   string
+	DID        string
 }
 
 type VerificationMethod struct {
@@ -26,85 +27,118 @@ type VerificationMethod struct {
 	Key        string
 }
 
-type DIDDocument struct {
-	Name   string
-	Values map[string]string
+type BasicKey struct {
+	ID         string
+	MethodType string
+	Key        string
 }
 
-func NewDID() *DIDSet {
-	didSet := &DIDSet{}
+type BasicDIDDocument struct {
+	Context        string
+	PublicKeys     []BasicKey
+	Authentication []string
+}
+
+type FullDIDDocument struct {
+	ID                  string
+	VerificationMethods []VerificationMethod
+	Context             string
+	Authentication      []string
+}
+
+const basicFilePath = "../bin/basicDocs/"
+const fullFilePath = "../bin/fullDocs/"
+
+func CreateDIDDocument(name string) (*BasicDIDDocument, *DIDSet) {
 	keys := NewKeyPair()
+	didSet := &DIDSet{}
 	didSet.PrivateKey = keys.GetPrivateKey()
-	didSet.PublicKey = keys.GetPublicKey()
-	pubKeyHash := PubKeyHash(generatePubKeyHash(didSet.PublicKey))
-	pubKeyHash = append([]byte{versionContract}, pubKeyHash...)
-	address := pubKeyHash.GenerateAddress()
-	didSet.DID = "did:dappley:" + address.address
+	didSet.FileName = name
+	basicKey := &BasicKey{}
+	basicKey.ID = "#verification"
+	basicKey.Key = hex.EncodeToString(keys.GetPublicKey())
+	basicKey.MethodType = "Secp256k1"
+	didDoc := &BasicDIDDocument{}
+	didDoc.Context = "https://www.w3.org/ns/did/v1"
+	didDoc.PublicKeys = append(didDoc.PublicKeys, *basicKey)
+	didDoc.Authentication = append(didDoc.Authentication, basicKey.ID)
+	SaveBasicDocFile(didDoc, name)
 
-	return didSet
-}
-
-func CreateDIDDocument(didSet *DIDSet, name string) *DIDDocument {
-	didDoc := &DIDDocument{}
-	didDoc.Name = name
-	didDoc.Values = make(map[string]string)
-	didDoc.Values["id"] = didSet.DID
-
-	docFile, err := os.Create(didDoc.Name + ".txt")
+	bytesToHash, err := os.ReadFile(basicFilePath + name)
 	if err != nil {
-		logger.Error("Failed to create file")
-		return nil
+		fmt.Println("error reading file: ", err)
+		return nil, nil
 	}
-	defer docFile.Close()
-	verMethod := CreateVerificationMethod(didSet)
-	didDoc.Values["verificationMethod"] = verMethod.ToString()
-	didDoc.Values["authentication"] = "[\"#verification\"]"
-	didDoc.Values["capabilityInvocation"] = "[\"#verification\"]"
-	didDoc.Values["capabilityDelegation"] = "[\"#verification\"]"
-	didDoc.Values["assertionMethod"] = "[\"#verification\"]"
-	docFile.Write([]byte("\"id\": \"" + didDoc.Values["id"] + "\",\n"))
-	docFile.Write([]byte("\"verificationMethod\": " + didDoc.Values["verificationMethod"] + ",\n"))
-	docFile.Write([]byte("\"authentication\": " + didDoc.Values["authentication"] + ",\n"))
-	docFile.Write([]byte("\"capabilityInvocation\": " + didDoc.Values["capabilityInvocation"] + ",\n"))
-	docFile.Write([]byte("\"capabilityDelegation\": " + didDoc.Values["capabilityDelegation"] + ",\n"))
-	docFile.Write([]byte("\"assertionMethod\": " + didDoc.Values["assertionMethod"]))
-	return didDoc
+	hashed := hash.Sha3256(bytesToHash)
+	hexstring := hex.EncodeToString(hashed)
+	did := "did:dappley:" + hexstring
+	didSet.DID = did
+
+	fullDoc := createFullDIDDocument(didDoc, did)
+	saveFullDIDDocument(fullDoc)
+	return didDoc, didSet
 }
 
-func CreateVerificationMethod(didSet *DIDSet) *VerificationMethod {
-	verMethod := &VerificationMethod{}
-	verMethod.ID = "#verification"
-	verMethod.MethodType = "Secp256k1"
-	verMethod.Controller = didSet.DID
-	verMethod.Key = hex.EncodeToString(didSet.PublicKey)
-	return verMethod
+func createFullDIDDocument(basicDoc *BasicDIDDocument, hash string) *FullDIDDocument {
+	fullDoc := &FullDIDDocument{}
+	fullDoc.ID = "did:dappley:" + hash
+	fullDoc.Context = basicDoc.Context
+	for _, pk := range basicDoc.PublicKeys {
+		vm := VerificationMethod{}
+		vm.ID = fullDoc.ID + pk.ID
+		vm.Controller = fullDoc.ID
+		vm.MethodType = pk.MethodType
+		vm.Key = pk.Key
+		fullDoc.VerificationMethods = append(fullDoc.VerificationMethods, vm)
+	}
+	for _, auth := range basicDoc.Authentication {
+		fullAuth := fullDoc.ID + auth
+		fullDoc.Authentication = append(fullDoc.Authentication, fullAuth)
+	}
+	return fullDoc
 }
 
-func (verMethod *VerificationMethod) ToString() string {
-	return "[\n{\n\t\"id\": \"" + verMethod.ID + "\",\n\t\"type\": \"" + verMethod.MethodType + "\",\n\t\"controller\": \"" + verMethod.Controller + "\",\n\t\"publicKeyHex\": \"" + verMethod.Key + "\",\n}\n]"
+func saveFullDIDDocument(fullDoc *FullDIDDocument) {
+	rawBytes, err := proto.Marshal(fullDoc.ToProto())
+	if err != nil {
+		fmt.Println("json.Marshal error: ", err)
+	}
+	os.Mkdir(fullFilePath, 0777)
+	if err := os.WriteFile(fullFilePath+fullDoc.ID+".dat", rawBytes, 0666); err != nil {
+		logger.Warn("Save ", fullDoc.ID+".dat", " failed.")
+	}
 }
 
-func GetDIDAddress(did string) Address {
-	fields := strings.Split(did, ":")
-	addressString := fields[2]
-	return NewAddress(addressString)
+func SaveBasicDocFile(doc *BasicDIDDocument, name string) {
+
+	v2message := proto.MessageV2(doc.ToProto())
+
+	jsonBytes, err := protojson.Marshal(v2message)
+	if err != nil {
+		fmt.Println("json.Marshal error: ", err)
+	}
+	os.Mkdir(basicFilePath, 0777)
+	if err := os.WriteFile(basicFilePath+name, jsonBytes, 0666); err != nil {
+		logger.Warn("Save ", name, " failed.")
+	}
 }
 
-func CheckDIDFormat(did string) bool {
-	fields := strings.Split(did, ":")
-	if len(fields) != 3 {
-		fmt.Println("Error: incorrect number of fields in DID")
-		return false
+func ReadBasicDocFile(path string) (*BasicDIDDocument, error) {
+	jsonBytes, err := os.ReadFile(path)
+	if err != nil {
+		logger.Warn(err.Error())
+		return nil, err
 	}
-	if fields[0] != "did" {
-		fmt.Println("Error: DID missing 'did' prefix")
-		return false
+
+	doc := &accountpb.BasicDIDDocFile{}
+	err = protojson.Unmarshal(jsonBytes, doc)
+	if err != nil {
+		logger.Warn("json.Unmarshal error: ", err.Error())
+		return nil, err
 	}
-	if fields[1] != "dappley" {
-		fmt.Println("Error: DID is not a dappley DID")
-		return false
-	}
-	return true
+	newDoc := BasicDIDDocument{}
+	newDoc.FromProto(doc)
+	return &newDoc, nil
 }
 
 func (d *DIDSet) ToProto() proto.Message {
@@ -115,6 +149,7 @@ func (d *DIDSet) ToProto() proto.Message {
 	return &accountpb.DIDSet{
 		DID:        d.DID,
 		PrivateKey: rawBytes,
+		FilePath:   d.FileName,
 	}
 }
 
@@ -125,4 +160,88 @@ func (d *DIDSet) FromProto(pb proto.Message) {
 		logger.Error("DIDSet: FromProto: Can not convert bytes to private key")
 	}
 	d.PrivateKey = *privKey
+	d.FileName = pb.(*accountpb.DIDSet).FilePath
+}
+
+func (d *BasicDIDDocument) ToProto() proto.Message {
+	keys := []*accountpb.BasicKey{}
+	for _, key := range d.PublicKeys {
+		keys = append(keys, key.ToProto().(*accountpb.BasicKey))
+	}
+	return &accountpb.BasicDIDDocFile{
+		Context:        d.Context,
+		PublicKey:      keys,
+		Authentication: d.Authentication,
+	}
+}
+
+func (d *BasicDIDDocument) FromProto(pb proto.Message) {
+	d.Context = pb.(*accountpb.BasicDIDDocFile).Context
+	keys := []BasicKey{}
+
+	for _, keypb := range pb.(*accountpb.BasicDIDDocFile).PublicKey {
+		key := BasicKey{}
+		key.FromProto(keypb)
+		keys = append(keys, key)
+	}
+	d.PublicKeys = keys
+	d.Authentication = pb.(*accountpb.BasicDIDDocFile).Authentication
+}
+
+func (d *FullDIDDocument) ToProto() proto.Message {
+	methods := []*accountpb.VerificationMethod{}
+	for _, method := range d.VerificationMethods {
+		methods = append(methods, method.ToProto().(*accountpb.VerificationMethod))
+	}
+	return &accountpb.DIDDocFile{
+		Context:            d.Context,
+		Id:                 d.ID,
+		VerificationMethod: methods,
+		Authentication:     d.Authentication,
+	}
+}
+
+func (d *FullDIDDocument) FromProto(pb proto.Message) {
+	d.Context = pb.(*accountpb.DIDDocFile).Context
+	d.ID = pb.(*accountpb.DIDDocFile).Id
+
+	methods := []VerificationMethod{}
+
+	for _, methodpb := range pb.(*accountpb.DIDDocFile).VerificationMethod {
+		vmethod := VerificationMethod{}
+		vmethod.FromProto(methodpb)
+		methods = append(methods, vmethod)
+	}
+	d.VerificationMethods = methods
+	d.Authentication = pb.(*accountpb.DIDDocFile).Authentication
+}
+
+func (v *VerificationMethod) ToProto() proto.Message {
+	return &accountpb.VerificationMethod{
+		Id:           v.ID,
+		Type:         v.MethodType,
+		Controller:   v.Controller,
+		PublicKeyHex: v.Key,
+	}
+}
+
+func (v *VerificationMethod) FromProto(pb proto.Message) {
+	v.ID = pb.(*accountpb.VerificationMethod).Id
+	v.MethodType = pb.(*accountpb.VerificationMethod).Type
+	v.Controller = pb.(*accountpb.VerificationMethod).Controller
+	v.Key = pb.(*accountpb.VerificationMethod).PublicKeyHex
+}
+
+func (b *BasicKey) ToProto() proto.Message {
+	return &accountpb.BasicKey{
+		Id:           b.ID,
+		Type:         b.MethodType,
+		PublicKeyHex: b.Key,
+	}
+}
+
+func (b *BasicKey) FromProto(pb proto.Message) {
+	b.ID = pb.(*accountpb.BasicKey).Id
+	b.MethodType = pb.(*accountpb.BasicKey).Type
+	b.Key = pb.(*accountpb.BasicKey).PublicKeyHex
 }
