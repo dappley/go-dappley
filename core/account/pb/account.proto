@@ -50,6 +50,7 @@ message DIDDocFile{
     string id = 2;
     repeated VerificationMethod verificationMethod = 3;
     repeated string authentication = 4;
+    map<string, string> otherValues = 5;
 }
 
 message BasicDIDDocFile{

@@ -38,5 +38,5 @@ func createDIDCommandHandler(ctx context.Context, a interface{}, flags cmdFlags)
 
 	dm.AddDID(didSet)
 	dm.SaveDIDsToFile()
-	fmt.Println("Operation complete!")
+	fmt.Println("Operation complete! " + name + " has been created!")
 }
