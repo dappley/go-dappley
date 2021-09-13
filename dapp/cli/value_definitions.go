@@ -29,7 +29,6 @@ const (
 	cliConfigGenerator   = "generateConfig"
 	cliCreateDID         = "createDID"
 	cliUpdateDID         = "updateDID"
-	cliDeleteDIDKey      = "deleteDIDKey"
 )
 
 //flag names
@@ -107,7 +106,6 @@ var cmdList = []string{
 	cliConfigGenerator,
 	cliCreateDID,
 	cliUpdateDID,
-	cliDeleteDIDKey,
 }
 
 //configure input parameters/flags for each command
@@ -345,14 +343,6 @@ var cmdFlagsMap = map[string][]flagPars{
 			"DID associated with the DID document to be edited. Do not include alongside a file path.",
 		},
 	},
-	cliDeleteDIDKey: {
-		flagPars{
-			flagDID,
-			"",
-			valueTypeString,
-			"DID associated with the key to be deleted.",
-		},
-	},
 }
 
 //map the callback function to each command
@@ -380,9 +370,8 @@ var cmdHandlers = map[string]commandHandlersWithType{
 
 	cliConfigGenerator: {adminRpcService, configGeneratorCommandHandler},
 
-	cliCreateDID:    {rpcService, createDIDCommandHandler},
-	cliUpdateDID:    {rpcService, updateDIDCommandHandler},
-	cliDeleteDIDKey: {rpcService, deleteDIDKeyCommandHandler},
+	cliCreateDID: {rpcService, createDIDCommandHandler},
+	cliUpdateDID: {rpcService, updateDIDCommandHandler},
 }
 
 type commandHandlersWithType struct {
