@@ -1,5 +1,6 @@
 syntax = "proto3";
 package accountpb;
+option go_package = "go/src/go-dappley/core/account/accountpb";
 
 message Account{
     KeyPair keyPair = 1;
@@ -24,3 +25,41 @@ message Address{
 message AccountConfig{
     string file_path = 1;
 }
+
+message DIDSet{
+    string DID = 1;
+    bytes privateKey = 2;
+    string file_path = 3;
+}
+
+message VerificationMethod{
+    string id = 1;
+    string type = 2;
+    string controller = 3;
+    string publicKeyHex = 4;
+}
+
+message BasicVM{
+    string id = 1;
+    string type = 2;
+    string publicKeyHex = 3;
+}
+
+message DIDDocFile{
+    string context = 1 [json_name = "@context"];
+    string created = 2;
+    string updated = 3;
+    int32 version = 4;
+    string id = 5;
+    repeated VerificationMethod verificationMethod = 6;
+    repeated string authentication = 7;
+    map<string, string> otherValues = 8;
+}
+
+message BasicDIDDocFile{
+    string context = 1 [json_name = "@context"];
+    repeated BasicVM verificationMethod = 2;
+    repeated string authentication = 3;
+}
+
+

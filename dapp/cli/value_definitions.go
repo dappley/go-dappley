@@ -27,6 +27,8 @@ const (
 	cliGetBlockByHeight  = "getBlockByHeight"
 	cliGenerateSeed      = "generateSeed"
 	cliConfigGenerator   = "generateConfig"
+	cliCreateDID         = "createDID"
+	cliUpdateDID         = "updateDID"
 )
 
 //flag names
@@ -52,6 +54,7 @@ const (
 	flagValue            = "value"
 	flagBlockHeight      = "height"
 	flagGenerateConfig   = "generateConfig"
+	flagDID              = "did"
 )
 
 type valueType int
@@ -101,6 +104,8 @@ var cmdList = []string{
 	cliGetBlockByHeight,
 	cliGenerateSeed,
 	cliConfigGenerator,
+	cliCreateDID,
+	cliUpdateDID,
 }
 
 //configure input parameters/flags for each command
@@ -323,6 +328,21 @@ var cmdFlagsMap = map[string][]flagPars{
 		},
 	},
 	cliGenerateSeed: {},
+	cliCreateDID:    {},
+	cliUpdateDID: {
+		flagPars{
+			flagFilePath,
+			"",
+			valueTypeString,
+			"The path to the DID document to be edited. Do not include alongside a DID.",
+		},
+		flagPars{
+			flagDID,
+			"",
+			valueTypeString,
+			"DID associated with the DID document to be edited. Do not include alongside a file path.",
+		},
+	},
 }
 
 //map the callback function to each command
@@ -349,6 +369,9 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGenerateSeed:      {adminRpcService, generateSeedCommandHandler},
 
 	cliConfigGenerator: {adminRpcService, configGeneratorCommandHandler},
+
+	cliCreateDID: {rpcService, createDIDCommandHandler},
+	cliUpdateDID: {rpcService, updateDIDCommandHandler},
 }
 
 type commandHandlersWithType struct {
