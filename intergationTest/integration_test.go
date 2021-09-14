@@ -711,7 +711,6 @@ func CreateProducer(producerAddr, addr account.Address, db *storage.RamStorage, 
 	producer := blockproducerinfo.NewBlockProducerInfo(producerAddr.String())
 
 	libPolicy := &blockchainMock.LIBPolicy{}
-	libPolicy.On("GetProducers").Return(nil)
 	libPolicy.On("GetMinConfirmationNum").Return(6)
 	libPolicy.On("IsBypassingLibCheck").Return(true)
 	consensus := &blockchainMock.Consensus{}

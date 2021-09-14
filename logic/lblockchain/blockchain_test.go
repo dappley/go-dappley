@@ -59,11 +59,11 @@ func TestMain(m *testing.M) {
 
 func TestCreateBlockchain(t *testing.T) {
 	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc := CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 
 	//find next block. This block should be the genesis block and its prev hash should be empty
 	blk, err := bc.Next()
@@ -73,39 +73,38 @@ func TestCreateBlockchain(t *testing.T) {
 
 func TestGetBlockchain(t *testing.T) {
 	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	// GetBlockchain should fail when no blockchain was previously created
-	bc, err := GetBlockchain(s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc, err := GetBlockchain(db, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 	assert.Nil(t, bc)
 	assert.Equal(t, errors.New("key is invalid"), err)
 
 	libPolicy := &blockchainMock.LIBPolicy{}
-	libPolicy.On("GetProducers").Return(nil)
 	libPolicy.On("GetMinConfirmationNum").Return(6)
 	libPolicy.On("IsBypassingLibCheck").Return(true)
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	expected := CreateBlockchain(addr, s, libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	expected := CreateBlockchain(addr, db, libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
 
 	// test libPolicy error check
-	bc, err = GetBlockchain(s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc, err = GetBlockchain(db, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 	assert.Nil(t, bc)
 	assert.Equal(t, errors.New("libPolicy is nil"), err)
 
 	// successful GetBlockchain
-	bc, err = GetBlockchain(s, libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc, err = GetBlockchain(db, libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
 	assert.Equal(t, expected.GetTailBlockHash(), bc.GetTailBlockHash())
 	assert.Equal(t, expected.GetLIBHash(), bc.GetLIBHash())
 	assert.Nil(t, err)
 }
 
 func TestBlockchain_SetTailBlockHash(t *testing.T) {
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc := CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 
 	tailHash := hash.Hash("TestHash")
 	bc.SetTailBlockHash(tailHash)
@@ -118,11 +117,11 @@ func TestBlockchain_SetTailBlockHash(t *testing.T) {
 
 func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc := CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 	blk := block.GenerateMockBlock()
 	blk.SetHeight(1)
 	assert.True(t, bc.IsHigherThanBlockchain(blk))
@@ -130,11 +129,11 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 
 func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc := CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 	tailblk, _ := bc.GetTailBlock()
 	blk := ltransaction.GenerateBlockWithCbtx(addr, tailblk)
 	blk.SetHeight(1)
@@ -146,15 +145,14 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 
 func TestBlockchain_GetUpdatedUTXOIndex(t *testing.T) {
 	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	acc := account.NewAccount()
 	libPolicy := &blockchainMock.LIBPolicy{}
-	libPolicy.On("GetProducers").Return(nil)
 	libPolicy.On("GetMinConfirmationNum").Return(6)
 	libPolicy.On("IsBypassingLibCheck").Return(true)
-	bc := CreateBlockchain(acc.GetAddress(), s, libPolicy, transactionpool.NewTransactionPool(nil, 128000), 1000000)
+	bc := CreateBlockchain(acc.GetAddress(), db, libPolicy, transactionpool.NewTransactionPool(nil, 128000), 1000000)
 	genesis, err := bc.GetTailBlock()
 	assert.Nil(t, err)
 
@@ -196,11 +194,11 @@ func TestBlockchain_GetUpdatedUTXOIndex(t *testing.T) {
 
 func TestBlockchain_IsInBlockchain(t *testing.T) {
 	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 100000)
+	bc := CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(nil, 128), 100000)
 
 	blk := core.GenerateUtxoMockBlockWithoutInputs()
 	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
@@ -288,11 +286,11 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 
 func TestBlockchain_GetMaxHeight(t *testing.T) {
 	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc := CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 	assert.Equal(t, uint64(0), bc.GetMaxHeight())
 
 	// Add new block
@@ -315,11 +313,11 @@ func TestBlockchain_GetMaxHeight(t *testing.T) {
 
 func TestBlockchain_GetLIBHeight(t *testing.T) {
 	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc := CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 	assert.Equal(t, uint64(0), bc.GetLIBHeight())
 	genesis, err := bc.GetTailBlock()
 	assert.Nil(t, err)
@@ -338,11 +336,11 @@ func TestBlockchain_GetLIBHeight(t *testing.T) {
 
 func TestBlockchain_GetBlockByHash(t *testing.T) {
 	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc := CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 	genesis, err := bc.GetTailBlock()
 	assert.Nil(t, err)
 
@@ -360,27 +358,29 @@ func TestBlockchain_GetBlockByHash(t *testing.T) {
 	assert.Nil(t, err)
 
 	result, err := bc.GetBlockByHash(genesis.GetHash())
-	assert.Equal(t, genesis.GetHash(), result.GetHash())
+	assert.Equal(t, genesis.GetHeader(), result.GetHeader())
+	assert.Equal(t, genesis.GetTransactions(), result.GetTransactions())
 	assert.Nil(t, err)
 	result, err = bc.GetBlockByHash(blk1.GetHash())
-	assert.Equal(t, blk1.GetHash(), result.GetHash())
+	assert.Equal(t, blk1.GetHeader(), result.GetHeader())
+	assert.Nil(t, result.GetTransactions())
 	assert.Nil(t, err)
 	result, err = bc.GetBlockByHash(blk2.GetHash())
-	assert.Equal(t, blk2.GetHash(), result.GetHash())
+	assert.Equal(t, blk2.GetHeader(), result.GetHeader())
+	assert.Nil(t, result.GetTransactions())
 	assert.Nil(t, err)
 }
 
 func TestBlockchain_Iterator(t *testing.T) {
 	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	libPolicy := &blockchainMock.LIBPolicy{}
-	libPolicy.On("GetProducers").Return(nil)
 	libPolicy.On("GetMinConfirmationNum").Return(6)
 	libPolicy.On("IsBypassingLibCheck").Return(true)
-	bc := CreateBlockchain(addr, s, libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc := CreateBlockchain(addr, db, libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
 	genesis, err := bc.GetTailBlock()
 	assert.Nil(t, err)
 
@@ -392,7 +392,7 @@ func TestBlockchain_Iterator(t *testing.T) {
 
 	expected := &Blockchain{
 		blockchain.NewBlockchain(blk1.GetHash(), genesis.GetHash()),
-		s,
+		db,
 		bc.utxoCache,
 		libPolicy,
 		nil,
@@ -405,11 +405,11 @@ func TestBlockchain_Iterator(t *testing.T) {
 
 func TestBlockchain_String(t *testing.T) {
 	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc := CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 	genesis, err := bc.GetTailBlock()
 	assert.Nil(t, err)
 
@@ -458,19 +458,25 @@ func TestBlockchain_String(t *testing.T) {
 
 func TestBlockchain_AddBlockToDb(t *testing.T) {
 	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc := CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 	genesis, err := bc.GetTailBlock()
 	assert.Nil(t, err)
 
 	txs := []*transaction.Transaction{
 		{
-			ID:         []byte("test1"),
-			Vin:        transactionbase.MockTxInputs(),
-			Vout:       transactionbase.MockTxOutputs(),
+			ID: []byte("test1"),
+			Vin: []transactionbase.TXInput{
+				{Txid: []byte{0xc7, 0x4d}, Vout: 6, Signature: nil, PubKey: []byte{0x7c, 0x4d}},
+				{Txid: []byte{0xc8, 0x4e}, Vout: 2, Signature: nil, PubKey: []byte{0x7d, 0x4e}},
+			},
+			Vout: []transactionbase.TXOutput{
+				{Value: common.NewAmount(3), PubKeyHash: account.PubKeyHash([]byte{0xc6, 0x49}), Contract: "test"},
+				{Value: common.NewAmount(4), PubKeyHash: account.PubKeyHash([]byte{0xc7, 0x4a}), Contract: "test"},
+			},
 			Tip:        common.NewAmount(1),
 			GasLimit:   common.NewAmount(30000),
 			GasPrice:   common.NewAmount(2),
@@ -478,9 +484,15 @@ func TestBlockchain_AddBlockToDb(t *testing.T) {
 			Type:       transaction.TxTypeNormal,
 		},
 		{
-			ID:         []byte("test2"),
-			Vin:        transactionbase.MockTxInputs(),
-			Vout:       transactionbase.MockTxOutputs(),
+			ID: []byte("test2"),
+			Vin: []transactionbase.TXInput{
+				{Txid: []byte{0xc6, 0x49}, Vout: 3, Signature: nil, PubKey: []byte{0x88, 0x77}},
+				{Txid: []byte{0xc7, 0x4a}, Vout: 4, Signature: nil, PubKey: []byte{0x89, 0x78}},
+			},
+			Vout: []transactionbase.TXOutput{
+				{Value: common.NewAmount(10), PubKeyHash: account.PubKeyHash([]byte{0x63, 0x52}), Contract: ""},
+				{Value: common.NewAmount(10), PubKeyHash: account.PubKeyHash([]byte{0x64, 0x53}), Contract: ""},
+			},
 			Tip:        common.NewAmount(15),
 			GasLimit:   common.NewAmount(200),
 			GasPrice:   common.NewAmount(1),
@@ -495,7 +507,8 @@ func TestBlockchain_AddBlockToDb(t *testing.T) {
 	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 	assert.Nil(t, err)
 
-	bc.AddBlockToDb(blk)
+	err = bc.AddBlockToDb(blk)
+	assert.Nil(t, err)
 
 	// check that blk is stored in db
 	result, err := bc.db.Get(blk.GetHash())
@@ -507,17 +520,13 @@ func TestBlockchain_AddBlockToDb(t *testing.T) {
 	assert.Equal(t, []uint8("hash1"), result)
 	assert.Nil(t, err)
 
-	// check that blk's txs are stored in db
-	txJournal1 := transaction.NewTxJournal(txs[0].ID, txs[0].Vout)
-	expected, err := txJournal1.SerializeJournal()
-	assert.Nil(t, err)
+	// check that blk's tx journal is stored in db
+	expected := []byte{0xa, 0xd, 0xa, 0x1, 0x3, 0x12, 0x2, 0xc6, 0x49, 0x1a, 0x4, 0x74, 0x65, 0x73, 0x74, 0xa, 0xd, 0xa, 0x1, 0x4, 0x12, 0x2, 0xc7, 0x4a, 0x1a, 0x4, 0x74, 0x65, 0x73, 0x74}
 	result, err = bc.db.Get([]byte("tx_journal_test1"))
 	assert.Equal(t, expected, result)
 	assert.Nil(t, err)
 
-	txJournal2 := transaction.NewTxJournal(txs[1].ID, txs[1].Vout)
-	expected, err = txJournal2.SerializeJournal()
-	assert.Nil(t, err)
+	expected = []byte{0xa, 0x7, 0xa, 0x1, 0xa, 0x12, 0x2, 0x63, 0x52, 0xa, 0x7, 0xa, 0x1, 0xa, 0x12, 0x2, 0x64, 0x53}
 	result, err = bc.db.Get([]byte("tx_journal_test2"))
 	assert.Equal(t, expected, result)
 	assert.Nil(t, err)
@@ -525,11 +534,11 @@ func TestBlockchain_AddBlockToDb(t *testing.T) {
 
 func TestBlockchain_setTailBlockHash(t *testing.T) {
 	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc := CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 
 	testHash := []byte("test")
 	err := bc.setTailBlockHash(testHash)
@@ -544,16 +553,15 @@ func TestBlockchain_setTailBlockHash(t *testing.T) {
 
 func TestBlockchain_isAliveProducerSufficient(t *testing.T) {
 	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	addr := account.NewAccount().GetAddress()
 	libPolicy := &blockchainMock.LIBPolicy{}
-	libPolicy.On("GetProducers").Return(nil)
 	libPolicy.On("GetMinConfirmationNum").Return(3)
 	libPolicy.On("IsBypassingLibCheck").Return(true)
 	libPolicy.On("GetTotalProducersNum").Return(3)
-	bc := CreateBlockchain(addr, s, libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc := CreateBlockchain(addr, db, libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
 	genesis, err := bc.GetTailBlock()
 	assert.Nil(t, err)
 	assert.True(t, bc.isAliveProducerSufficient(genesis))
@@ -616,48 +624,13 @@ func TestBlockchain_isAliveProducerSufficient(t *testing.T) {
 	assert.True(t, bc.isAliveProducerSufficient(blk3))
 }
 
-func TestBlockchain_IsLIB(t *testing.T) {
-	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
-
-	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
-	genesis, err := bc.GetTailBlock()
-	assert.Nil(t, err)
-
-	// Add blocks to blockchain
-	blk1 := block.NewBlock([]*transaction.Transaction{}, genesis, "")
-	blk1.SetHash([]byte("hash1"))
-	blk1.SetHeight(1)
-	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk1))
-	assert.Nil(t, err)
-
-	blk2 := block.NewBlock([]*transaction.Transaction{}, blk1, "")
-	blk2.SetHash([]byte("hash2"))
-	blk2.SetHeight(2)
-	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk2))
-	assert.Nil(t, err)
-
-	// blk3 is not added to the blockchain
-	blk3 := block.NewBlock([]*transaction.Transaction{}, blk2, "")
-	blk3.SetHash([]byte("hash3"))
-	blk3.SetHeight(3)
-
-	bc.SetLIBHash(blk1.GetHash())
-	assert.True(t, bc.IsLIB(genesis)) // blocks exist and isLIB
-	assert.True(t, bc.IsLIB(blk1))
-	assert.False(t, bc.IsLIB(blk2)) // block exists but !isLIB
-	assert.False(t, bc.IsLIB(blk3)) // block does not exist
-}
-
 func TestBlockchain_DeleteBlockByHash(t *testing.T) {
 	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc := CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 	genesis, err := bc.GetTailBlock()
 	assert.Nil(t, err)
 
@@ -683,7 +656,6 @@ func TestBlockchain_getLIB(t *testing.T) {
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 
 	libPolicy := &blockchainMock.LIBPolicy{}
-	libPolicy.On("GetProducers").Return(nil)
 	libPolicy.On("GetMinConfirmationNum").Return(6)
 	libPolicy.On("IsBypassingLibCheck").Return(true)
 
@@ -726,14 +698,14 @@ func TestBlockchain_getLIB(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			//create a new block chain
-			s := storage.NewRamStorage()
-			defer s.Close()
+			db := storage.NewRamStorage()
+			defer db.Close()
 
 			var bc *Blockchain
 			if tt.libPolicy == nil {
-				bc = CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
+				bc = CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 			} else {
-				bc = CreateBlockchain(addr, s, tt.libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
+				bc = CreateBlockchain(addr, db, tt.libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
 			}
 			genesis, err := bc.GetTailBlock()
 			assert.Nil(t, err)
@@ -758,15 +730,14 @@ func TestBlockchain_getLIB(t *testing.T) {
 
 func TestBlockchain_updateLIB(t *testing.T) {
 	//create a new block chain
-	s := storage.NewRamStorage()
-	defer s.Close()
+	db := storage.NewRamStorage()
+	defer db.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	libPolicy := &blockchainMock.LIBPolicy{}
-	libPolicy.On("GetProducers").Return(nil)
 	libPolicy.On("GetMinConfirmationNum").Return(6)
 	libPolicy.On("IsBypassingLibCheck").Return(true)
-	bc := CreateBlockchain(addr, s, libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
+	bc := CreateBlockchain(addr, db, libPolicy, transactionpool.NewTransactionPool(nil, 128), 1000000)
 	genesis, err := bc.GetTailBlock()
 	assert.Nil(t, err)
 	// add some blocks
@@ -789,10 +760,10 @@ func TestBlockchain_updateLIB(t *testing.T) {
 func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 	//create a new block chain
 
-	s := storage.NewRamStorage()
+	db := storage.NewRamStorage()
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 1280000), 100000)
+	bc := CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(nil, 1280000), 100000)
 	var accounts []*account.Account
 	for i := 0; i < 10; i++ {
 		acc := account.NewAccount()
@@ -823,10 +794,10 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 
 func GenerateMockBlockchain(size int) *Blockchain {
 	//create a new block chain
-	s := storage.NewRamStorage()
+	db := storage.NewRamStorage()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128000), 100000)
+	bc := CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(nil, 128000), 100000)
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()

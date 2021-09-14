@@ -464,7 +464,6 @@ func TestBlockchainManager_RequestBlockHandler(t *testing.T) {
 	senderNode.GetNetwork().ConnectToSeed(requesterNode.GetHostPeerInfo())
 	// create BlockChains
 	libPolicy := &blockchainMock.LIBPolicy{}
-	libPolicy.On("GetProducers").Return(nil)
 	libPolicy.On("GetMinConfirmationNum").Return(6)
 	libPolicy.On("IsBypassingLibCheck").Return(true)
 	bcSender := CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), libPolicy, transactionpool.NewTransactionPool(senderNode, 100), 100)

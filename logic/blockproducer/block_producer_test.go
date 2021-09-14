@@ -37,7 +37,6 @@ func TestBlockProducer_Start(t *testing.T) {
 	con.SetDynasty(consensus.NewDynasty([]string{"test"}, 1, 1))
 
 	libPolicy := &mocks.LIBPolicy{}
-	libPolicy.On("GetProducers").Return(nil)
 	libPolicy.On("GetMinConfirmationNum").Return(6)
 	libPolicy.On("IsBypassingLibCheck").Return(true)
 	acc := account.NewAccount()
