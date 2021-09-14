@@ -57,6 +57,34 @@ const FullFilePath = "../bin/fullDocs/"
 
 const currentVersion = 1
 
+func AddNewVerificationMethod(doc *FullDIDDocument, identifier string) string {
+	vmethod := VerificationMethod{}
+	vmethod.ID = doc.ID + "#" + identifier
+	for _, existingMethod := range doc.VerificationMethods {
+		if existingMethod.ID == vmethod.ID {
+			fmt.Println("Error: verification method with that identifier already exists.")
+			return ""
+		}
+	}
+	vmethod.Controller = doc.ID
+	vmethod.MethodType = "Secp256k1"
+	keys := NewKeyPair()
+	vmethod.Key = hex.EncodeToString(keys.GetPublicKey())
+	privKey := keys.GetPrivateKey()
+	privBytes, err := secp256k1.FromECDSAPrivateKey(&privKey)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return ""
+	}
+	doc.VerificationMethods = append(doc.VerificationMethods, vmethod)
+	return hex.EncodeToString(privBytes)
+}
+
+func DeleteVerificationMethod(doc *FullDIDDocument, index int) {
+	doc.VerificationMethods[index] = doc.VerificationMethods[len(doc.VerificationMethods)-1]
+	doc.VerificationMethods = doc.VerificationMethods[:len(doc.VerificationMethods)-1]
+}
+
 func CreateDIDDocument(name string) (*BasicDIDDocument, *DIDSet) {
 	keys := NewKeyPair()
 	didSet := &DIDSet{}
@@ -176,6 +204,9 @@ func ReadBasicDocFile(path string) (*BasicDIDDocument, error) {
 func DisplayFullDoc(doc *FullDIDDocument) {
 	fmt.Println("{")
 	fmt.Println("\t\"@context\": \"" + doc.Context + "\",")
+	fmt.Println("\t\"created\": \"" + doc.Created + "\",")
+	fmt.Println("\t\"updated\": \"" + doc.Updated + "\",")
+	fmt.Println("\t\"version\": " + fmt.Sprint(doc.Version) + ",")
 	fmt.Println("\t\"id\": \"" + doc.ID + "\",")
 	fmt.Println("\t\"verificationMethod\": [")
 	skipComma := true

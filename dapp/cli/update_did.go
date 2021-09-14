@@ -6,6 +6,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/hash"
@@ -14,6 +17,26 @@ import (
 	"github.com/dappley/go-dappley/util"
 	"github.com/dappley/go-dappley/wallet"
 )
+
+var allowedChars = map[rune]bool{
+	'-':  true,
+	'.':  true,
+	'_':  true,
+	'~':  true,
+	'!':  true,
+	'$':  true,
+	'&':  true,
+	'\'': true,
+	'(':  true,
+	')':  true,
+	'*':  true,
+	'+':  true,
+	',':  true,
+	';':  true,
+	'=':  true,
+	':':  true,
+	'@':  true,
+}
 
 func updateDIDCommandHandler(ctx context.Context, a interface{}, flags cmdFlags) {
 	dm, err := logic.GetDIDManager(wallet.GetDIDFilePath())
@@ -87,7 +110,7 @@ func updateDIDCommandHandler(ctx context.Context, a interface{}, flags cmdFlags)
 	}
 	fmt.Println("Authentication successful!")
 
-	fullPathName := account.FullFilePath + did + ".dat"
+	fullPathName := account.FullFilePath + did + ".json"
 	fullDoc, err := account.ReadFullDocFile(fullPathName)
 	if err != nil {
 		fmt.Println("Could not open document for " + did)
@@ -113,9 +136,73 @@ func updateDIDCommandHandler(ctx context.Context, a interface{}, flags cmdFlags)
 		if key == "" {
 			break
 		}
-		if key == "@context" || key == "id" || key == "verificationMethod" || key == "authentication" {
+		if key == "@context" || key == "id" || key == "authentication" || key == "created" || key == "updated" || key == "version" {
 			fmt.Println("That value cannot be modified.")
 			continue
+		} else if key == "verificationMethod" {
+			mode, err := prompter.Prompt("Type 'add' to create a new verification method or 'del' to delete one (enter any other value to cancel): ")
+			if err != nil {
+				fmt.Println("Error: ", err)
+				continue
+			}
+			switch mode {
+			case "add":
+				ident, err := prompter.Prompt("Enter an identifier for the new method (leave blank to cancel): ")
+				if err != nil {
+					fmt.Println("Error: ", err)
+					continue
+				}
+				if ident == "" {
+					continue
+				}
+
+				invalidCharacters := func(r rune) bool {
+					return (r < 'A' || r > 'z') && (r < '0' || r > '9') && !allowedChars[r]
+				}
+				if strings.IndexFunc(ident, invalidCharacters) != -1 {
+					fmt.Println("Invalid character detected in identifier.")
+					continue
+				}
+				newKey := account.AddNewVerificationMethod(fullDoc, ident)
+				if newKey != "" {
+					fmt.Println("New private key is " + newKey)
+				}
+				continue
+
+			case "del":
+				fmt.Println()
+				if len(fullDoc.VerificationMethods) == 1 {
+					fmt.Println("No deletable verification methods in document.")
+					continue
+				}
+				for index, vm := range fullDoc.VerificationMethods[1:] {
+					fmt.Println(fmt.Sprint(index+1) + ":   " + vm.ID)
+				}
+				delIndex, err := prompter.Prompt("Enter the number of the verification method to delete (leave blank to cancel): ")
+				if err != nil {
+					fmt.Println("Error: ", err)
+					continue
+				}
+				if delIndex == "" {
+					continue
+				}
+
+				delInt, err := strconv.Atoi(delIndex)
+				if err != nil {
+					fmt.Println("Error: Please enter a number.")
+					continue
+				}
+				if delInt < 1 || delInt >= len(fullDoc.VerificationMethods) {
+					fmt.Println("Error: Invalid index.")
+					continue
+				}
+
+				account.DeleteVerificationMethod(fullDoc, delInt)
+				fmt.Println("Verification method deleted.")
+				continue
+			default:
+				continue
+			}
 		}
 		if value, found := fullDoc.OtherValues[key]; found {
 			fmt.Println("Value of \"" + value + "\" found for key \"" + key + "\".")
@@ -159,6 +246,7 @@ func updateDIDCommandHandler(ctx context.Context, a interface{}, flags cmdFlags)
 			continue
 		}
 	}
+	fullDoc.Updated = time.Now().Format(time.RFC3339)
 	account.SaveFullDocFile(fullDoc)
 	fmt.Println("Changes saved!")
 }
