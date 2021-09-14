@@ -60,17 +60,17 @@ func updateDIDCommandHandler(ctx context.Context, a interface{}, flags cmdFlags)
 		return
 	}
 	authID := doc.Authentication[0]
-	pubKey := account.BasicKey{}
-	for _, key := range doc.PublicKeys {
-		if authID == key.ID {
-			pubKey = key
+	authVM := account.BasicVM{}
+	for _, vm := range doc.VerificationMethod {
+		if authID == vm.ID {
+			authVM = vm
 			break
 		}
 	}
-	if pubKey.ID == "" {
+	if authVM.ID == "" {
 		fmt.Println("Failed to find correct key")
 	} else {
-		fmt.Println("Correct key is ", pubKey.ID)
+		fmt.Println("Correct key is ", authVM.ID)
 	}
 	privBytes, err := secp256k1.FromECDSAPrivateKey(&private)
 	if err != nil {
@@ -80,7 +80,7 @@ func updateDIDCommandHandler(ctx context.Context, a interface{}, flags cmdFlags)
 
 	sig, timeHash := account.PrepareSignature(privBytes)
 
-	success, err := account.VerifySignature(pubKey, sig, timeHash)
+	success, err := account.VerifySignature(authVM, sig, timeHash)
 	if !success {
 		fmt.Println("Failed to authenticate: ", err)
 		return

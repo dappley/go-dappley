@@ -29,19 +29,22 @@ type VerificationMethod struct {
 	Key        string
 }
 
-type BasicKey struct {
+type BasicVM struct {
 	ID         string
 	MethodType string
 	Key        string
 }
 
 type BasicDIDDocument struct {
-	Context        string
-	PublicKeys     []BasicKey
-	Authentication []string
+	Context            string
+	VerificationMethod []BasicVM
+	Authentication     []string
 }
 
 type FullDIDDocument struct {
+	Created             string
+	Updated             string
+	Version             int
 	ID                  string
 	VerificationMethods []VerificationMethod
 	Context             string
@@ -52,19 +55,21 @@ type FullDIDDocument struct {
 const BasicFilePath = "../bin/basicDocs/"
 const FullFilePath = "../bin/fullDocs/"
 
+const currentVersion = 1
+
 func CreateDIDDocument(name string) (*BasicDIDDocument, *DIDSet) {
 	keys := NewKeyPair()
 	didSet := &DIDSet{}
 	didSet.PrivateKey = keys.GetPrivateKey()
 	didSet.FileName = name
-	basicKey := &BasicKey{}
-	basicKey.ID = "#verification"
-	basicKey.Key = hex.EncodeToString(keys.GetPublicKey())
-	basicKey.MethodType = "Secp256k1"
+	basicVM := &BasicVM{}
+	basicVM.ID = "#verification"
+	basicVM.Key = hex.EncodeToString(keys.GetPublicKey())
+	basicVM.MethodType = "Secp256k1"
 	didDoc := &BasicDIDDocument{}
 	didDoc.Context = "https://www.w3.org/ns/did/v1"
-	didDoc.PublicKeys = append(didDoc.PublicKeys, *basicKey)
-	didDoc.Authentication = append(didDoc.Authentication, basicKey.ID)
+	didDoc.VerificationMethod = append(didDoc.VerificationMethod, *basicVM)
+	didDoc.Authentication = append(didDoc.Authentication, basicVM.ID)
 	SaveBasicDocFile(didDoc, name)
 
 	bytesToHash, err := os.ReadFile(BasicFilePath + name)
@@ -86,12 +91,12 @@ func createFullDocFile(basicDoc *BasicDIDDocument, did string) *FullDIDDocument 
 	fullDoc := &FullDIDDocument{}
 	fullDoc.ID = did
 	fullDoc.Context = basicDoc.Context
-	for _, pk := range basicDoc.PublicKeys {
+	for _, bvm := range basicDoc.VerificationMethod {
 		vm := VerificationMethod{}
-		vm.ID = fullDoc.ID + pk.ID
+		vm.ID = fullDoc.ID + bvm.ID
 		vm.Controller = fullDoc.ID
-		vm.MethodType = pk.MethodType
-		vm.Key = pk.Key
+		vm.MethodType = bvm.MethodType
+		vm.Key = bvm.Key
 		fullDoc.VerificationMethods = append(fullDoc.VerificationMethods, vm)
 	}
 	for _, auth := range basicDoc.Authentication {
@@ -99,31 +104,36 @@ func createFullDocFile(basicDoc *BasicDIDDocument, did string) *FullDIDDocument 
 		fullDoc.Authentication = append(fullDoc.Authentication, fullAuth)
 	}
 	fullDoc.OtherValues = make(map[string]string)
+	currentTime := time.Now().Format(time.RFC3339)
+	fullDoc.Created = currentTime
+	fullDoc.Updated = currentTime
+	fullDoc.Version = currentVersion
 	return fullDoc
 }
 
 func SaveFullDocFile(fullDoc *FullDIDDocument) {
-	rawBytes, err := proto.Marshal(fullDoc.ToProto())
+	v2message := proto.MessageV2(fullDoc.ToProto())
+	jsonBytes, err := protojson.Marshal(v2message)
 	if err != nil {
 		fmt.Println("json.Marshal error: ", err)
 	}
 	os.Mkdir(FullFilePath, 0777)
-	if err := os.WriteFile(FullFilePath+fullDoc.ID+".dat", rawBytes, 0666); err != nil {
-		logger.Warn("Save ", fullDoc.ID+".dat", " failed.")
+	if err := os.WriteFile(FullFilePath+fullDoc.ID+".json", jsonBytes, 0666); err != nil {
+		logger.Warn("Save ", fullDoc.ID+".json", " failed.")
 	}
 }
 
 func ReadFullDocFile(path string) (*FullDIDDocument, error) {
-	protoBytes, err := os.ReadFile(path)
+	jsonBytes, err := os.ReadFile(path)
 	if err != nil {
 		logger.Warn(err.Error())
 		return nil, err
 	}
 
 	doc := &accountpb.DIDDocFile{}
-	err = proto.Unmarshal(protoBytes, doc)
+	err = protojson.Unmarshal(jsonBytes, doc)
 	if err != nil {
-		logger.Warn("proto.Unmarshal error: ", err.Error())
+		logger.Warn("json.Unmarshal error: ", err.Error())
 		return nil, err
 	}
 	newDoc := FullDIDDocument{}
@@ -207,8 +217,8 @@ func PrepareSignature(privBytes []byte) ([]byte, []byte) {
 	return sig, timeHash[:]
 }
 
-func VerifySignature(pubKey BasicKey, sig, timeHash []byte) (bool, error) {
-	pubBytes, _ := hex.DecodeString(pubKey.Key)
+func VerifySignature(vm BasicVM, sig, timeHash []byte) (bool, error) {
+	pubBytes, _ := hex.DecodeString(vm.Key)
 	originPub := make([]byte, 1+len(pubBytes))
 	originPub[0] = 4
 	copy(originPub[1:], pubBytes)
@@ -240,27 +250,27 @@ func (d *DIDSet) FromProto(pb proto.Message) {
 }
 
 func (d *BasicDIDDocument) ToProto() proto.Message {
-	keys := []*accountpb.BasicKey{}
-	for _, key := range d.PublicKeys {
-		keys = append(keys, key.ToProto().(*accountpb.BasicKey))
+	bvms := []*accountpb.BasicVM{}
+	for _, bvm := range d.VerificationMethod {
+		bvms = append(bvms, bvm.ToProto().(*accountpb.BasicVM))
 	}
 	return &accountpb.BasicDIDDocFile{
-		Context:        d.Context,
-		PublicKey:      keys,
-		Authentication: d.Authentication,
+		Context:            d.Context,
+		VerificationMethod: bvms,
+		Authentication:     d.Authentication,
 	}
 }
 
 func (d *BasicDIDDocument) FromProto(pb proto.Message) {
 	d.Context = pb.(*accountpb.BasicDIDDocFile).Context
-	keys := []BasicKey{}
+	bvms := []BasicVM{}
 
-	for _, keypb := range pb.(*accountpb.BasicDIDDocFile).PublicKey {
-		key := BasicKey{}
-		key.FromProto(keypb)
-		keys = append(keys, key)
+	for _, bvmpb := range pb.(*accountpb.BasicDIDDocFile).VerificationMethod {
+		bvm := BasicVM{}
+		bvm.FromProto(bvmpb)
+		bvms = append(bvms, bvm)
 	}
-	d.PublicKeys = keys
+	d.VerificationMethod = bvms
 	d.Authentication = pb.(*accountpb.BasicDIDDocFile).Authentication
 }
 
@@ -271,6 +281,9 @@ func (d *FullDIDDocument) ToProto() proto.Message {
 	}
 	return &accountpb.DIDDocFile{
 		Context:            d.Context,
+		Created:            d.Created,
+		Updated:            d.Updated,
+		Version:            int32(d.Version),
 		Id:                 d.ID,
 		VerificationMethod: methods,
 		Authentication:     d.Authentication,
@@ -280,6 +293,9 @@ func (d *FullDIDDocument) ToProto() proto.Message {
 
 func (d *FullDIDDocument) FromProto(pb proto.Message) {
 	d.Context = pb.(*accountpb.DIDDocFile).Context
+	d.Created = pb.(*accountpb.DIDDocFile).Created
+	d.Updated = pb.(*accountpb.DIDDocFile).Updated
+	d.Version = int(pb.(*accountpb.DIDDocFile).Version)
 	d.ID = pb.(*accountpb.DIDDocFile).Id
 	methods := []VerificationMethod{}
 
@@ -309,16 +325,16 @@ func (v *VerificationMethod) FromProto(pb proto.Message) {
 	v.Key = pb.(*accountpb.VerificationMethod).PublicKeyHex
 }
 
-func (b *BasicKey) ToProto() proto.Message {
-	return &accountpb.BasicKey{
+func (b *BasicVM) ToProto() proto.Message {
+	return &accountpb.BasicVM{
 		Id:           b.ID,
 		Type:         b.MethodType,
 		PublicKeyHex: b.Key,
 	}
 }
 
-func (b *BasicKey) FromProto(pb proto.Message) {
-	b.ID = pb.(*accountpb.BasicKey).Id
-	b.MethodType = pb.(*accountpb.BasicKey).Type
-	b.Key = pb.(*accountpb.BasicKey).PublicKeyHex
+func (b *BasicVM) FromProto(pb proto.Message) {
+	b.ID = pb.(*accountpb.BasicVM).Id
+	b.MethodType = pb.(*accountpb.BasicVM).Type
+	b.Key = pb.(*accountpb.BasicVM).PublicKeyHex
 }

@@ -39,7 +39,7 @@ message VerificationMethod{
     string publicKeyHex = 4;
 }
 
-message BasicKey{
+message BasicVM{
     string id = 1;
     string type = 2;
     string publicKeyHex = 3;
@@ -47,15 +47,18 @@ message BasicKey{
 
 message DIDDocFile{
     string context = 1 [json_name = "@context"];
-    string id = 2;
-    repeated VerificationMethod verificationMethod = 3;
-    repeated string authentication = 4;
-    map<string, string> otherValues = 5;
+    string created = 2;
+    string updated = 3;
+    int32 version = 4;
+    string id = 5;
+    repeated VerificationMethod verificationMethod = 6;
+    repeated string authentication = 7;
+    map<string, string> otherValues = 8;
 }
 
 message BasicDIDDocFile{
     string context = 1 [json_name = "@context"];
-    repeated BasicKey publicKey = 2;
+    repeated BasicVM verificationMethod = 2;
     repeated string authentication = 3;
 }
 
