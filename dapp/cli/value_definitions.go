@@ -29,7 +29,8 @@ const (
 	cliConfigGenerator   = "generateConfig"
 	cliCreateDID         = "createDID"
 	cliUpdateDID         = "updateDID"
-	cliTestSigVer        = "testSigVer"
+	cliTestSigVer1       = "testSigVer1"
+	cliTestSigVer2       = "testSigVer2"
 )
 
 //flag names
@@ -107,6 +108,8 @@ var cmdList = []string{
 	cliConfigGenerator,
 	cliCreateDID,
 	cliUpdateDID,
+	cliTestSigVer1,
+	cliTestSigVer2,
 }
 
 //configure input parameters/flags for each command
@@ -344,9 +347,23 @@ var cmdFlagsMap = map[string][]flagPars{
 			"DID associated with the DID document to be edited. Do not include alongside a file path.",
 		},
 	},
-	cliTestSigVer: {
+	cliTestSigVer1: {
 		flagPars{
 			flagFromAddress,
+			"",
+			valueTypeString,
+			"The account to send stuff.",
+		},
+	},
+	cliTestSigVer2: {
+		flagPars{
+			flagFromAddress,
+			"",
+			valueTypeString,
+			"The account to send stuff.",
+		},
+		flagPars{
+			flagToAddress,
 			"",
 			valueTypeString,
 			"The account to send stuff.",
@@ -379,9 +396,10 @@ var cmdHandlers = map[string]commandHandlersWithType{
 
 	cliConfigGenerator: {adminRpcService, configGeneratorCommandHandler},
 
-	cliCreateDID:  {rpcService, createDIDCommandHandler},
-	cliUpdateDID:  {rpcService, updateDIDCommandHandler},
-	cliTestSigVer: {rpcService, testSigVerCommandHandler},
+	cliCreateDID:   {rpcService, createDIDCommandHandler},
+	cliUpdateDID:   {rpcService, updateDIDCommandHandler},
+	cliTestSigVer1: {rpcService, testSigVer1CommandHandler},
+	cliTestSigVer2: {rpcService, testSigVer2CommandHandler},
 }
 
 type commandHandlersWithType struct {

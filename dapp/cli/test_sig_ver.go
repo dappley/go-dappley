@@ -19,7 +19,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func testSigVerCommandHandler(ctx context.Context, a interface{}, flags cmdFlags) {
+func testSigVer1CommandHandler(ctx context.Context, a interface{}, flags cmdFlags) {
 	script, _ := ioutil.ReadFile("contracts/sig_tester.js")
 	am, err := logic.GetAccountManager(wallet.GetAccountFilePath())
 	if err != nil {
@@ -87,5 +87,76 @@ func testSigVerCommandHandler(ctx context.Context, a interface{}, flags cmdFlags
 		return
 	}
 
-	fmt.Println("Contract sent successfully")
+	fmt.Println("Contract sent successfully to ", toAddress)
+}
+
+func testSigVer2CommandHandler(ctx context.Context, a interface{}, flags cmdFlags) {
+	script := `{"function": "test", "args": []}`
+	am, err := logic.GetAccountManager(wallet.GetAccountFilePath())
+	if err != nil {
+		fmt.Println("Error: ", err.Error())
+		return
+	}
+
+	contract := string(script)
+	toAddress := account.NewAddress(*(flags[flagToAddress].(*string)))
+	fromAddress := *flags[flagFromAddress].(*string)
+	sender := am.GetAccountByAddress(account.NewAddress(fromAddress))
+	if !sender.IsValid() {
+		fmt.Println("Error: 'from' address is not valid!")
+		return
+	}
+
+	response, err := logic.GetUtxoStream(a.(rpcpb.RpcServiceClient), &rpcpb.GetUTXORequest{
+		Address: sender.GetAddress().String(),
+	})
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error: ", status.Convert(err).Message())
+		}
+		return
+	}
+	utxos := response.GetUtxos()
+	var inputUtxos []*utxo.UTXO
+	for _, u := range utxos {
+		utxo := utxo.UTXO{}
+		utxo.FromProto(u)
+		inputUtxos = append(inputUtxos, &utxo)
+	}
+	sort.Sort(utxoSlice(inputUtxos))
+	amount := common.NewAmount(0)
+	tip := common.NewAmount(0)
+	gasLimit := common.NewAmount(100000)
+	gasPrice := common.NewAmount(1)
+	tx_utxos, err := getUTXOsfromAmount(inputUtxos, amount, tip, gasLimit, gasPrice)
+	if err != nil {
+		fmt.Println("Error: ", err.Error())
+		return
+	}
+	sendTxParam := transaction.NewSendTxParam(account.NewAddress(sender.GetAddress().String()), sender.GetKeyPair(),
+		toAddress, amount, tip, gasLimit, gasPrice, contract)
+
+	tx, err := ltransaction.NewNormalUTXOTransaction(tx_utxos, sendTxParam)
+	if err != nil {
+		fmt.Println("Error: ", err.Error())
+		return
+	}
+
+	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
+	_, err = a.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
+
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error: ", status.Convert(err).Message())
+		}
+		return
+	}
+
+	fmt.Println("Contract invoked successfully")
 }

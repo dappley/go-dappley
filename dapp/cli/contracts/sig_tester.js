@@ -6,7 +6,8 @@ var Tester = function(){
 
 Tester.prototype = {
     test:function(){
+        LocalStorage.set("test1", "yay1");
         SigVerification.verify();
     }
 };
-var tester = new Tester;
+module.exports = new Tester;
