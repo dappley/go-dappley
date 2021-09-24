@@ -6,6 +6,7 @@ void LoadLibraries(Isolate *isolate, Local<Context> &context) {
     LoadBlockchainLibrary(isolate, context);
     LoadStorageLibrary(isolate, context);
     LoadSenderLibrary(isolate, context);
+    LoadVerificationLibrary(isolate, context);
 }
 
 void LoadBlockchainLibrary(Isolate *isolate, Local<Context> &context){
@@ -18,6 +19,10 @@ void LoadStorageLibrary(Isolate *isolate, Local<Context> &context){
 
 void LoadSenderLibrary(Isolate *isolate, Local<Context> &context){
     LoadLibrary(isolate, context, "jslib/sender.js", "sender.js");
+}
+
+void LoadVerificationLibrary(Isolate *isolate, Local<Context> &context){
+    LoadLibrary(isolate, context, "jslib/verification.js", "verification.js");
 }
 
 void LoadLibrary(Isolate *isolate, Local<Context> &context, const char *filepath, const char *filename){
