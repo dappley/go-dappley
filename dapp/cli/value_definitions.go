@@ -31,6 +31,14 @@ const (
 	cliUpdateDID         = "updateDID"
 	cliTestSigVer1       = "testSigVer1"
 	cliTestSigVer2       = "testSigVer2"
+	cliTestAdd           = "testAdd"
+	cliTestUpdate        = "testUpdate"
+	cliTestDelete        = "testDelete"
+	cliTestVC            = "testVC"
+	cliTestAddVC         = "testAddVC"
+	cliTestCreateFormat  = "testCreateFormat"
+	cliTestUpdateVC      = "testUpdateVC"
+	cliTestDeleteVC      = "testDeleteVC"
 )
 
 //flag names
@@ -110,6 +118,14 @@ var cmdList = []string{
 	cliUpdateDID,
 	cliTestSigVer1,
 	cliTestSigVer2,
+	cliTestAdd,
+	cliTestUpdate,
+	cliTestDelete,
+	cliTestVC,
+	cliTestAddVC,
+	cliTestCreateFormat,
+	cliTestUpdateVC,
+	cliTestDeleteVC,
 }
 
 //configure input parameters/flags for each command
@@ -369,6 +385,105 @@ var cmdFlagsMap = map[string][]flagPars{
 			"The account to send stuff.",
 		},
 	},
+	cliTestAdd: {flagPars{
+		flagFromAddress,
+		"",
+		valueTypeString,
+		"The account to send stuff.",
+	},
+		flagPars{
+			flagToAddress,
+			"",
+			valueTypeString,
+			"The account to send stuff.",
+		},
+	},
+	cliTestUpdate: {flagPars{
+		flagFromAddress,
+		"",
+		valueTypeString,
+		"The account to send stuff.",
+	},
+		flagPars{
+			flagToAddress,
+			"",
+			valueTypeString,
+			"The account to send stuff.",
+		},
+	},
+	cliTestDelete: {flagPars{
+		flagFromAddress,
+		"",
+		valueTypeString,
+		"The account to send stuff.",
+	},
+		flagPars{
+			flagToAddress,
+			"",
+			valueTypeString,
+			"The account to send stuff.",
+		},
+	},
+	cliTestVC: {
+		flagPars{
+			flagFromAddress,
+			"",
+			valueTypeString,
+			"The account to send stuff.",
+		},
+	},
+	cliTestAddVC: {flagPars{
+		flagFromAddress,
+		"",
+		valueTypeString,
+		"The account to send stuff.",
+	},
+		flagPars{
+			flagToAddress,
+			"",
+			valueTypeString,
+			"The account to send stuff.",
+		},
+	},
+	cliTestCreateFormat: {flagPars{
+		flagFromAddress,
+		"",
+		valueTypeString,
+		"The account to send stuff.",
+	},
+		flagPars{
+			flagToAddress,
+			"",
+			valueTypeString,
+			"The account to send stuff.",
+		},
+	},
+	cliTestUpdateVC: {flagPars{
+		flagFromAddress,
+		"",
+		valueTypeString,
+		"The account to send stuff.",
+	},
+		flagPars{
+			flagToAddress,
+			"",
+			valueTypeString,
+			"The account to send stuff.",
+		},
+	},
+	cliTestDeleteVC: {flagPars{
+		flagFromAddress,
+		"",
+		valueTypeString,
+		"The account to send stuff.",
+	},
+		flagPars{
+			flagToAddress,
+			"",
+			valueTypeString,
+			"The account to send stuff.",
+		},
+	},
 }
 
 //map the callback function to each command
@@ -396,10 +511,18 @@ var cmdHandlers = map[string]commandHandlersWithType{
 
 	cliConfigGenerator: {adminRpcService, configGeneratorCommandHandler},
 
-	cliCreateDID:   {rpcService, createDIDCommandHandler},
-	cliUpdateDID:   {rpcService, updateDIDCommandHandler},
-	cliTestSigVer1: {rpcService, testSigVer1CommandHandler},
-	cliTestSigVer2: {rpcService, testSigVer2CommandHandler},
+	cliCreateDID:        {rpcService, createDIDCommandHandler},
+	cliUpdateDID:        {rpcService, updateDIDCommandHandler},
+	cliTestSigVer1:      {rpcService, testSigVer1CommandHandler},
+	cliTestSigVer2:      {rpcService, testSigVer2CommandHandler},
+	cliTestAdd:          {rpcService, testAddDidCommandHandler},
+	cliTestUpdate:       {rpcService, testUpdateDidCommandHandler},
+	cliTestDelete:       {rpcService, testDeleteDidCommandHandler},
+	cliTestVC:           {rpcService, testVCStuffCommandHandler},
+	cliTestAddVC:        {rpcService, testAddVCCommandHandler},
+	cliTestCreateFormat: {rpcService, testCreateFormatCommandHandler},
+	cliTestUpdateVC:     {rpcService, testUpdateVCCommandHandler},
+	cliTestDeleteVC:     {rpcService, testDeleteVCCommandHandler},
 }
 
 type commandHandlersWithType struct {
