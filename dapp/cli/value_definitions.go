@@ -29,14 +29,12 @@ const (
 	cliConfigGenerator   = "generateConfig"
 	cliCreateDID         = "createDID"
 	cliUpdateDID         = "updateDID"
-	cliTestSigVer1       = "testSigVer1"
-	cliTestSigVer2       = "testSigVer2"
-	cliTestAdd           = "testAdd"
-	cliTestUpdate        = "testUpdate"
-	cliTestDelete        = "testDelete"
-	cliTestVC            = "testVC"
+	cliTestAddDID        = "testAddDID"
+	cliTestUpdateDID     = "testUpdateDID"
+	cliTestDeleteDID     = "testDeleteDID"
+	cliLaunchVCContract  = "launchVCContract"
 	cliTestAddVC         = "testAddVC"
-	cliTestCreateFormat  = "testCreateFormat"
+	cliTestCreateSchema  = "testCreateSchema"
 	cliTestUpdateVC      = "testUpdateVC"
 	cliTestDeleteVC      = "testDeleteVC"
 )
@@ -116,14 +114,12 @@ var cmdList = []string{
 	cliConfigGenerator,
 	cliCreateDID,
 	cliUpdateDID,
-	cliTestSigVer1,
-	cliTestSigVer2,
-	cliTestAdd,
-	cliTestUpdate,
-	cliTestDelete,
-	cliTestVC,
+	cliTestAddDID,
+	cliTestUpdateDID,
+	cliTestDeleteDID,
+	cliLaunchVCContract,
 	cliTestAddVC,
-	cliTestCreateFormat,
+	cliTestCreateSchema,
 	cliTestUpdateVC,
 	cliTestDeleteVC,
 }
@@ -363,125 +359,103 @@ var cmdFlagsMap = map[string][]flagPars{
 			"DID associated with the DID document to be edited. Do not include alongside a file path.",
 		},
 	},
-	cliTestSigVer1: {
+	cliTestAddDID: {flagPars{
+		flagFromAddress,
+		"",
+		valueTypeString,
+		"The account to send the invocation.",
+	},
+		flagPars{
+			flagToAddress,
+			"",
+			valueTypeString,
+			"The contract address.",
+		},
+	},
+	cliTestUpdateDID: {flagPars{
+		flagFromAddress,
+		"",
+		valueTypeString,
+		"The account to send the invocation.",
+	},
+		flagPars{
+			flagToAddress,
+			"",
+			valueTypeString,
+			"The contract address.",
+		},
+	},
+	cliTestDeleteDID: {flagPars{
+		flagFromAddress,
+		"",
+		valueTypeString,
+		"The account to send the invocation.",
+	},
+		flagPars{
+			flagToAddress,
+			"",
+			valueTypeString,
+			"The contract address.",
+		},
+	},
+	cliLaunchVCContract: {
 		flagPars{
 			flagFromAddress,
 			"",
 			valueTypeString,
-			"The account to send stuff.",
-		},
-	},
-	cliTestSigVer2: {
-		flagPars{
-			flagFromAddress,
-			"",
-			valueTypeString,
-			"The account to send stuff.",
-		},
-		flagPars{
-			flagToAddress,
-			"",
-			valueTypeString,
-			"The account to send stuff.",
-		},
-	},
-	cliTestAdd: {flagPars{
-		flagFromAddress,
-		"",
-		valueTypeString,
-		"The account to send stuff.",
-	},
-		flagPars{
-			flagToAddress,
-			"",
-			valueTypeString,
-			"The account to send stuff.",
-		},
-	},
-	cliTestUpdate: {flagPars{
-		flagFromAddress,
-		"",
-		valueTypeString,
-		"The account to send stuff.",
-	},
-		flagPars{
-			flagToAddress,
-			"",
-			valueTypeString,
-			"The account to send stuff.",
-		},
-	},
-	cliTestDelete: {flagPars{
-		flagFromAddress,
-		"",
-		valueTypeString,
-		"The account to send stuff.",
-	},
-		flagPars{
-			flagToAddress,
-			"",
-			valueTypeString,
-			"The account to send stuff.",
-		},
-	},
-	cliTestVC: {
-		flagPars{
-			flagFromAddress,
-			"",
-			valueTypeString,
-			"The account to send stuff.",
+			"The account to send the contract.",
 		},
 	},
 	cliTestAddVC: {flagPars{
 		flagFromAddress,
 		"",
 		valueTypeString,
-		"The account to send stuff.",
+		"The account to send the invocation.",
 	},
 		flagPars{
 			flagToAddress,
 			"",
 			valueTypeString,
-			"The account to send stuff.",
+			"The contract address.",
 		},
 	},
-	cliTestCreateFormat: {flagPars{
+	cliTestCreateSchema: {flagPars{
 		flagFromAddress,
 		"",
 		valueTypeString,
-		"The account to send stuff.",
+		"The account to send the invocation.",
 	},
 		flagPars{
 			flagToAddress,
 			"",
 			valueTypeString,
-			"The account to send stuff.",
+			"The contract address.",
 		},
 	},
 	cliTestUpdateVC: {flagPars{
 		flagFromAddress,
 		"",
 		valueTypeString,
-		"The account to send stuff.",
+		"The account to send the invocation.",
 	},
 		flagPars{
 			flagToAddress,
 			"",
 			valueTypeString,
-			"The account to send stuff.",
+			"The contract address.",
 		},
 	},
 	cliTestDeleteVC: {flagPars{
 		flagFromAddress,
 		"",
 		valueTypeString,
-		"The account to send stuff.",
+		"The account to send the invocation.",
 	},
 		flagPars{
 			flagToAddress,
 			"",
 			valueTypeString,
-			"The account to send stuff.",
+			"The contract address.",
 		},
 	},
 }
@@ -513,14 +487,12 @@ var cmdHandlers = map[string]commandHandlersWithType{
 
 	cliCreateDID:        {rpcService, createDIDCommandHandler},
 	cliUpdateDID:        {rpcService, updateDIDCommandHandler},
-	cliTestSigVer1:      {rpcService, testSigVer1CommandHandler},
-	cliTestSigVer2:      {rpcService, testSigVer2CommandHandler},
-	cliTestAdd:          {rpcService, testAddDidCommandHandler},
-	cliTestUpdate:       {rpcService, testUpdateDidCommandHandler},
-	cliTestDelete:       {rpcService, testDeleteDidCommandHandler},
-	cliTestVC:           {rpcService, testVCStuffCommandHandler},
+	cliTestAddDID:       {rpcService, testAddDidCommandHandler},
+	cliTestUpdateDID:    {rpcService, testUpdateDidCommandHandler},
+	cliTestDeleteDID:    {rpcService, testDeleteDidCommandHandler},
+	cliLaunchVCContract: {rpcService, launchVCContractCommandHandler},
 	cliTestAddVC:        {rpcService, testAddVCCommandHandler},
-	cliTestCreateFormat: {rpcService, testCreateFormatCommandHandler},
+	cliTestCreateSchema: {rpcService, testCreateSchemaCommandHandler},
 	cliTestUpdateVC:     {rpcService, testUpdateVCCommandHandler},
 	cliTestDeleteVC:     {rpcService, testDeleteVCCommandHandler},
 }
