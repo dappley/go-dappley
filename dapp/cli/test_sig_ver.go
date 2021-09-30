@@ -310,7 +310,7 @@ func testSigVer1CommandHandler(ctx context.Context, a interface{}, flags cmdFlag
 
 func testUpdateVCCommandHandler(ctx context.Context, a interface{}, flags cmdFlags) {
 
-	script := `{"function": "updateVC", "args": ["{'context': 'vcstuff', 'id': 'test', 'type': 'good', 'credentialSubject': {'id': 'placeholder'}, 'credentialSchema': {'id': 'test','type': 'good'}, 'issuer': 'did:dappley:123456789', 'issuanceDate': 'now', 'proof': [{'type': 'stillgood', 'created': 'earlier', 'proofPurpose': 'testing', 'verificationMethod': 'whoknows', 'hex': 'f8d99846ca74161de2847041ed3bfd5b79ae0d4f20febfaa8075e0366d6abce42b838306ffac2d8bdbdad3fb943e2431cbf568950ca59da3c218b96795077b6600'}]}", "2021-09-27T10:25:04.697700166-07:00"]}`
+	script := `{"function": "updateVC", "args": ["{'context': 'vcstuffmodified', 'id': 'test', 'type': 'good', 'credentialSubject': {'id': 'placeholder'}, 'credentialSchema': {'id': 'test','type': 'good'}, 'issuer': 'did:dappley:123456789', 'issuanceDate': 'now', 'proof': [{'type': 'stillgood', 'created': 'earlier', 'proofPurpose': 'testing', 'verificationMethod': 'whoknows', 'hex': 'f8d99846ca74161de2847041ed3bfd5b79ae0d4f20febfaa8075e0366d6abce42b838306ffac2d8bdbdad3fb943e2431cbf568950ca59da3c218b96795077b6600'}]}", "2021-09-27T10:25:04.697700166-07:00"]}`
 	am, err := logic.GetAccountManager(wallet.GetAccountFilePath())
 	if err != nil {
 		fmt.Println("Error: ", err.Error())
@@ -525,7 +525,7 @@ func testAddDidCommandHandler(ctx context.Context, a interface{}, flags cmdFlags
 }
 
 func testUpdateDidCommandHandler(ctx context.Context, a interface{}, flags cmdFlags) {
-	script := `{"function": "updateDID", "args": ["did:dappley:123456789", "{'bepis' : 'yes', 'id': 'did:dappley:123456789', 'verificationMethod': [{'id': 'did:dappley:123456789#verification', 'controller': 'did:dappley:1234567890', 'type': 'Secp256k1'}]}", "2021-09-27T10:25:04.697700166-07:00", "f8d99846ca74161de2847041ed3bfd5b79ae0d4f20febfaa8075e0366d6abce42b838306ffac2d8bdbdad3fb943e2431cbf568950ca59da3c218b96795077b6600"]}`
+	script := `{"function": "updateDID", "args": ["did:dappley:123456789", "{'update' : 'successful', 'id': 'did:dappley:123456789', 'verificationMethod': [{'id': 'did:dappley:123456789#verification', 'controller': 'did:dappley:1234567890', 'type': 'Secp256k1', 'publicKeyHex': '11daebdd3b879b3552da81479f893447338234623c70a2e4c343a419395f7428c87350f52964dc6ef21497f51ee38c7dae83d08e84c6aa9ed3ec35744bc8ac18'}]}", "2021-09-27T10:25:04.697700166-07:00", "f8d99846ca74161de2847041ed3bfd5b79ae0d4f20febfaa8075e0366d6abce42b838306ffac2d8bdbdad3fb943e2431cbf568950ca59da3c218b96795077b6600"]}`
 	am, err := logic.GetAccountManager(wallet.GetAccountFilePath())
 	if err != nil {
 		fmt.Println("Error: ", err.Error())

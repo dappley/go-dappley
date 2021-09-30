@@ -82,7 +82,7 @@ VCStorage.prototype = {
             if ("publicKeyHex" in doc.verificationMethod[i]){
             var pubKey = doc.verificationMethod[i].publicKeyHex;
             if (Crypto.verifySig(msg, pubKey, sig)){
-                LocalStorage.del(did, doc);
+                LocalStorage.del(did);
                 return;
             }
         }
