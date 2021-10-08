@@ -22,13 +22,12 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"sort"
-	"sync"
-
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"sort"
+	"sync"
 
 	"github.com/asaskevich/EventBus"
 	"github.com/dappley/go-dappley/common/pubsub"
@@ -290,29 +289,41 @@ func (txPool *TransactionPool) removeFromTipOrder(txID []byte) {
 }
 
 func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transaction {
-	var traverse func(node *transaction.TransactionNode) []*transaction.Transaction
-	traverse = func(node *transaction.TransactionNode) []*transaction.Transaction {
-		returnNodes := []*transaction.Transaction{node.Value}
+	rootNodes := make(map[string]*transaction.TransactionNode)
+	remaining := make(map[string]*transaction.TransactionNode)
+	sortedTxs := make([]*transaction.Transaction, len(txPool.txs))
+
+	// Recursively traverses the treeNode, inserting into sortedTx at the specified index.
+	// Returns the updated index number after evaluation.
+	var traverse func(key string, node *transaction.TransactionNode, index int) int
+	traverse = func(key string, node *transaction.TransactionNode, index int) int {
+		i := index
+		_, isRemaining := remaining[key]
+		if isRemaining {
+			sortedTxs[i] = node.Value
+			i++
+			delete(remaining, key)
+		}
 		if node.Children != nil {
-			for key, _ := range node.Children {
-				returnNodes = append(returnNodes, traverse(txPool.txs[key])...)
+			for childKey, _ := range node.Children {
+				i = traverse(childKey, txPool.txs[childKey], i)
 			}
 		}
-		return returnNodes
+		return i
 	}
 
-	rootNodes := make(map[string]*transaction.TransactionNode)
 	for key, node := range txPool.txs {
 		if !checkDependTxInMap(node.Value, txPool.txs) {
 			rootNodes[key] = node
 		}
+		remaining[key] = node
 	}
 
-	// perform recursive tree search starting from the root nodes
+	// perform recursive tree traversal starting from the root nodes
 	// guarantees that all child transactions will appear after their parents
-	var sortedTxs []*transaction.Transaction
-	for _, node := range rootNodes {
-		sortedTxs = append(sortedTxs, traverse(node)...)
+	i := 0
+	for key, node := range rootNodes {
+		i = traverse(key, node, i)
 	}
 
 	return sortedTxs

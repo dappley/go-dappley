@@ -795,10 +795,12 @@ func BenchmarkTransactionPool_GetTransactions(b *testing.B) {
 	benchData := map[string]struct {
 		n int
 	}{
-		"with 100 txs":   {n: 100},
-		"with 1000 txs":  {n: 1000},
-		"with 10000 txs": {n: 10000},
-		"with 50000 txs": {n: 50000},
+		"with 100 txs":       {n: 100},
+		"with 1,000 txs":     {n: 1000},
+		"with 10,000 txs":    {n: 10000},
+		"with 50,000 txs":    {n: 50000},
+		"with 100,000 txs":   {n: 100000},
+		"with 1,000,000 txs": {n: 1000000},
 	}
 	b.ResetTimer()
 	for benchName, data := range benchData {
