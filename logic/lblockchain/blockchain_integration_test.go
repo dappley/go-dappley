@@ -71,7 +71,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 		bc.txPool.Push(txs[i])
 	}
 
-	assert.Equal(t, 3, len(bc.txPool.GetAllTransactions(utxoIndex)))
+	assert.Equal(t, 3, len(bc.txPool.GetAllTransactions()))
 	assert.Equal(t, 1, len(bc.txPool.GetTipOrder()))
 
 	//add block 4 with tx0
@@ -103,7 +103,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 	/*
 		tx0 - tx1 - tx2 - tx3 - tx4
 	*/
-	assert.Equal(t, 5, len(bc.txPool.GetAllTransactions(utxoIndex)))
+	assert.Equal(t, 5, len(bc.txPool.GetAllTransactions()))
 	assert.Equal(t, 1, len(bc.txPool.GetTipOrder()))
 
 }

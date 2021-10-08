@@ -19,12 +19,11 @@
 package transactionpool
 
 import (
+	"bytes"
 	"encoding/hex"
+	"errors"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
-	"github.com/dappley/go-dappley/core/utxo"
-	"github.com/dappley/go-dappley/logic/lutxo"
-	"github.com/dappley/go-dappley/storage"
 	"reflect"
 	"testing"
 
@@ -38,6 +37,15 @@ import (
 
 func getAoB(length int64) []byte {
 	return util.GenerateRandomAoB(length)
+}
+
+func findTransaction(txs []*transaction.Transaction, toFind *transaction.Transaction) (int, error) {
+	for i, tx := range txs {
+		if bytes.Equal(tx.ID, toFind.ID) {
+			return i, nil
+		}
+	}
+	return -1, errors.New("transaction not found")
 }
 
 func GenerateFakeTxInputs() []transactionbase.TXInput {
@@ -117,12 +125,12 @@ func TestTransactionPool_Push(t *testing.T) {
 	txPool := NewTransactionPool(nil, 128000)
 	txPool.Push(tx1)
 
-	assert.Equal(t, 1, len(txPool.GetTransactions(nil)))
+	assert.Equal(t, 1, len(txPool.GetTransactions()))
 	txPool.Push(tx2)
-	assert.Equal(t, 2, len(txPool.GetTransactions(nil)))
+	assert.Equal(t, 2, len(txPool.GetTransactions()))
 	txPool.Push(tx3)
 	txPool.Push(tx4)
-	assert.Equal(t, 4, len(txPool.GetTransactions(nil)))
+	assert.Equal(t, 4, len(txPool.GetTransactions()))
 
 	newTxPool := NewTransactionPool(nil, 128000)
 	var txs = []transaction.Transaction{tx1, tx2, tx3, tx4}
@@ -130,7 +138,7 @@ func TestTransactionPool_Push(t *testing.T) {
 		//txPointer := tx.DeepCopy()
 		newTxPool.Push(tx) // &txPointer)
 	}
-	diffTxs := newTxPool.GetTransactions(nil)
+	diffTxs := newTxPool.GetTransactions()
 	for i := 0; i < 3; i++ {
 		assert.NotEqual(t, diffTxs[i].ID, diffTxs[i+1].ID)
 	}
@@ -269,125 +277,74 @@ func TestTransactionPool_Update(t *testing.T) {
 func TestTransactionPoolLimit(t *testing.T) {
 	txPool := NewTransactionPool(nil, 0)
 	txPool.Push(tx1)
-	assert.Equal(t, 0, len(txPool.GetTransactions(nil)))
+	assert.Equal(t, 0, len(txPool.GetTransactions()))
 
 	txPool = NewTransactionPool(nil, 1)
 	txPool.Push(tx1)
 	txPool.Push(tx2) // Note: t2 should be ignore
-	assert.Equal(t, 1, len(txPool.GetTransactions(nil)))
-	assert.Equal(t, tx1, *(txPool.GetTransactions(nil)[0]))
+	assert.Equal(t, 1, len(txPool.GetTransactions()))
+	assert.Equal(t, tx1, *(txPool.GetTransactions()[0]))
 }
 
 func TestTransactionPool_GetTransactions(t *testing.T) {
-	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa99"
-	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
-	var contractAccount = account.NewContractTransactionAccount()
-
-	var deploymentTx = transaction.Transaction{
-		ID: nil,
-		Vin: []transactionbase.TXInput{
-			{tx1.ID, 1, nil, pubkey1},
-		},
-		Vout: []transactionbase.TXOutput{
-			{common.NewAmount(5), contractAccount.GetPubKeyHash(), "CreateContractTx"},
-		},
-		Tip:      common.NewAmount(1),
-		GasLimit: common.NewAmount(0),
-		GasPrice: common.NewAmount(0),
-		Type:     transaction.TxTypeContract,
-	}
-	deploymentTx.ID = deploymentTx.Hash()
-
-	var executionTx = transaction.Transaction{
-		ID:  nil,
-		Vin: GenerateFakeTxInputs(),
-		Vout: []transactionbase.TXOutput{
-			{common.NewAmount(5), contractAccount.GetPubKeyHash(), "InvokeContractTx"},
-		},
-		Tip:      common.NewAmount(2),
-		GasLimit: common.NewAmount(0),
-		GasPrice: common.NewAmount(0),
-		Type:     transaction.TxTypeContract,
-	}
-	executionTx.ID = executionTx.Hash()
-
-	db := storage.NewRamStorage()
-	defer db.Close()
-	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
-	index := make(map[string]*utxo.UTXOTx)
-	newUtxos := utxo.NewUTXOTx()
-	index[contractAccount.GetPubKeyHash().String()] = &newUtxos
-
 	txPool := NewTransactionPool(nil, 100000)
-	txPool.Push(deploymentTx)
-	utxoIndex.SetIndexAdd(index)
 
-	txPool.Push(executionTx)
+	txs := generateDependentTxs()
+	for _, tx := range txs {
+		txPool.Push(*tx)
+	}
 
-	// deployment transaction should be ahead of execution transaction
-	txs := txPool.GetTransactions(utxoIndex)
-	assert.Equal(t, &deploymentTx, txs[0])
-	assert.Equal(t, &executionTx, txs[1])
+	result := txPool.GetTransactions()
+	assert.Equal(t, len(generateDependentTxs()), len(result))
+
+	// all child transactions must come after their parent transactions
+	txIndex0, err := findTransaction(result, txs[0])
+	assert.Nil(t, err)
+	txIndex1, err := findTransaction(result, txs[1])
+	assert.Nil(t, err)
+	assert.Greater(t, txIndex1, txIndex0)
+	txIndex2, err := findTransaction(result, txs[2])
+	assert.Nil(t, err)
+	assert.Greater(t, txIndex2, txIndex0)
+	txIndex3, err := findTransaction(result, txs[3])
+	assert.Nil(t, err)
+	assert.Greater(t, txIndex3, txIndex1)
+
+	txIndex4, err := findTransaction(result, txs[4])
+	assert.Nil(t, err)
+	txIndex5, err := findTransaction(result, txs[5])
+	assert.Nil(t, err)
+	assert.Greater(t, txIndex5, txIndex4)
 }
 
 func TestTransactionPool_GetAllTransactions(t *testing.T) {
-	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa99"
-	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
-	var contractAccount = account.NewContractTransactionAccount()
-
-	var deploymentTx = transaction.Transaction{
-		ID: nil,
-		Vin: []transactionbase.TXInput{
-			{tx1.ID, 1, nil, pubkey1},
-		},
-		Vout: []transactionbase.TXOutput{
-			{common.NewAmount(5), contractAccount.GetPubKeyHash(), "CreateContractTx"},
-		},
-		Tip:      common.NewAmount(1),
-		GasLimit: common.NewAmount(0),
-		GasPrice: common.NewAmount(0),
-		Type:     transaction.TxTypeContract,
-	}
-	deploymentTx.ID = deploymentTx.Hash()
-
-	var executionTx = transaction.Transaction{
-		ID:  nil,
-		Vin: GenerateFakeTxInputs(),
-		Vout: []transactionbase.TXOutput{
-			{common.NewAmount(5), contractAccount.GetPubKeyHash(), "InvokeContractTx"},
-		},
-		Tip:      common.NewAmount(2),
-		GasLimit: common.NewAmount(0),
-		GasPrice: common.NewAmount(0),
-		Type:     transaction.TxTypeContract,
-	}
-	executionTx.ID = executionTx.Hash()
-
-	db := storage.NewRamStorage()
-	defer db.Close()
-	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
-	index := make(map[string]*utxo.UTXOTx)
-	newUtxos := utxo.NewUTXOTx()
-	index[contractAccount.GetPubKeyHash().String()] = &newUtxos
-
 	txPool := NewTransactionPool(nil, 100000)
-	txPool.Push(deploymentTx)
-	utxoIndex.SetIndexAdd(index)
-
-	txPool.Push(executionTx)
 
 	txs := generateDependentTxs()
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 4; i++ {
+		txPool.Push(*txs[i])
+	}
+	for i := 4; i < 8; i++ {
 		txPool.pendingTxs = append(txPool.pendingTxs, txs[i])
 	}
 
-	expected := []*transaction.Transaction{
-		txs[0], txs[1], txs[2], &deploymentTx, &executionTx,
-	}
-	result := txPool.GetAllTransactions(utxoIndex)
-	for i, tx := range result {
-		assert.Equal(t, expected[i], tx)
-	}
+	result := txPool.GetAllTransactions()
+	// pendingTxs were added first
+	assert.Equal(t, txs[4], result[0])
+	assert.Equal(t, txs[5], result[1])
+	assert.Equal(t, txs[6], result[2])
+	assert.Equal(t, txs[7], result[3])
+
+	// 0 is the parent
+	txIndex0, err := findTransaction(result, txs[0])
+	assert.Nil(t, err)
+	assert.Equal(t, 4, txIndex0)
+	// txs[3] must come after txs[1]
+	txIndex1, err := findTransaction(result, txs[1])
+	assert.Nil(t, err)
+	txIndex3, err := findTransaction(result, txs[3])
+	assert.Nil(t, err)
+	assert.Greater(t, txIndex3, txIndex1)
 }
 
 func TestTransactionPool_Rollback(t *testing.T) {
@@ -816,4 +773,43 @@ func TestCheckDependTxInMap(t *testing.T) {
 
 	txNodeMap[hex.EncodeToString(parent1.ID)] = transaction.NewTransactionNode(parent1)
 	assert.True(t, checkDependTxInMap(tx, txNodeMap))
+}
+
+func BenchmarkTransactionPool_GetTransactions(b *testing.B) {
+	generateTxPool := func(n int) *TransactionPool {
+		txPool := NewTransactionPool(nil, 128000000)
+		var prevTxId []byte
+		// generate a chain of dependent txs
+		for i := 0; i < n; i++ {
+			tx := transaction.Transaction{
+				ID:   util.GenerateRandomAoB(5),
+				Vin:  []transactionbase.TXInput{{Txid: prevTxId}},
+				Vout: GenerateFakeTxOutputs(),
+				Tip:  common.NewAmount(1)}
+			txPool.Push(tx)
+			prevTxId = tx.ID
+		}
+		return txPool
+	}
+
+	benchData := map[string]struct {
+		n int
+	}{
+		"with 100 txs":   {n: 100},
+		"with 1000 txs":  {n: 1000},
+		"with 10000 txs": {n: 10000},
+		"with 50000 txs": {n: 50000},
+	}
+	b.ResetTimer()
+	for benchName, data := range benchData {
+		b.StopTimer()
+		txPool := generateTxPool(data.n)
+
+		b.StartTimer()
+		b.Run(benchName, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				txPool.GetTransactions()
+			}
+		})
+	}
 }
