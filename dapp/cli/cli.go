@@ -169,7 +169,6 @@ func createAccount(ctx context.Context, c interface{}, flags cmdFlags) *account.
 }
 
 func getUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) ([]*utxo.UTXO, error) {
-
 	if tip != nil {
 		amount = amount.Add(tip)
 	}
@@ -184,7 +183,7 @@ func getUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 	for i := 0; i < len(inputUTXOs); i++ {
 		retUtxos = append(retUtxos, inputUTXOs[i])
 		sum = sum.Add(inputUTXOs[i].Value)
-		if vinRules(sum, amount, i, len(inputUTXOs)-i) {
+		if vinRules(sum, amount, i, len(inputUTXOs)) {
 			vinRulesCheck = true
 			break
 		}
@@ -192,7 +191,9 @@ func getUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 	if vinRulesCheck {
 		return retUtxos, nil
 	}
-
+	if sum.Cmp(amount) >= 0 {
+		return nil, errval.TooManyUtxoFund
+	}
 	return nil, errval.InsufficientFund
 }
 
