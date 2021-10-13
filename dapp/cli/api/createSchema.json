@@ -1,0 +1,3 @@
+{
+  "schema" : "{'context': 'stuff', 'id': 'test', 'type': 'good', 'credentialSubject': {'id': 'did:dappley:123456789'}, 'credentialSchema': {'id': 'test','type': 'good'}, 'issuer': 'me', 'issuanceDate': 'now', 'proof': [{'type': 'stillgood', 'created': 'earlier', 'proofPurpose': 'testing', 'verificationMethod': 'whoknows', 'hex': 'f8d99846ca74161de2847041ed3bfd5b79ae0d4f20febfaa8075e0366d6abce42b838306ffac2d8bdbdad3fb943e2431cbf568950ca59da3c218b96795077b6600'}]}"
+}

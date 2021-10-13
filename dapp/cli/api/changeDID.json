@@ -1,0 +1,6 @@
+{
+  "doc" : "{'id': 'did:dappley:123456789', 'updated': 'yes', 'verificationMethod': [{'id': 'did:dappley:123456789#verification', 'controller': 'did:dappley:1234567890', 'type': 'Secp256k1', 'publicKeyHex': '11daebdd3b879b3552da81479f893447338234623c70a2e4c343a419395f7428c87350f52964dc6ef21497f51ee38c7dae83d08e84c6aa9ed3ec35744bc8ac18'}]}",
+"did": "did:dappley:123456789",
+"message": "2021-09-27T10:25:04.697700166-07:00",
+"sign": "f8d99846ca74161de2847041ed3bfd5b79ae0d4f20febfaa8075e0366d6abce42b838306ffac2d8bdbdad3fb943e2431cbf568950ca59da3c218b96795077b6600"
+}
