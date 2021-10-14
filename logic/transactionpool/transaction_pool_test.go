@@ -294,8 +294,17 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 		txPool.Push(*tx)
 	}
 
+	// add a tx that depends on txs[5] but was not added as a child of txs[5]
+	otherChildTx := &transaction.Transaction{
+		ID:   util.GenerateRandomAoB(5),
+		Vin:  []transactionbase.TXInput{{Txid: txs[5].ID}},
+		Vout: GenerateFakeTxOutputs(),
+		Tip:  common.NewAmount(5000),
+	}
+	txPool.addTransaction(transaction.NewTransactionNode(otherChildTx))
+
 	result := txPool.GetTransactions()
-	assert.Equal(t, len(generateDependentTxs()), len(result))
+	assert.Equal(t, len(generateDependentTxs())+1, len(result))
 
 	// all child transactions must come after their parent transactions
 	txIndex0, err := findTransaction(result, txs[0])
@@ -315,6 +324,9 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 	txIndex5, err := findTransaction(result, txs[5])
 	assert.Nil(t, err)
 	assert.Greater(t, txIndex5, txIndex4)
+	txIndexOtherChild, err := findTransaction(result, otherChildTx)
+	assert.Nil(t, err)
+	assert.Greater(t, txIndexOtherChild, txIndex5)
 }
 
 func TestTransactionPool_GetAllTransactions(t *testing.T) {

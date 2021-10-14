@@ -291,25 +291,23 @@ func (txPool *TransactionPool) removeFromTipOrder(txID []byte) {
 func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transaction {
 	rootNodes := make(map[string]*transaction.TransactionNode)
 	remaining := make(map[string]*transaction.TransactionNode)
-	sortedTxs := make([]*transaction.Transaction, len(txPool.txs))
+	sortedTxs := make([]*transaction.Transaction, 0, len(txPool.txs))
 
-	// Recursively traverses the treeNode, inserting into sortedTx at the specified index.
-	// Returns the updated index number after evaluation.
-	var traverse func(key string, node *transaction.TransactionNode, index int) int
-	traverse = func(key string, node *transaction.TransactionNode, index int) int {
-		i := index
+	// Recursively traverses the treeNode, appending transactions to sortedTxs
+	var traverse func(key string, node *transaction.TransactionNode)
+	traverse = func(key string, node *transaction.TransactionNode) {
 		_, isRemaining := remaining[key]
 		if isRemaining {
-			sortedTxs[i] = node.Value
-			i++
+			sortedTxs = append(sortedTxs, node.Value)
 			delete(remaining, key)
 		}
 		if node.Children != nil {
 			for childKey, _ := range node.Children {
-				i = traverse(childKey, txPool.txs[childKey], i)
+				if _, exist := txPool.txs[childKey]; exist {
+					traverse(childKey, txPool.txs[childKey])
+				}
 			}
 		}
-		return i
 	}
 
 	for key, node := range txPool.txs {
@@ -321,9 +319,21 @@ func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transactio
 
 	// perform recursive tree traversal starting from the root nodes
 	// guarantees that all child transactions will appear after their parents
-	i := 0
 	for key, node := range rootNodes {
-		i = traverse(key, node, i)
+		traverse(key, node)
+	}
+
+	if len(remaining) > 0 {
+		logger.Warn("Nodes were not properly traversed. Updating parent nodes for existing children...")
+		for _, node := range remaining {
+			for _, vin := range node.Value.Vin {
+				if parent, exist := txPool.txs[hex.EncodeToString(vin.Txid)]; exist {
+					parent.Children[hex.EncodeToString(node.Value.ID)] = node.Value
+				}
+			}
+		}
+		logger.Info("Node children updated.")
+		return txPool.getSortedTransactions()
 	}
 
 	return sortedTxs
