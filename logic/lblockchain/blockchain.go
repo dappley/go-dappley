@@ -387,7 +387,9 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 		}
 		parentblockHash = block.GetPrevHash()
 
-		for _, tx := range block.GetTransactions() {
+		// rollback the transactions in reverse order
+		for i := len(block.GetTransactions()) - 1; i >= 0; i-- {
+			tx := block.GetTransactions()[i]
 			adaptedTx := transaction.NewTxAdapter(tx)
 			if !adaptedTx.IsCoinbase() && !adaptedTx.IsRewardTx() && !adaptedTx.IsGasRewardTx() && !adaptedTx.IsGasChangeTx() {
 				bc.txPool.Rollback(*tx)
