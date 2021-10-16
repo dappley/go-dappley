@@ -827,3 +827,48 @@ func BenchmarkTransactionPool_GetTransactions(b *testing.B) {
 		})
 	}
 }
+
+func BenchmarkTransactionPool_Rollback(b *testing.B) {
+	generateTxsToRollback := func(n int) []transaction.Transaction {
+		txs := make([]transaction.Transaction, 0, n)
+		var prevTxId []byte
+
+		// generate a chain of dependent txs
+		for i := 0; i < n; i++ {
+			tx := transaction.Transaction{
+				ID:   util.GenerateRandomAoB(5),
+				Vin:  []transactionbase.TXInput{{Txid: prevTxId}},
+				Vout: GenerateFakeTxOutputs(),
+				Tip:  common.NewAmount(1)}
+			txs = append(txs, tx)
+			prevTxId = tx.ID
+		}
+		return txs
+	}
+
+	benchData := map[string]struct {
+		n int
+	}{
+		"with 100 txs":    {n: 100},
+		"with 1,000 txs":  {n: 1000},
+		"with 10,000 txs": {n: 10000},
+		//"with 50,000 txs": {n: 50000},
+		//"with 100,000 txs":   {n: 100000},
+		//"with 1,000,000 txs": {n: 1000000},
+	}
+	b.ResetTimer()
+	for benchName, data := range benchData {
+		b.StopTimer()
+		txs := generateTxsToRollback(data.n)
+
+		b.StartTimer()
+		b.Run(benchName, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				txPool := NewTransactionPool(nil, 128000000)
+				for j := len(txs) - 1; j >= 0; j-- {
+					txPool.Rollback(txs[j])
+				}
+			}
+		})
+	}
+}

@@ -318,22 +318,13 @@ func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transactio
 	}
 
 	// perform recursive tree traversal starting from the root nodes
-	// guarantees that all child transactions will appear after their parents
+	// all child transactions will appear after their parents, as long as they are properly linked
 	for key, node := range rootNodes {
 		traverse(key, node)
 	}
 
 	if len(remaining) > 0 {
-		logger.Warn("Nodes were not properly traversed. Updating parent nodes for existing children...")
-		for _, node := range remaining {
-			for _, vin := range node.Value.Vin {
-				if parent, exist := txPool.txs[hex.EncodeToString(vin.Txid)]; exist {
-					parent.Children[hex.EncodeToString(node.Value.ID)] = node.Value
-				}
-			}
-		}
-		logger.Info("Node children updated.")
-		return txPool.getSortedTransactions()
+		logger.Warn("Nodes were not properly traversed.")
 	}
 
 	return sortedTxs
