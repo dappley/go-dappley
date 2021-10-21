@@ -20,6 +20,7 @@ package main
 
 import (
 	"flag"
+
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/blockproducerinfo"
@@ -95,6 +96,7 @@ func main() {
 	// logger.Infof("Genesis conf file is %v,node conf file is %v", genesisPath, filePath)
 	//load genesis file information
 	genesisConf := &configpb.DynastyConfig{}
+	producerConf := &configpb.DynastyConfig{}
 	config.LoadConfig(genesisPath, genesisConf)
 
 	if genesisConf == nil {
@@ -124,6 +126,11 @@ func main() {
 
 	//create blockchain
 	conss, _ := initConsensus(genesisConf, conf)
+	config.LoadConfig(producerFilePath, producerConf)
+
+	if producerConf != nil {
+		conss, _ = initConsensus(producerConf, conf)
+	}
 	conss.SetFilePath(producerFilePath)
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit() * size1kB
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
