@@ -59,7 +59,7 @@ const (
 	peerConfDirPath  = "../dapp/"
 	defaultPassword  = "password"
 	size1kB          = 1024
-	version          = "v0.6.0"
+	version          = "v0.5.9"
 )
 
 func main() {
@@ -133,7 +133,7 @@ func main() {
 
 	var LIBBlk *block.Block = nil
 	var bc *lblockchain.Blockchain
-	err = lblockchain.DataCheckingAndRecovery(db)
+	//err = lblockchain.DataCheckingAndRecovery(db)
 	if err != nil {
 		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddr), db, conss, txPool, int(blkSizeLimit))
 		if err != nil {
