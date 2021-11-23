@@ -658,8 +658,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, account.NewAddress(""), common.NewAmount(1), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
-	utxoIndex, _ := bm.Getblockchain().GetUpdatedUTXOIndex()
-	txp := bm.Getblockchain().GetTxPool().GetTransactions(utxoIndex)[0]
+	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
 	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 
 	// Create a miner account; Balance is 0 initially
@@ -712,7 +711,6 @@ func CreateProducer(producerAddr, addr account.Address, db *storage.RamStorage, 
 	producer := blockproducerinfo.NewBlockProducerInfo(producerAddr.String())
 
 	libPolicy := &blockchainMock.LIBPolicy{}
-	libPolicy.On("GetProducers").Return(nil)
 	libPolicy.On("GetMinConfirmationNum").Return(6)
 	libPolicy.On("IsBypassingLibCheck").Return(true)
 	consensus := &blockchainMock.Consensus{}
@@ -1201,8 +1199,7 @@ func TestSmartContractOfContractTransfer(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, account.NewAddress(""), common.NewAmount(30000), common.NewAmount(0), common.NewAmount(30000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
-	utxoIndex, _ := bm.Getblockchain().GetUpdatedUTXOIndex()
-	txp := bm.Getblockchain().GetTxPool().GetTransactions(utxoIndex)[0]
+	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
 	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 
 	if err != nil {
@@ -1292,8 +1289,7 @@ func TestSmartContractOfContractDelete(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, account.NewAddress(""), toAmount, common.NewAmount(0), common.NewAmount(30000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
-	utxoIndex, _ := bm.Getblockchain().GetUpdatedUTXOIndex()
-	txp := bm.Getblockchain().GetTxPool().GetTransactions(utxoIndex)[0]
+	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
 	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 
 	if err != nil {

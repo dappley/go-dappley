@@ -21,14 +21,13 @@ package transactionpool
 import (
 	"bytes"
 	"encoding/hex"
-	"sort"
-	"sync"
-
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"sort"
+	"sync"
 
 	"github.com/asaskevich/EventBus"
 	"github.com/dappley/go-dappley/common/pubsub"
@@ -140,10 +139,10 @@ func (txPool *TransactionPool) GetSizeLimit() uint32 {
 	return txPool.sizeLimit
 }
 
-func (txPool *TransactionPool) GetTransactions(utxoIndex *lutxo.UTXOIndex) []*transaction.Transaction {
+func (txPool *TransactionPool) GetTransactions() []*transaction.Transaction {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
-	return txPool.getSortedTransactions(utxoIndex)
+	return txPool.getSortedTransactions()
 }
 
 func (txPool *TransactionPool) GetNumOfTxInPool() int {
@@ -160,7 +159,7 @@ func (txPool *TransactionPool) ResetPendingTransactions() {
 	txPool.pendingTxs = make([]*transaction.Transaction, 0)
 }
 
-func (txPool *TransactionPool) GetAllTransactions(utxoIndex *lutxo.UTXOIndex) []*transaction.Transaction {
+func (txPool *TransactionPool) GetAllTransactions() []*transaction.Transaction {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
 
@@ -169,7 +168,7 @@ func (txPool *TransactionPool) GetAllTransactions(utxoIndex *lutxo.UTXOIndex) []
 		txs = append(txs, tx)
 	}
 
-	for _, tx := range txPool.getSortedTransactions(utxoIndex) {
+	for _, tx := range txPool.getSortedTransactions() {
 		txs = append(txs, tx)
 
 	}
@@ -289,21 +288,43 @@ func (txPool *TransactionPool) removeFromTipOrder(txID []byte) {
 
 }
 
-func (txPool *TransactionPool) getSortedTransactions(utxoIndex *lutxo.UTXOIndex) []*transaction.Transaction {
-	nodes := make(map[string]*transaction.TransactionNode)
+func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transaction {
+	rootNodes := make(map[string]*transaction.TransactionNode)
+	remaining := make(map[string]*transaction.TransactionNode)
+	sortedTxs := make([]*transaction.Transaction, 0, len(txPool.txs))
 
-	for key, node := range txPool.txs {
-		nodes[key] = node
-	}
-
-	var sortedTxs []*transaction.Transaction
-	for len(nodes) > 0 {
-		for key, node := range nodes {
-			if !checkDependTxInMap(node.Value, nodes) {
-				sortedTxs = append(sortedTxs, node.Value)
-				delete(nodes, key)
+	// Recursively traverses the treeNode, appending transactions to sortedTxs
+	var traverse func(key string, node *transaction.TransactionNode)
+	traverse = func(key string, node *transaction.TransactionNode) {
+		_, isRemaining := remaining[key]
+		if isRemaining {
+			sortedTxs = append(sortedTxs, node.Value)
+			delete(remaining, key)
+		}
+		if node.Children != nil {
+			for childKey, _ := range node.Children {
+				if _, exist := txPool.txs[childKey]; exist {
+					traverse(childKey, txPool.txs[childKey])
+				}
 			}
 		}
+	}
+
+	for key, node := range txPool.txs {
+		if !checkDependTxInMap(node.Value, txPool.txs) {
+			rootNodes[key] = node
+		}
+		remaining[key] = node
+	}
+
+	// perform recursive tree traversal starting from the root nodes
+	// all child transactions will appear after their parents, as long as they are properly linked
+	for key, node := range rootNodes {
+		traverse(key, node)
+	}
+
+	if len(remaining) > 0 {
+		logger.Warn("Nodes were not properly traversed.")
 	}
 
 	return sortedTxs

@@ -143,7 +143,7 @@ func (bc *Blockchain) GetUpdatedUTXOIndex() (*lutxo.UTXOIndex, bool) {
 
 	errFlag := true
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
-	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions(utxoIndex)) {
+	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions()) {
 		logger.Warn("GetUpdatedUTXOIndex error")
 		errFlag = false
 	}
@@ -380,7 +380,9 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 		}
 		parentblockHash = block.GetPrevHash()
 
-		for _, tx := range block.GetTransactions() {
+		// rollback the transactions in reverse order
+		for i := len(block.GetTransactions()) - 1; i >= 0; i-- {
+			tx := block.GetTransactions()[i]
 			adaptedTx := transaction.NewTxAdapter(tx)
 			if !adaptedTx.IsCoinbase() && !adaptedTx.IsRewardTx() && !adaptedTx.IsGasRewardTx() && !adaptedTx.IsGasChangeTx() {
 				bc.txPool.Rollback(*tx)
@@ -431,25 +433,6 @@ func (bc *Blockchain) savedHash(bytes []byte) {
 
 func (bc *Blockchain) SetLIBHash(hash hash.Hash) {
 	bc.bc.SetLIBHash(hash)
-}
-
-func (bc *Blockchain) IsLIB(blk *block.Block) bool {
-	blkFromDb, err := bc.GetBlockByHash(blk.GetHash())
-	if err != nil {
-		logger.Error("Blockchain:get block by hash from blockchain error: ", err)
-		return false
-	}
-	if blkFromDb == nil {
-		logger.Error("Blockchain:blk is not exist in blockchain")
-		return false
-	}
-
-	lib, _ := bc.GetLIB()
-
-	if lib.GetHeight() >= blkFromDb.GetHeight() {
-		return true
-	}
-	return false
 }
 
 // GasPrice returns gas price in current blockchain

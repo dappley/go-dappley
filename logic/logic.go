@@ -205,7 +205,7 @@ func sendProducerChange(sendTxParam transaction.SendTxParam, bc *lblockchain.Blo
 
 	acc := account.NewAccountByKey(sendTxParam.SenderKeyPair)
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
-	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions(utxoIndex)) {
+	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions()) {
 		logger.Warn("sendTo error")
 	}
 
@@ -244,7 +244,7 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 
 	acc := account.NewAccountByKey(sendTxParam.SenderKeyPair)
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
-	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions(utxoIndex)) {
+	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions()) {
 		logger.Warn("sendTo error")
 	}
 
