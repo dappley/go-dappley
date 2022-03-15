@@ -1,16 +1,17 @@
 package block
 
 import (
-	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/core/transaction"
-	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/core/transactionbase"
 	"testing"
 	"time"
 
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/account"
+	blockpb "github.com/dappley/go-dappley/core/block/pb"
+	"github.com/dappley/go-dappley/core/transaction"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
+	"github.com/dappley/go-dappley/core/transactionbase"
+
 	"github.com/dappley/go-dappley/common/hash"
-	"github.com/dappley/go-dappley/core/block/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )
@@ -68,6 +69,81 @@ func TestNewBlock(t *testing.T) {
 	assert.NotNil(t, block5.transactions)
 }
 
+func TestNewBlockWithTimestamp(t *testing.T) {
+	block1 := NewBlockWithTimestamp(nil, nil, 123456789, "")
+	assert.Equal(t, int64(123456789), block1.header.timestamp)
+
+	block2 := NewBlockWithTimestamp(nil, nil, 0, "")
+	assert.Equal(t, int64(0), block2.header.timestamp)
+
+	block3 := NewBlockWithTimestamp(nil, nil, -10, "")
+	assert.Equal(t, int64(-10), block3.header.timestamp)
+}
+
+func TestNewBlockWithRawInfo(t *testing.T) {
+	var emptyTx = []*transaction.Transaction([]*transaction.Transaction{})
+	var emptyHash = hash.Hash(hash.Hash{})
+
+	block1 := NewBlockWithRawInfo(nil, nil, 15, 16, 17, emptyTx)
+	assert.Nil(t, block1.header.hash)
+	assert.Nil(t, block1.header.prevHash)
+	assert.Equal(t, int64(15), block1.header.nonce)
+	assert.Equal(t, int64(16), block1.header.timestamp)
+	assert.Equal(t, uint64(17), block1.header.height)
+	assert.Equal(t, emptyTx, block1.transactions)
+
+	block2 := NewBlockWithRawInfo(emptyHash, emptyHash, 18, 19, 20, emptyTx)
+	assert.Equal(t, emptyHash, block2.header.hash)
+	assert.Equal(t, emptyHash, block2.header.prevHash)
+	assert.Equal(t, int64(18), block2.header.nonce)
+	assert.Equal(t, int64(19), block2.header.timestamp)
+	assert.Equal(t, uint64(20), block2.header.height)
+	assert.Equal(t, emptyTx, block2.transactions)
+}
+
+func TestNewBlockByHash(t *testing.T) {
+	var emptyTx = []*transaction.Transaction([]*transaction.Transaction{})
+	var emptyHash = hash.Hash(hash.Hash{})
+
+	block1 := NewBlockByHash(nil, "")
+	assert.Equal(t, emptyHash, block1.header.hash)
+	assert.Nil(t, block1.header.prevHash)
+	assert.Equal(t, int64(0), block1.header.nonce)
+	assert.Equal(t, int64(0), block1.header.timestamp)
+	assert.Equal(t, emptyHash, block1.header.signature)
+	assert.Equal(t, uint64(0), block1.header.height)
+	assert.Equal(t, "", block1.header.producer)
+	assert.Equal(t, emptyTx, block1.transactions)
+
+	block2 := NewBlockByHash(emptyHash, "producer")
+	assert.Equal(t, emptyHash, block2.header.hash)
+	assert.Equal(t, emptyHash, block2.header.prevHash)
+	assert.Equal(t, int64(0), block2.header.nonce)
+	assert.Equal(t, int64(0), block2.header.timestamp)
+	assert.Equal(t, emptyHash, block2.header.producer)
+	assert.Equal(t, uint64(0), block2.header.height)
+	assert.Equal(t, "producer", block2.header.signature)
+	assert.Equal(t, emptyTx, block2.transactions)
+}
+
+func TestNewBlockHeader(t *testing.T) {
+	var emptyHash = hash.Hash(hash.Hash{})
+
+	header1 := NewBlockHeader(nil, nil, 15, 16, 17)
+	assert.Nil(t, header1.hash)
+	assert.Nil(t, header1.prevHash)
+	assert.Equal(t, int64(15), header1.nonce)
+	assert.Equal(t, int64(16), header1.timestamp)
+	assert.Equal(t, uint64(17), header1.height)
+
+	header2 := NewBlockHeader(emptyHash, emptyHash, 18, 19, 20)
+	assert.Equal(t, emptyHash, header2.hash)
+	assert.Equal(t, emptyHash, header2.prevHash)
+	assert.Equal(t, int64(18), header2.nonce)
+	assert.Equal(t, int64(19), header2.timestamp)
+	assert.Equal(t, uint64(20), header2.height)
+}
+
 func TestBlockHeader_Proto(t *testing.T) {
 	bh1 := BlockHeader{
 		[]byte("hash"),
@@ -105,13 +181,13 @@ func TestBlock_ToProto(t *testing.T) {
 	}
 	expected := &blockpb.Block{
 		Header: &blockpb.BlockHeader{
-			Hash: b1.header.hash,
+			Hash:         b1.header.hash,
 			PreviousHash: b1.header.prevHash,
-			Nonce: b1.header.nonce,
-			Timestamp: b1.header.timestamp,
-			Signature: b1.header.signature,
-			Height: b1.header.height,
-			Producer: b1.header.producer,
+			Nonce:        b1.header.nonce,
+			Timestamp:    b1.header.timestamp,
+			Signature:    b1.header.signature,
+			Height:       b1.header.height,
+			Producer:     b1.header.producer,
 		},
 		Transactions: txArray,
 	}
@@ -128,13 +204,13 @@ func TestBlock_FromProto(t *testing.T) {
 	}
 	blockProto := &blockpb.Block{
 		Header: &blockpb.BlockHeader{
-			Hash: expected.header.hash,
+			Hash:         expected.header.hash,
 			PreviousHash: expected.header.prevHash,
-			Nonce: expected.header.nonce,
-			Timestamp: expected.header.timestamp,
-			Signature: expected.header.signature,
-			Height: expected.header.height,
-			Producer: expected.header.producer,
+			Nonce:        expected.header.nonce,
+			Timestamp:    expected.header.timestamp,
+			Signature:    expected.header.signature,
+			Height:       expected.header.height,
+			Producer:     expected.header.producer,
 		},
 		Transactions: txArray,
 	}
@@ -169,13 +245,13 @@ func TestBlock_IsSigned(t *testing.T) {
 func TestBlock_Serialize(t *testing.T) {
 	block := &Block{
 		header: &BlockHeader{
-			hash: hash.Hash{0x68, 0x61, 0x73, 0x68},
-			prevHash: hash.Hash{0x70, 0x72, 0x65, 0x76, 0x68, 0x61, 0x73, 0x68},
-			nonce: 1,
+			hash:      hash.Hash{0x68, 0x61, 0x73, 0x68},
+			prevHash:  hash.Hash{0x70, 0x72, 0x65, 0x76, 0x68, 0x61, 0x73, 0x68},
+			nonce:     1,
 			timestamp: 1623087951,
 			signature: hash.Hash{0x58},
-			height: 0,
-			producer: "producer",
+			height:    0,
+			producer:  "producer",
 		},
 		transactions: []*transaction.Transaction{
 			{
@@ -187,7 +263,7 @@ func TestBlock_Serialize(t *testing.T) {
 				Vout: []transactionbase.TXOutput{
 					{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash{0x9a, 0x62}, Contract: ""},
 					{Value: common.NewAmount(2), PubKeyHash: account.PubKeyHash{0x1d, 0x72}, Contract: ""}},
-				Tip: common.NewAmount(1),
+				Tip:      common.NewAmount(1),
 				GasLimit: common.NewAmount(3),
 				GasPrice: common.NewAmount(2),
 			},
@@ -203,13 +279,13 @@ func TestDeserialize(t *testing.T) {
 
 	expectedBlock := &Block{
 		header: &BlockHeader{
-			hash: hash.Hash{0x68, 0x61, 0x73, 0x68},
-			prevHash: hash.Hash{0x70, 0x72, 0x65, 0x76, 0x68, 0x61, 0x73, 0x68},
-			nonce: 1,
+			hash:      hash.Hash{0x68, 0x61, 0x73, 0x68},
+			prevHash:  hash.Hash{0x70, 0x72, 0x65, 0x76, 0x68, 0x61, 0x73, 0x68},
+			nonce:     1,
 			timestamp: 1623087951,
 			signature: hash.Hash{0x58},
-			height: 0,
-			producer: "producer",
+			height:    0,
+			producer:  "producer",
 		},
 		transactions: []*transaction.Transaction{
 			{
@@ -221,7 +297,7 @@ func TestDeserialize(t *testing.T) {
 				Vout: []transactionbase.TXOutput{
 					{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash{0x9a, 0x62}, Contract: ""},
 					{Value: common.NewAmount(2), PubKeyHash: account.PubKeyHash{0x1d, 0x72}, Contract: ""}},
-				Tip: common.NewAmount(1),
+				Tip:      common.NewAmount(1),
 				GasLimit: common.NewAmount(3),
 				GasPrice: common.NewAmount(2),
 			},

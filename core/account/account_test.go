@@ -18,9 +18,10 @@
 package account
 
 import (
+	"testing"
+
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	logger "github.com/sirupsen/logrus"
-	"testing"
 
 	accountpb "github.com/dappley/go-dappley/core/account/pb"
 	"github.com/stretchr/testify/assert"
@@ -35,9 +36,9 @@ func TestAccount_ToProto(t *testing.T) {
 	expected := &accountpb.Account{
 		KeyPair: &accountpb.KeyPair{
 			PrivateKey: privateKey,
-			PublicKey: account.key.publicKey,
+			PublicKey:  account.key.publicKey,
 		},
-		Address: &accountpb.Address{Address: account.address.address},
+		Address:    &accountpb.Address{Address: account.address.address},
 		PubKeyHash: account.pubKeyHash,
 	}
 	assert.Equal(t, expected, account.ToProto())
@@ -68,4 +69,42 @@ func TestAccount_IsValid(t *testing.T) {
 
 	account.address.address = "address000000000000000000000000011"
 	assert.False(t, account.IsValid())
+}
+
+func TestAccount_SetAddress(t *testing.T) {
+	account := NewAccount()
+	account.SetAddress("testValue")
+	assert.Equal(t, "testValue", account.address.address)
+}
+
+func TestAccount_NewAccountByKey(t *testing.T) {
+	testKey := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e"
+	testKeyPair := GenerateKeyPairByPrivateKey(testKey)
+	account := NewAccountByKey(testKeyPair)
+	assert.Equal(t, testKeyPair, account.key)
+	assert.Equal(t, "dQEooMsqp23RkPsvZXj3XbsRh9BUyGz2S9", account.address.address)
+	assert.Equal(t, "5a76ae00ceb16dbc3ec303553cc9fb7249e7e5f0aa", account.pubKeyHash.String())
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("The code did not panic")
+		}
+	}()
+	_ = NewAccountByKey(nil)
+}
+
+func TestAccount_NewAccountByPrivateKey(t *testing.T) {
+	testKey := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e"
+	testKeyPair := GenerateKeyPairByPrivateKey(testKey)
+	account := NewAccountByPrivateKey(testKey)
+	assert.Equal(t, testKeyPair, account.key)
+	assert.Equal(t, "dQEooMsqp23RkPsvZXj3XbsRh9BUyGz2S9", account.address.address)
+	assert.Equal(t, "5a76ae00ceb16dbc3ec303553cc9fb7249e7e5f0aa", account.pubKeyHash.String())
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("The code did not panic")
+		}
+	}()
+	account = NewAccountByPrivateKey("")
 }
