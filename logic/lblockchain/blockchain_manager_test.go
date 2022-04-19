@@ -482,6 +482,7 @@ func TestBlockchainManager_RequestBlockHandler(t *testing.T) {
 	bcmSender := NewBlockchainManager(bcSender, bp, senderNode, conss)
 	bcmRequester := NewBlockchainManager(bcRequester, bp, requesterNode, conss)
 	transaction.SetSubsidy(0)
+	defer func() { transaction.SetSubsidy(10000000000) }()
 
 	txs := []*transaction.Transaction{
 		{
