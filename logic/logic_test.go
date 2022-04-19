@@ -36,7 +36,10 @@ import (
 
 const InvalidAddress = "Invalid Address"
 
+// TestMain prevents race conditions related to the account test file
 func TestMain(m *testing.M) {
+	AccountTestFileMutex.Lock()
+	defer AccountTestFileMutex.Unlock()
 	cleanUpDatabase()
 	logger.SetLevel(logger.WarnLevel)
 	retCode := m.Run()
@@ -163,6 +166,7 @@ func TestGetAllAddresses(t *testing.T) {
 	//create a account address
 	account, err := CreateAccountWithPassphrase("test", GetTestAccountPath())
 	assert.NotEmpty(t, account)
+	assert.Nil(t, err)
 	addr := account.GetAddress()
 
 	expectedRes = append(expectedRes, addr)
