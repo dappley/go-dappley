@@ -213,6 +213,35 @@ func TestUTXOIndex_GetUpdatedUtxo(t *testing.T) {
 	assert.Equal(t, errors.New("key is invalid"), err)
 }
 
+func TestUTXOIndex_GetContractCreateUTXOByPubKeyHash(t *testing.T) {
+	index := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	acc := account.NewContractTransactionAccount()
+
+	// no utxo found
+	result := index.GetContractCreateUTXOByPubKeyHash(acc.GetPubKeyHash())
+	assert.Nil(t, result)
+
+	txid := []byte("test")
+	txo1 := transactionbase.TXOutput{
+		Value:      common.NewAmount(10),
+		PubKeyHash: acc.GetPubKeyHash(),
+		Contract:   "contract",
+	}
+	txo2 := transactionbase.TXOutput{
+		Value:      common.NewAmount(20),
+		PubKeyHash: acc.GetPubKeyHash(),
+		Contract:   "contract2",
+	}
+	index.AddUTXO(txo1, txid, 0)
+	index.AddUTXO(txo2, txid, 1)
+	err := index.Save()
+	assert.Nil(t, err)
+
+	expected := utxo.NewUTXO(txo1, txid, 0, utxo.UtxoCreateContract)
+	result = index.GetContractCreateUTXOByPubKeyHash(acc.GetPubKeyHash())
+	assert.Equal(t, expected, result)
+}
+
 func TestUTXOIndex_GetContractInvokeUTXOsByPubKeyHash(t *testing.T) {
 	index := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 	acc := account.NewContractTransactionAccount()
@@ -646,6 +675,20 @@ func TestUTXOIndex_Save(t *testing.T) {
 
 }
 
+func TestUTXOIndex_IsIndexAddExist(t *testing.T) {
+	index := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	acc := account.NewContractTransactionAccount()
+	assert.False(t, index.IsIndexAddExist(acc.GetPubKeyHash()))
+
+	index.SetIndexAdd(map[string]*utxo.UTXOTx{
+		acc.GetPubKeyHash().String(): &utxo.UTXOTx{},
+	})
+	assert.True(t, index.IsIndexAddExist(acc.GetPubKeyHash()))
+
+	index.SetIndexAdd(make(map[string]*utxo.UTXOTx))
+	assert.False(t, index.IsIndexAddExist(acc.GetPubKeyHash()))
+}
+
 func TestUTXOIndex_AddAndRmoveUTXO(t *testing.T) {
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
 	var ta1 = account.NewAccountByPrivateKey(prikey1)
@@ -967,4 +1010,53 @@ func TestFindVinUtxosInUtxoPool(t *testing.T) {
 	utxos, err = FindVinUtxosInUtxoPool(index, tx)
 	assert.ElementsMatch(t, expectedUtxos, utxos)
 	assert.Nil(t, err)
+}
+
+func TestGetTXOutputSpent(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+
+	txin := transactionbase.TXInput{
+		Txid:      []byte("test"),
+		Vout:      0,
+		Signature: nil,
+		PubKey:    nil,
+	}
+	txout, vout, err := getTXOutputSpent(txin, db)
+	assert.NotNil(t, err)
+
+	tx := transaction.Transaction{
+		ID:  []byte("test"),
+		Vin: nil,
+		Vout: []transactionbase.TXOutput{
+			{
+				Value:      common.NewAmount(10),
+				PubKeyHash: nil,
+				Contract:   "contract1",
+			},
+			{
+				Value:      common.NewAmount(20),
+				PubKeyHash: nil,
+				Contract:   "contract2",
+			},
+		},
+		Tip:        nil,
+		GasLimit:   nil,
+		GasPrice:   nil,
+		CreateTime: 0,
+		Type:       0,
+	}
+	err = transaction.PutTxJournal(tx, db)
+	assert.Nil(t, err)
+
+	txout, vout, err = getTXOutputSpent(txin, db)
+	assert.Nil(t, err)
+	assert.Equal(t, txin.Vout, vout)
+	assert.Equal(t, tx.Vout[0], txout)
+
+	txin.Vout = 1
+	txout, vout, err = getTXOutputSpent(txin, db)
+	assert.Nil(t, err)
+	assert.Equal(t, txin.Vout, vout)
+	assert.Equal(t, tx.Vout[1], txout)
 }
