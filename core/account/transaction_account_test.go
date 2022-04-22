@@ -118,4 +118,7 @@ func TestNewContractTransactionAccount(t *testing.T) {
 	assert.NotNil(t, account)
 	assert.NotNil(t, account.address)
 	assert.NotNil(t, account.pubKeyHash)
+	isContract, err := account.pubKeyHash.IsContract()
+	assert.Nil(t, err)
+	assert.True(t, isContract)
 }

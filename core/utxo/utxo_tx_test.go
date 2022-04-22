@@ -39,16 +39,6 @@ func TestNewUTXOTxWithData(t *testing.T) {
 	assert.Equal(t, expected, NewUTXOTxWithData(utxo1))
 }
 
-func TestNewUTXOTxWithSize(t *testing.T) {
-	result := NewUTXOTxWithSize(300000)
-	expected := &UTXOTx{Indices: make(map[string]*UTXO, 300000)}
-	assert.Equal(t, expected, result)
-
-	result = NewUTXOTxWithSize(30)
-	expected = &UTXOTx{Indices: make(map[string]*UTXO, 30)}
-	assert.Equal(t, expected, result)
-}
-
 func TestUTXOTx_PutUtxo(t *testing.T) {
 	utxoTx := NewUTXOTx()
 	utxoTx.PutUtxo(utxo1)

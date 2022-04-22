@@ -104,6 +104,7 @@ func TestNewBlockWithRawInfo(t *testing.T) {
 func TestNewBlockByHash(t *testing.T) {
 	var emptyTx = []*transaction.Transaction([]*transaction.Transaction{})
 	var emptyHash = hash.Hash(hash.Hash{})
+	var nonEmptyHash = hash.Hash(hash.Hash{0x61})
 
 	block1 := NewBlockByHash(nil, "")
 	assert.Equal(t, emptyHash, block1.header.hash)
@@ -120,10 +121,20 @@ func TestNewBlockByHash(t *testing.T) {
 	assert.Equal(t, emptyHash, block2.header.prevHash)
 	assert.Equal(t, int64(0), block2.header.nonce)
 	assert.Equal(t, int64(0), block2.header.timestamp)
-	assert.Equal(t, emptyHash, block2.header.producer)
+	assert.Equal(t, "producer", block2.header.producer)
 	assert.Equal(t, uint64(0), block2.header.height)
-	assert.Equal(t, "producer", block2.header.signature)
+	assert.Equal(t, emptyHash, block2.header.signature)
 	assert.Equal(t, emptyTx, block2.transactions)
+
+	block3 := NewBlockByHash(nonEmptyHash, "")
+	assert.Equal(t, emptyHash, block3.header.hash)
+	assert.Equal(t, nonEmptyHash, block3.header.prevHash)
+	assert.Equal(t, int64(0), block3.header.nonce)
+	assert.Equal(t, int64(0), block3.header.timestamp)
+	assert.Equal(t, "", block3.header.producer)
+	assert.Equal(t, uint64(0), block3.header.height)
+	assert.Equal(t, emptyHash, block3.header.signature)
+	assert.Equal(t, emptyTx, block3.transactions)
 }
 
 func TestNewBlockHeader(t *testing.T) {

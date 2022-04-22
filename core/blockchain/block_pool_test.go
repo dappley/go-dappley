@@ -621,15 +621,20 @@ func TestBlockPool_GetRootBlk(t *testing.T) {
 
 func TestBlockPool_GetBlocksFromTrees(t *testing.T) {
 	treeSlice := make([]*common.TreeNode, 3)
-	treeSlice[0], _ = common.NewTreeNode(createBlock(hash.Hash("node1"), []byte{0}, 1))
-	treeSlice[1], _ = common.NewTreeNode(createBlock(hash.Hash("node2"), hash.Hash("node1"), 3))
-	treeSlice[2], _ = common.NewTreeNode(createBlock(hash.Hash("node3"), hash.Hash("node2"), 5))
+	expectedBlockSlice := [3]*block.Block{}
+	expectedBlockSlice[0] = createBlock(hash.Hash("node1"), []byte{0}, 1)
+	expectedBlockSlice[1] = createBlock(hash.Hash("node2"), hash.Hash("node1"), 3)
+	expectedBlockSlice[2] = createBlock(hash.Hash("node3"), hash.Hash("node2"), 5)
+
+	treeSlice[0], _ = common.NewTreeNode(expectedBlockSlice[0])
+	treeSlice[1], _ = common.NewTreeNode(expectedBlockSlice[1])
+	treeSlice[2], _ = common.NewTreeNode(expectedBlockSlice[2])
 
 	blockSlice := getBlocksFromTrees(treeSlice)
 
-	assert.Equal(t, treeSlice[0].GetValue().(*block.Block), blockSlice[0])
-	assert.Equal(t, treeSlice[1].GetValue().(*block.Block), blockSlice[1])
-	assert.Equal(t, treeSlice[2].GetValue().(*block.Block), blockSlice[2])
+	assert.Equal(t, expectedBlockSlice[0], blockSlice[0])
+	assert.Equal(t, expectedBlockSlice[1], blockSlice[1])
+	assert.Equal(t, expectedBlockSlice[2], blockSlice[2])
 }
 
 func testGetForkHeadHashes(bp *BlockPool) []string {
