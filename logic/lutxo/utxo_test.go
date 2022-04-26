@@ -238,9 +238,11 @@ func TestUTXOIndex_GetContractCreateUTXOByPubKeyHash(t *testing.T) {
 	err := index.Save()
 	assert.Nil(t, err)
 
-	expected := utxo.NewUTXO(txo1, txid, 0, utxo.UtxoCreateContract)
 	result = index.GetContractCreateUTXOByPubKeyHash(acc.GetPubKeyHash())
-	assert.Equal(t, expected, result)
+	assert.Equal(t, txo1.Value, result.Value)
+	assert.Equal(t, txo1.PubKeyHash, result.PubKeyHash)
+	assert.Equal(t, txo1.Contract, result.Contract)
+	assert.Equal(t, utxo.UtxoCreateContract, result.UtxoType)
 }
 
 func TestUTXOIndex_GetContractInvokeUTXOsByPubKeyHash(t *testing.T) {
