@@ -48,10 +48,11 @@ func TestMain(m *testing.M) {
 }
 
 func TestCreateAccount(t *testing.T) {
-	acc, err := CreateAccountWithPassphrase("test", GetTestAccountPath())
+	acc, err := CreateAccount()
 	assert.Nil(t, err)
 	_, err = account.IsValidPubKey(acc.GetKeyPair().GetPublicKey())
 	assert.Nil(t, err)
+	assert.True(t, acc.IsValid())
 	cleanUpDatabase()
 }
 
