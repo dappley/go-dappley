@@ -24,6 +24,7 @@ import (
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/pkg/errors"
 	"io"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -288,6 +289,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		return nil, status.Error(codes.InvalidArgument, "transaction type error, must be normal or contract")
 	}
 
+	bc := rpcService.GetBlockchain()
 	var generatedContractAddress string
 	if adaptedTx.IsContract() {
 		if adaptedTx.GasPrice.Cmp(common.NewAmount(0)) < 0 || tx.GasPrice.Cmp(common.NewAmount(0)) == ltransaction.GasConsumption {
@@ -303,9 +305,11 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 		generatedContractAddress = ltransaction.NewTxContract(tx).GetContractAddress().String()
+	}else{
+		generatedContractAddress =strconv.FormatUint(bc.GetMaxHeight(), 10)
 	}
 
-	bc := rpcService.GetBlockchain()
+
 	rpcService.mutex.Lock()
 	if rpcService.utxoIndex == nil || rpcService.blockMaxHeight < bc.GetMaxHeight() {
 		errFlag := true
