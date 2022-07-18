@@ -19,6 +19,7 @@ package intergationTest
 import (
 	"bytes"
 	"fmt"
+	logger "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path"
@@ -69,6 +70,17 @@ const testport_fork_syncing = 10531
 const testport_fork_download = 10600
 const InvalidAddress = "Invalid Address"
 const confDir = "../storage/fakeFileLoaders/"
+
+// TestMain prevents race conditions related to the account test file
+func TestMain(m *testing.M) {
+	logic.AccountTestFileMutex.Lock()
+	defer logic.AccountTestFileMutex.Unlock()
+	logic.RemoveAccountTestFile()
+	logger.SetLevel(logger.WarnLevel)
+	retCode := m.Run()
+	logic.RemoveAccountTestFile()
+	os.Exit(retCode)
+}
 
 //test logic.Send
 func TestSend(t *testing.T) {

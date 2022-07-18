@@ -6,7 +6,10 @@ import (
 	logger "github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
+	"sync"
 )
+
+var AccountTestFileMutex = &sync.Mutex{}
 
 //get all addresses
 func GetAllAddressesByPath(path string) ([]account.Address, error) {
@@ -48,4 +51,3 @@ func RemoveAccountTestFile() {
 	testAccountPath := binFolder + "accounts_test.dat"
 	os.Remove(testAccountPath)
 }
-
