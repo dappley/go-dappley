@@ -987,6 +987,28 @@ func TestSetSubsidy(t *testing.T) {
 	assert.Equal(t, common.NewAmount(10000000000), Subsidy)
 }
 
+func TestNewSendTxParam(t *testing.T) {
+	fromAddress := account.Address{}
+	senderKeyPair := account.NewKeyPair()
+	toAddress := account.Address{}
+	amount := common.NewAmount(50)
+	tip := common.NewAmount(5)
+	gasLimit := common.NewAmount(10)
+	gasPrice := common.NewAmount(1)
+	contract := "test contract"
+
+	sendTxParam := NewSendTxParam(fromAddress, senderKeyPair, toAddress, amount, tip, gasLimit, gasPrice, contract)
+
+	assert.Equal(t, fromAddress, sendTxParam.From)
+	assert.Equal(t, senderKeyPair, sendTxParam.SenderKeyPair)
+	assert.Equal(t, toAddress, sendTxParam.To)
+	assert.Equal(t, amount, sendTxParam.Amount)
+	assert.Equal(t, tip, sendTxParam.Tip)
+	assert.Equal(t, gasLimit, sendTxParam.GasLimit)
+	assert.Equal(t, gasPrice, sendTxParam.GasPrice)
+	assert.Equal(t, contract, sendTxParam.Contract)
+}
+
 func TestCalculateUtxoSum(t *testing.T) {
 	var utxos []*utxo.UTXO
 	for i := 0; i < 10; i++ {

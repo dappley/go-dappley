@@ -19,12 +19,13 @@
 package blockchain
 
 import (
-	"github.com/dappley/go-dappley/common/hash"
-	"github.com/dappley/go-dappley/core/block"
-	logger "github.com/sirupsen/logrus"
 	"reflect"
 	"strconv"
 	"testing"
+
+	"github.com/dappley/go-dappley/common/hash"
+	"github.com/dappley/go-dappley/core/block"
+	logger "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -254,6 +255,56 @@ func TestBlockPool_removeTree(t *testing.T) {
 			node, ok := bp.blkCache.Get(hash.Hash(tt.treeRoot).String())
 			assert.True(t, ok)
 			bp.removeTree(node.(*common.TreeNode))
+			assert.Equal(t, tt.expectedNumOfNodesLeft, bp.blkCache.Len())
+		})
+	}
+}
+
+func TestBlockPool_removeNode(t *testing.T) {
+	/*  BLOCK FORK STRUCTURE
+	MAIN FORK:		     1           ORPHANS:(3 orphan forks)
+				    2        3
+				  8  9     4                              15
+				10	     5 6 7              11          16
+	                                      12  13					17
+	                                            14
+	*/
+
+	tests := []struct {
+		name                   string
+		serializedBp           string
+		rootBlkHash            string
+		treeRoot               string
+		expectedNumOfNodesLeft int
+	}{
+		{
+			"Remove from main fork",
+			"0^1, 1#2, 1#3, 3#4, 4#5, 4#6, 4#7, 2#8, 2#9, 8#10, 3^11, 11#12, 11#13, 13#14, 2^15, 15#16, 4^17",
+			"1",
+			"3",
+			16,
+		},
+		{
+			"Remove from orphan 1",
+			"0^1, 1#2, 1#3, 3#4, 4#5, 4#6, 4#7, 2#8, 2#9, 8#10, 3^11, 11#12, 11#13, 13#14, 2^15, 15#16, 4^17",
+			"1",
+			"13",
+			16,
+		},
+		{
+			"Remove from orphan 2",
+			"0^1, 1#2, 1#3, 3#4, 4#5, 4#6, 4#7, 2#8, 2#9, 8#10, 3^11, 11#12, 11#13, 13#14, 2^15, 15#16, 4^17",
+			"1",
+			"15",
+			16,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp, _ := deserializeBlockPool(tt.serializedBp, tt.rootBlkHash)
+			node, ok := bp.blkCache.Get(hash.Hash(tt.treeRoot).String())
+			assert.True(t, ok)
+			bp.removeNode(node.(*common.TreeNode))
 			assert.Equal(t, tt.expectedNumOfNodesLeft, bp.blkCache.Len())
 		})
 	}
@@ -496,6 +547,29 @@ func TestBlockPool_SetRootBlock(t *testing.T) {
 	}
 }
 
+func TestBlockPool_link(t *testing.T) {
+	root, _ := common.NewTreeNode(createBlock(hash.Hash("root"), []byte{0}, 1))
+	orphan1, _ := common.NewTreeNode(createBlock(hash.Hash("orphan1"), hash.Hash("root"), 3))
+	orphan2, _ := common.NewTreeNode(createBlock(hash.Hash("orphan2"), hash.Hash("root"), 5))
+	orphan3, _ := common.NewTreeNode(createBlock(hash.Hash("orphan3"), hash.Hash("nonexistent"), 7))
+
+	bp := NewBlockPool(nil)
+	bp.orphans[orphan1.GetValue().(*block.Block).GetHash().String()] = orphan1
+	bp.orphans[orphan2.GetValue().(*block.Block).GetHash().String()] = orphan2
+	bp.orphans[orphan3.GetValue().(*block.Block).GetHash().String()] = orphan3
+
+	expectedOrphans := map[string]*common.TreeNode{
+		root.GetValue().(*block.Block).GetHash().String():    root,
+		orphan3.GetValue().(*block.Block).GetHash().String(): orphan3,
+	}
+	bp.link(root)
+	assert.Equal(t, expectedOrphans, bp.orphans)
+	assert.True(t, reflect.DeepEqual([]*common.TreeNode{orphan1, orphan2}, root.Children))
+	assert.Equal(t, root, orphan1.Parent)
+	assert.Equal(t, root, orphan2.Parent)
+	assert.Nil(t, orphan3.Parent)
+}
+
 func TestBlockPool_linkOrphan(t *testing.T) {
 	root, _ := common.NewTreeNode(createBlock(hash.Hash("root"), []byte{0}, 1))
 	orphan1, _ := common.NewTreeNode(createBlock(hash.Hash("orphan1"), hash.Hash("root"), 3))
@@ -533,6 +607,34 @@ func TestBlockPool_linkParent(t *testing.T) {
 	bp.linkParent(orphan)
 	assert.Nil(t, orphan.Parent)
 	assert.Equal(t, expectedOrphans, bp.orphans)
+}
+
+func TestBlockPool_GetRootBlk(t *testing.T) {
+	root, _ := common.NewTreeNode(createBlock(hash.Hash("root"), []byte{0}, 1))
+
+	bp := NewBlockPool(nil)
+	assert.Nil(t, bp.getRootBlk())
+
+	bp.SetRootBlock(root.GetValue().(*block.Block))
+	assert.Equal(t, root.GetValue().(*block.Block), bp.getRootBlk())
+}
+
+func TestBlockPool_GetBlocksFromTrees(t *testing.T) {
+	treeSlice := make([]*common.TreeNode, 3)
+	expectedBlockSlice := [3]*block.Block{}
+	expectedBlockSlice[0] = createBlock(hash.Hash("node1"), []byte{0}, 1)
+	expectedBlockSlice[1] = createBlock(hash.Hash("node2"), hash.Hash("node1"), 3)
+	expectedBlockSlice[2] = createBlock(hash.Hash("node3"), hash.Hash("node2"), 5)
+
+	treeSlice[0], _ = common.NewTreeNode(expectedBlockSlice[0])
+	treeSlice[1], _ = common.NewTreeNode(expectedBlockSlice[1])
+	treeSlice[2], _ = common.NewTreeNode(expectedBlockSlice[2])
+
+	blockSlice := getBlocksFromTrees(treeSlice)
+
+	assert.Equal(t, expectedBlockSlice[0], blockSlice[0])
+	assert.Equal(t, expectedBlockSlice[1], blockSlice[1])
+	assert.Equal(t, expectedBlockSlice[2], blockSlice[2])
 }
 
 func testGetForkHeadHashes(bp *BlockPool) []string {

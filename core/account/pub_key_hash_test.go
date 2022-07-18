@@ -101,3 +101,9 @@ func TestIsValidPubKey(t *testing.T) {
 	assert.True(t, isPubKey3Valid)
 	assert.Nil(t, err3)
 }
+
+func TestString(t *testing.T) {
+	pubKey := []uint8([]byte{versionUser, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c})
+	pubKeyHash := PubKeyHash(generatePubKeyHash(pubKey))
+	assert.Equal(t, "76bef1d09b9e712f73e565eddf8e1ddb81bb137e", pubKeyHash.String())
+}

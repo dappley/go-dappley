@@ -9,7 +9,7 @@ import (
 
 func TestTransactionAccount_ToProto(t *testing.T) {
 	transactionAccount := &TransactionAccount{
-		Address{ "cd2MRu285Uwiu8ZkDp4jtL8tcZeHMZk8YL"},
+		Address{"cd2MRu285Uwiu8ZkDp4jtL8tcZeHMZk8YL"},
 		[]byte{0x58, 0x86, 0xb5, 0x56, 0xb7, 0x12, 0xf2, 0x1b, 0xcc, 0x7, 0xd9, 0x3c, 0xba, 0x83, 0xba, 0xb0, 0xde, 0x99, 0x48, 0x3e, 0x0},
 	}
 
@@ -28,14 +28,14 @@ func TestTransactionAccount_FromProto(t *testing.T) {
 	transactionAccount := &TransactionAccount{}
 	transactionAccountProto := &accountpb.TransactionAccount{
 		Address: &accountpb.Address{
-			Address: 		"cd2MRu285Uwiu8ZkDp4jtL8tcZeHMZk8YL",
+			Address: "cd2MRu285Uwiu8ZkDp4jtL8tcZeHMZk8YL",
 		},
 		PubKeyHash: []byte{0x58, 0x86, 0xb5, 0x56, 0xb7, 0x12, 0xf2, 0x1b, 0xcc, 0x7, 0xd9, 0x3c, 0xba, 0x83, 0xba, 0xb0, 0xde, 0x99, 0x48, 0x3e, 0x0},
 	}
 	transactionAccount.FromProto(transactionAccountProto)
 
-	expected  := &TransactionAccount{
-		Address{ "cd2MRu285Uwiu8ZkDp4jtL8tcZeHMZk8YL"},
+	expected := &TransactionAccount{
+		Address{"cd2MRu285Uwiu8ZkDp4jtL8tcZeHMZk8YL"},
 		[]byte{0x58, 0x86, 0xb5, 0x56, 0xb7, 0x12, 0xf2, 0x1b, 0xcc, 0x7, 0xd9, 0x3c, 0xba, 0x83, 0xba, 0xb0, 0xde, 0x99, 0x48, 0x3e, 0x0},
 	}
 	assert.Equal(t, expected, transactionAccount)
@@ -43,12 +43,12 @@ func TestTransactionAccount_FromProto(t *testing.T) {
 
 func TestTransactionAccount_IsValid(t *testing.T) {
 	transactionAccount := &TransactionAccount{
-		Address{ "cd2MRu285Uwiu8ZkDp4jtL8tcZeHMZk8YL"},
+		Address{"cd2MRu285Uwiu8ZkDp4jtL8tcZeHMZk8YL"},
 		[]byte{0x58, 0x86, 0xb5, 0x56, 0xb7, 0x12, 0xf2, 0x1b, 0xcc, 0x7, 0xd9, 0x3c, 0xba, 0x83, 0xba, 0xb0, 0xde, 0x99, 0x48, 0x3e, 0x0},
 	}
 	assert.True(t, transactionAccount.IsValid())
 
-	transactionAccount.pubKeyHash=[]byte{}
+	transactionAccount.pubKeyHash = []byte{}
 	assert.False(t, transactionAccount.IsValid())
 
 	transactionAccount.pubKeyHash = []byte{0x58, 0x86, 0xb5, 0x56, 0xb7, 0x12, 0xf2, 0x1b, 0xcc, 0x7, 0xd9, 0x3c, 0xba, 0x83, 0xba, 0xb0, 0xde, 0x99, 0x48, 0x3e, 0x0}
@@ -111,4 +111,14 @@ func TestChecksum(t *testing.T) {
 
 func TestGetAddressPayloadLength(t *testing.T) {
 	assert.Equal(t, 25, GetAddressPayloadLength())
+}
+
+func TestNewContractTransactionAccount(t *testing.T) {
+	account := NewContractTransactionAccount()
+	assert.NotNil(t, account)
+	assert.NotNil(t, account.address)
+	assert.NotNil(t, account.pubKeyHash)
+	isContract, err := account.pubKeyHash.IsContract()
+	assert.Nil(t, err)
+	assert.True(t, isContract)
 }
