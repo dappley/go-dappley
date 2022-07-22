@@ -35,7 +35,7 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0
 	github.com/rifflock/lfshook v0.0.0-20180920164130-b9218ef580f5
 	github.com/satori/go.uuid v1.2.0
-	github.com/shirou/gopsutil v2.20.5+incompatible
+	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/afero v1.2.2 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
@@ -47,9 +47,10 @@ require (
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/tebeka/strftime v0.1.4 // indirect
 	github.com/tidwall/gjson v1.6.1
+	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
-	golang.org/x/sys v0.0.0-20200610111108-226ff32320da // indirect
+	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
 	golang.org/x/tools v0.0.0-20191216052735-49a3e744a425
 	google.golang.org/genproto v0.0.0-20200610212329-df9b449b0ff2 // indirect
 	google.golang.org/grpc v1.29.1
