@@ -57,7 +57,7 @@ func main() {
 	cliConfig := &configpb.CliConfig{}
 	config.LoadConfig(filePath, cliConfig)
 
-	conn := initRpcClient(int(cliConfig.GetPort()))
+	conn := initRpcClient(cliConfig.Address, int(cliConfig.GetPort()))
 	defer conn.Close()
 	clients := map[serviceType]interface{}{
 		rpcService:        rpcpb.NewRpcServiceClient(conn),
@@ -204,10 +204,10 @@ func vinRules(utxoSum, amount *common.Amount, utxoNum, totalUtxoNum int) bool {
 	return utxoSum.Cmp(amount) >= 0 && utxoNum == 49 //there is 50 utxos when utxoNum = 49
 }
 
-func initRpcClient(port int) *grpc.ClientConn {
+func initRpcClient(ip string, port int) *grpc.ClientConn {
 	//prepare grpc account
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(fmt.Sprint(":", port), grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprint(ip, ":", port), grpc.WithInsecure())
 	if err != nil {
 		logger.Panic("Error:", err.Error())
 	}
