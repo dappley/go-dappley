@@ -409,6 +409,13 @@ func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.Transac
 
 	txPool.addTransaction(txNode)
 
+	for _, key := range txPool.tipOrder {
+		tipTx := txPool.txs[key].Value
+		if checkDependTxInMap(tipTx, txPool.txs) {
+			txPool.removeFromTipOrder(tipTx.ID)
+		}
+	}
+
 	txPool.EventBus.Publish(NewTransactionTopic, txNode.Value)
 
 	//if it depends on another tx in txpool, the transaction will be not be included in the sorted list
