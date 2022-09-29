@@ -212,7 +212,7 @@ func (rpcService *RpcService) RpcGetUTXO(server rpcpb.RpcService_RpcGetUTXOServe
 	return nil
 }
 
-func (rpcService *RpcService) RpcGetUTXOWithAmount(server rpcpb.RpcService_RpcGetUTXOServer) error {
+func (rpcService *RpcService) RpcGetUTXOWithAmount(server rpcpb.RpcService_RpcGetUTXOWithAmountServer) error {
 	bc := rpcService.GetBlockchain()
 	rpcService.mutex.Lock()
 	if rpcService.dbUtxoIndex == nil || rpcService.blockMaxHeight < bc.GetMaxHeight() {
@@ -252,8 +252,7 @@ func (rpcService *RpcService) RpcGetUTXOWithAmount(server rpcpb.RpcService_RpcGe
 		}
 		response.BlockHeaders = append(response.BlockHeaders, blk.GetHeader().ToProto().(*blockpb.BlockHeader))
 	}
-	// TODO: call GetUTXOsByPubKeyHashWithAmount instead, after the proto stuff is compiled properly
-	utxos := rpcService.dbUtxoIndex.GetAllUTXOsByPubKeyHash(acc.GetPubKeyHash())
+	utxos := rpcService.dbUtxoIndex.GetUTXOsByPubKeyHashWithAmount(acc.GetPubKeyHash(), common.NewAmount(req.Amount))
 	if len(utxos.Indices) == 0 {
 		err := server.Send(&response)
 		if err != nil {
