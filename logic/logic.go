@@ -315,3 +315,38 @@ func GetUtxoStream(streamClient rpcpb.RpcServiceClient, getUTXORequest *rpcpb.Ge
 	}
 	return &response, nil
 }
+
+func GetUtxoStreamWithAmount(streamClient rpcpb.RpcServiceClient, getUTXORequest *rpcpb.GetUTXOWithAmountRequest) (*rpcpb.GetUTXOResponse, error) {
+	stream, err := streamClient.RpcGetUTXOWithAmount(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	response := rpcpb.GetUTXOResponse{}
+	for {
+		err := stream.Send(getUTXORequest)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return &response, err
+		}
+		res, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return &response, err
+		}
+		for i := 0; i < len(res.Utxos); i++ {
+			response.Utxos = append(response.Utxos, res.Utxos[i])
+		}
+		for i := 0; i < len(res.BlockHeaders); i++ {
+			response.BlockHeaders = append(response.BlockHeaders, res.BlockHeaders[i])
+		}
+	}
+	err = stream.CloseSend()
+	if err != nil {
+		return &response, err
+	}
+	return &response, nil
+}
