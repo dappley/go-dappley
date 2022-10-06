@@ -118,7 +118,6 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		utxo.FromProto(u)
 		inputUtxos = append(inputUtxos, &utxo)
 	}
-	fmt.Println(len(inputUtxos), "utxos received from stream")
 	sort.Sort(utxoSlice(inputUtxos))
 	tx_utxos, err := getUTXOsfromAmount(inputUtxos, amount, tip, gasLimit, gasPrice)
 	if err != nil {
