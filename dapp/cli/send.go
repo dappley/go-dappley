@@ -73,33 +73,8 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		return
 	}
 
-	amount := common.NewAmount(0)
-	tip := common.NewAmount(0)
-	gasLimit := common.NewAmount(0)
-	gasPrice := common.NewAmount(0)
-	if flags[flagAmount] != nil {
-		amount = common.NewAmount(uint64(*(flags[flagAmount].(*int))))
-	}
-	if flags[flagTip] != nil {
-		tip = common.NewAmount(*(flags[flagTip].(*uint64)))
-	}
-	if flags[flagGasLimit] != nil {
-		gasLimit = common.NewAmount(*(flags[flagGasLimit].(*uint64)))
-	}
-	if flags[flagGasPrice] != nil {
-		gasPrice = common.NewAmount(*(flags[flagGasPrice].(*uint64)))
-	}
-
-	/*
-		response, err := logic.GetUtxoStream(c.(rpcpb.RpcServiceClient), &rpcpb.GetUTXORequest{
-			Address: account.NewAddress(*(flags[flagFromAddress].(*string))).String(),
-		})
-	*/
-
-	targetAmount := amount.Uint64() + tip.Uint64() + gasLimit.Uint64()*gasPrice.Uint64()
-	response, err := logic.GetUtxoStreamWithAmount(c.(rpcpb.RpcServiceClient), &rpcpb.GetUTXOWithAmountRequest{
+	response, err := logic.GetUtxoStream(c.(rpcpb.RpcServiceClient), &rpcpb.GetUTXORequest{
 		Address: account.NewAddress(*(flags[flagFromAddress].(*string))).String(),
-		Amount:  targetAmount,
 	})
 
 	if err != nil {
@@ -119,7 +94,19 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		inputUtxos = append(inputUtxos, &utxo)
 	}
 	sort.Sort(utxoSlice(inputUtxos))
-	tx_utxos, err := getUTXOsfromAmount(inputUtxos, amount, tip, gasLimit, gasPrice)
+	tip := common.NewAmount(0)
+	gasLimit := common.NewAmount(0)
+	gasPrice := common.NewAmount(0)
+	if flags[flagTip] != nil {
+		tip = common.NewAmount(*(flags[flagTip].(*uint64)))
+	}
+	if flags[flagGasLimit] != nil {
+		gasLimit = common.NewAmount(*(flags[flagGasLimit].(*uint64)))
+	}
+	if flags[flagGasPrice] != nil {
+		gasPrice = common.NewAmount(*(flags[flagGasPrice].(*uint64)))
+	}
+	tx_utxos, err := getUTXOsfromAmount(inputUtxos, common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice)
 	if err != nil {
 		fmt.Println("Error: ", err.Error())
 		return
@@ -137,7 +124,7 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		return
 	}
 	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
-		account.NewAddress(*(flags[flagToAddress].(*string))), amount, tip, gasLimit, gasPrice, data)
+		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
 
 	tx, err := ltransaction.NewNormalUTXOTransaction(tx_utxos, sendTxParam)
 	if err != nil {
