@@ -11,6 +11,7 @@ const (
 	cliGetBalance        = "getBalance"
 	cliGetPeerInfo       = "getPeerInfo"
 	cliSend              = "send"
+	cliSendAmount        = "sendAmount"
 	cliAddPeer           = "addPeer"
 	cliCreateAccount     = "createAccount"
 	cliAddAccount        = "addAccount"
@@ -85,6 +86,7 @@ var cmdList = []string{
 	cliGetBalance,
 	cliGetPeerInfo,
 	cliSend,
+	cliSendAmount,
 	cliAddPeer,
 	cliCreateAccount,
 	cliAddAccount,
@@ -161,6 +163,56 @@ var cmdFlagsMap = map[string][]flagPars{
 		},
 	},
 	cliSend: {
+		flagPars{
+			flagFromAddress,
+			"",
+			valueTypeString,
+			"Sender's account address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+		},
+		flagPars{
+			flagToAddress,
+			"",
+			valueTypeString,
+			"Receiver's account address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+		},
+		flagPars{
+			flagAmount,
+			0,
+			valueTypeInt,
+			"The amount to send from the sender to the receiver.",
+		},
+		flagPars{
+			flagTip,
+			uint64(0),
+			valueTypeUint64,
+			"Tip to miner.",
+		},
+		flagPars{
+			flagData,
+			"",
+			valueTypeString,
+			"Smart contract in JavaScript. Eg. helloworld!",
+		},
+		flagPars{
+			flagFilePath,
+			"",
+			valueTypeString,
+			"Smart contract file path. Eg. contract/smart_contract.js",
+		},
+		flagPars{
+			flagGasLimit,
+			uint64(0),
+			valueTypeUint64,
+			"Gas limit count of smart contract execution.",
+		},
+		flagPars{
+			flagGasPrice,
+			uint64(0),
+			valueTypeUint64,
+			"Gas price of smart contract execution.",
+		},
+	},
+	cliSendAmount: {
 		flagPars{
 			flagFromAddress,
 			"",
@@ -332,6 +384,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGetBalance:        {rpcService, getBalanceCommandHandler},
 	cliGetPeerInfo:       {adminRpcService, getPeerInfoCommandHandler},
 	cliSend:              {rpcService, sendCommandHandler},
+	cliSendAmount:        {rpcService, sendAmountCommandHandler},
 	cliAddPeer:           {adminRpcService, addPeerCommandHandler},
 	cliCreateAccount:     {rpcService, createAccountCommandHandler},
 	cliAddAccount:        {rpcService, addAccountCommandHandler},

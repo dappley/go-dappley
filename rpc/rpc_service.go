@@ -212,6 +212,84 @@ func (rpcService *RpcService) RpcGetUTXO(server rpcpb.RpcService_RpcGetUTXOServe
 	return nil
 }
 
+func (rpcService *RpcService) RpcGetUTXOWithAmount(server rpcpb.RpcService_RpcGetUTXOWithAmountServer) error {
+	bc := rpcService.GetBlockchain()
+	rpcService.mutex.Lock()
+	if rpcService.dbUtxoIndex == nil || rpcService.blockMaxHeight < bc.GetMaxHeight() {
+		rpcService.dbUtxoIndex = lutxo.NewUTXOIndex(bc.GetUtxoCache())
+		rpcService.blockMaxHeight = bc.GetMaxHeight()
+	}
+	rpcService.mutex.Unlock()
+
+	req, err := server.Recv()
+	if err == io.EOF {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	acc := account.NewTransactionAccountByAddress(account.NewAddress(req.Address))
+	if !acc.IsValid() {
+		return status.Error(codes.InvalidArgument, errval.InvalidAddress.Error())
+	}
+	response := rpcpb.GetUTXOResponse{}
+	//TODO Race condition Blockchain update after GetUTXO
+	getHeaderCount := MinUtxoBlockHeaderCount
+	if int(getHeaderCount) < len(rpcService.dynasty.GetProducers()) {
+		getHeaderCount = uint64(len(rpcService.dynasty.GetProducers()))
+	}
+
+	tailHeight := rpcService.GetBlockchain().GetMaxHeight()
+	if getHeaderCount > tailHeight {
+		getHeaderCount = tailHeight
+	}
+
+	for i := uint64(0); i < getHeaderCount; i++ {
+		blk, err := rpcService.GetBlockchain().GetBlockByHeight(tailHeight - uint64(i))
+		if err != nil {
+			break
+		}
+		response.BlockHeaders = append(response.BlockHeaders, blk.GetHeader().ToProto().(*blockpb.BlockHeader))
+	}
+	utxos := rpcService.dbUtxoIndex.GetUTXOsByPubKeyHashWithAmount(acc.GetPubKeyHash(), common.NewAmount(req.Amount))
+	if len(utxos.Indices) == 0 {
+		err := server.Send(&response)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"error": err,
+			}).Error("Server Send Failed!")
+			return err
+		}
+	} else {
+		count := 0
+		for _, utxo := range utxos.Indices {
+			count++
+			response.Utxos = append(response.Utxos, utxo.ToProto().(*utxopb.Utxo))
+			if count%1000 == 0 || count == len(utxos.Indices) {
+				err := server.Send(&response)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"error": err,
+					}).Error("Server Send Failed!")
+					return err
+				}
+				if count != len(utxos.Indices) {
+					_, err = server.Recv()
+					if err == io.EOF {
+						return nil
+					}
+					if err != nil {
+						return err
+					}
+					response = rpcpb.GetUTXOResponse{}
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlocksRequest) (*rpcpb.GetBlocksResponse, error) {
 	result := &rpcpb.GetBlocksResponse{}
 	blk := rpcService.findBlockInRequestHash(in.GetStartBlockHashes())

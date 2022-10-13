@@ -225,6 +225,27 @@ func (utxoCache *UTXOCache) GetUTXOTx(pubKeyHash account.PubKeyHash) *UTXOTx {
 	return &utxoTx
 }
 
+func (utxoCache *UTXOCache) GetUTXOTxWithAmount(pubKeyHash account.PubKeyHash, amount *common.Amount) *UTXOTx {
+	lastUtxokey := utxoCache.getLastUTXOKey(pubKeyHash.String())
+	utxoTx := NewUTXOTx()
+	utxoKey := util.Bytes2str(lastUtxokey)
+	sum := common.NewAmount(0)
+	for utxoKey != "" {
+		utxo, err := utxoCache.GetUtxo(utxoKey)
+		if err != nil {
+			logger.Error("GetUTXOTx:", err)
+			break
+		}
+		utxoTx.Indices[utxoKey] = utxo
+		sum = sum.Add(utxo.Value)
+		if sum.Cmp(amount) >= 0 {
+			break
+		}
+		utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
+	}
+	return &utxoTx
+}
+
 func (utxoCache *UTXOCache) putUTXOToDB(utxo *UTXO) error {
 	utxoBytes, err := proto.Marshal(utxo.ToProto().(*utxopb.Utxo))
 	if err != nil {
@@ -427,7 +448,6 @@ func (utxoCache *UTXOCache) DelStateLog(scStateLogKey string) error {
 	utxoCache.stateLogCache.Remove(scStateLogKey)
 	return nil
 }
-
 
 func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash account.PubKeyHash, amount *common.Amount, utxoTxRemove *UTXOTx) ([]*UTXO, error) {
 	lastUtxokey := utxoCache.getLastUTXOKey(pubKeyHash.String())
