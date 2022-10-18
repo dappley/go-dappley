@@ -409,10 +409,15 @@ func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.Transac
 
 	txPool.addTransaction(txNode)
 
-	for _, key := range txPool.tipOrder {
+	// remove any txs from tip order if they depend on the new tx, and set it as the child of the new tx
+	for i := len(txPool.tipOrder) - 1; i >= 0; i-- { // iterate backwards so that removeFromTipOrder doesn't cause indexing errors
+		key := txPool.tipOrder[i]
 		tipTx := txPool.txs[key].Value
-		if checkDependTxInMap(tipTx, txPool.txs) {
-			txPool.removeFromTipOrder(tipTx.ID)
+		for _, vin := range tipTx.Vin {
+			if bytes.Equal(vin.Txid, txNode.Value.ID) {
+				txPool.removeFromTipOrder(tipTx.ID)
+				txNode.Children[hex.EncodeToString(tipTx.ID)] = tipTx
+			}
 		}
 	}
 
