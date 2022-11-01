@@ -190,6 +190,11 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *lutxo.UTXOI
 	if err := ltransaction.VerifyTransaction(utxoIndex, txNode.Value, 0); err == nil {
 		txPool.insertChildrenIntoSortedWaitlist(txNode)
 		txPool.removeTransaction(txNode)
+	} else if err == errval.TXInputNotFound {
+		// The parent transaction might not have arrived yet, remove the children from tipOrder but keep them in the pool
+		logger.WithError(err).Warn("Transaction Pool: Removing children from tip order")
+		txPool.removeTransactionNodeAndChildrenFromTipOrder(txNode.Value)
+		return nil, nil
 	} else {
 		logger.WithError(err).Warn("Transaction Pool: Pop max tip transaction failed!")
 		txPool.removeTransactionNodeAndChildren(txNode.Value)
@@ -353,6 +358,23 @@ func (txPool *TransactionPool) GetTransactionById(txid []byte) *transaction.Tran
 //Note: this function does not remove the node from tipOrder!
 //todo:delete  node from tipOrder
 func (txPool *TransactionPool) removeTransactionNodeAndChildren(tx *transaction.Transaction) {
+
+	txStack := stack.New()
+	txStack.Push(hex.EncodeToString(tx.ID))
+	for txStack.Len() > 0 {
+		txid := txStack.Pop().(string)
+		currTxNode, ok := txPool.txs[txid]
+		if !ok {
+			continue
+		}
+		for _, child := range currTxNode.Children {
+			txStack.Push(hex.EncodeToString(child.ID))
+		}
+		txPool.removeTransaction(currTxNode)
+	}
+}
+
+func (txPool *TransactionPool) removeTransactionNodeAndChildrenFromTipOrder(tx *transaction.Transaction) {
 
 	txStack := stack.New()
 	txStack.Push(hex.EncodeToString(tx.ID))
