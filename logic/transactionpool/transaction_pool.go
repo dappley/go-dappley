@@ -387,7 +387,7 @@ func (txPool *TransactionPool) removeTransactionNodeAndChildrenFromTipOrder(tx *
 		for _, child := range currTxNode.Children {
 			txStack.Push(hex.EncodeToString(child.ID))
 		}
-		txPool.removeTransaction(currTxNode)
+		txPool.removeFromTipOrder(currTxNode.Value.ID)
 	}
 }
 
