@@ -191,12 +191,11 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *lutxo.UTXOI
 		txPool.insertChildrenIntoSortedWaitlist(txNode)
 		txPool.removeTransaction(txNode)
 	} else if err == errval.TXInputNotFound {
-		// The parent transaction might not have arrived yet, remove the children from tipOrder but keep them in the pool
-		logger.WithError(err).Warn("Transaction Pool: Removing children from tip order")
-		txPool.removeTransactionNodeAndChildrenFromTipOrder(txNode.Value)
+		// The parent transaction might not have arrived yet, skip the transaction. It will be added back to the tip order if its parent is successfully used.
+		logger.WithError(err).Warn("Transaction Pool: Pop max tip transaction failed!")
 		return nil, nil
 	} else {
-		logger.WithError(err).Warn("Transaction Pool: Pop max tip transaction failed!")
+		logger.WithError(err).Warn("Transaction Pool: Pop max tip transaction failed! Removing transaction and children from tx pool...")
 		txPool.removeTransactionNodeAndChildren(txNode.Value)
 		return nil, nil
 	}
@@ -371,23 +370,6 @@ func (txPool *TransactionPool) removeTransactionNodeAndChildren(tx *transaction.
 			txStack.Push(hex.EncodeToString(child.ID))
 		}
 		txPool.removeTransaction(currTxNode)
-	}
-}
-
-func (txPool *TransactionPool) removeTransactionNodeAndChildrenFromTipOrder(tx *transaction.Transaction) {
-
-	txStack := stack.New()
-	txStack.Push(hex.EncodeToString(tx.ID))
-	for txStack.Len() > 0 {
-		txid := txStack.Pop().(string)
-		currTxNode, ok := txPool.txs[txid]
-		if !ok {
-			continue
-		}
-		for _, child := range currTxNode.Children {
-			txStack.Push(hex.EncodeToString(child.ID))
-		}
-		txPool.removeFromTipOrder(currTxNode.Value.ID)
 	}
 }
 
