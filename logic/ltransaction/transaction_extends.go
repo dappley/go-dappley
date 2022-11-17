@@ -471,6 +471,35 @@ func NewUTXOTransaction(txType transaction.TxType, utxos []*utxo.UTXO, sendTxPar
 	return tx, nil
 }
 
+func NewHardCodeTransaction(txType transaction.TxType, utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam) (transaction.Transaction, error) {
+	fromAccount := account.NewTransactionAccountByAddress(sendTxParam.From)
+	toAccount := account.NewTransactionAccountByAddress(sendTxParam.To)
+	sum := transaction.CalculateUtxoSum(utxos)
+	change, err := transaction.CalculateChange(sum, sendTxParam.Amount, sendTxParam.Tip, sendTxParam.GasLimit, sendTxParam.GasPrice)
+	if err != nil {
+		return transaction.Transaction{}, err
+	}
+
+	tx := transaction.Transaction{
+		nil,
+		prepareInputLists(utxos, sendTxParam.SenderKeyPair.GetPublicKey(), nil),
+		prepareOutputListsForHardcode(fromAccount, toAccount, sendTxParam.Amount, change, sendTxParam.Contract),
+		sendTxParam.Tip,
+		sendTxParam.GasLimit,
+		sendTxParam.GasPrice,
+		time.Now().UnixNano() / 1e6,
+		txType,
+	}
+	tx.ID = tx.Hash()
+
+	err = tx.Sign(sendTxParam.SenderKeyPair.GetPrivateKey(), utxos)
+	if err != nil {
+		return transaction.Transaction{}, err
+	}
+
+	return tx, nil
+}
+
 func NewSmartContractDestoryTX(utxos []*utxo.UTXO, contractAddr account.Address, sourceTXID []byte) transaction.Transaction {
 	sum := transaction.CalculateUtxoSum(utxos)
 	tips := common.NewAmount(0)
@@ -540,6 +569,18 @@ func prepareOutputLists(from, to *account.TransactionAccount, amount *common.Amo
 	}
 
 	outputs = append(outputs, *transactionbase.NewTXOutput(amount, toAddr))
+	if !change.IsZero() {
+		outputs = append(outputs, *transactionbase.NewTXOutput(change, from))
+	}
+	return outputs
+}
+
+func prepareOutputListsForHardcode(from, to *account.TransactionAccount, amount *common.Amount, change *common.Amount, contract string) []transactionbase.TXOutput {
+	var outputs []transactionbase.TXOutput
+	toAddr := to
+
+	outputs = append(outputs, *transactionbase.NewTXOutput(amount, toAddr))
+	outputs[0].Contract=contract
 	if !change.IsZero() {
 		outputs = append(outputs, *transactionbase.NewTXOutput(change, from))
 	}

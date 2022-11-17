@@ -32,6 +32,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	lru "github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
+	"github.com/tidwall/gjson"
 )
 
 const (
@@ -107,6 +108,8 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkeyHash string) error {
 				return err
 			}
 		}
+
+		utxoCache.saveHardCodeData(utxo)
 	}
 	err := utxoCache.putLastUTXOKey(pubkeyHash, lastestUtxoKey)
 	if err != nil {
@@ -170,6 +173,9 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkeyHash string) error
 		if err != nil {
 			return err
 		}
+
+		utxoCache.delHardCodeData(utxo)
+
 	}
 	return nil
 }
@@ -486,3 +492,40 @@ func GetscStateKey(address, key string) string {
 func GetscStateLogKey(blockHash hash.Hash) string {
 	return "scLog" + util.Bytes2str(blockHash)
 }
+
+func (utxoCache *UTXOCache) saveHardCodeData(utxo *UTXO)  {
+	scStateKey, value, exist := getScKeyValue(utxo.Contract, utxo.PubKeyHash)
+	if !exist {
+		return
+	}
+	if err := utxoCache.db.Put(scStateKey, value); err != nil {
+		logger.Warn("save hard code data failed: ", err)
+	}
+}
+
+func (utxoCache *UTXOCache) delHardCodeData(utxo *UTXO)  {
+	scStateKey, _, exist := getScKeyValue(utxo.Contract, utxo.PubKeyHash)
+	if !exist {
+		return
+	}
+	if err := utxoCache.db.Del(scStateKey); err != nil {
+		logger.Warn("delete hard code data failed: ", err)
+	}
+}
+
+func getScKeyValue(data string, pubkeyHash account.PubKeyHash) ([]byte, []byte,bool){
+	if !gjson.Valid(data){
+		return nil,nil,false
+	}
+
+	key := gjson.Get(data, "data.key").String()
+	value := gjson.Get(data, "data.value").String()
+	if key==""||value==""{
+		return nil,nil,false
+	}
+
+	address := pubkeyHash.GenerateAddress().String()
+	scStateKey := GetscStateKey(address, key)
+	return util.Str2bytes(scStateKey), util.Str2bytes(value),true
+}
+
