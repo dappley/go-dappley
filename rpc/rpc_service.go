@@ -14,14 +14,12 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
-//
 package rpc
 
 import (
 	"context"
 
 	"io"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -385,10 +383,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 		generatedContractAddress = ltransaction.NewTxContract(tx).GetContractAddress().String()
-	}else{
-		generatedContractAddress =strconv.FormatUint(bc.GetMaxHeight(), 10)
 	}
-
 
 	rpcService.mutex.Lock()
 	if rpcService.utxoIndex == nil || rpcService.blockMaxHeight < bc.GetMaxHeight() {
