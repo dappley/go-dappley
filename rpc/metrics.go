@@ -12,6 +12,7 @@ var(
 		txRequestStats.name:txRequestStats,
 		txRequestFromMinerStats.name:txRequestFromMinerStats,
 	}
+	MetricsInfo string
 )
 
 type ReqStats struct {

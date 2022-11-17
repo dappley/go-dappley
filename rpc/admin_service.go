@@ -20,8 +20,9 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
-	"github.com/dappley/go-dappley/consensus"
 	"sync"
+
+	"github.com/dappley/go-dappley/consensus"
 
 	"time"
 
@@ -55,17 +56,67 @@ func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcp
 	return &rpcpb.AddPeerResponse{}, nil
 }
 
-func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
-	address := in.GetAddress()
-	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(address))
-	if len(address) == 0 || !addressAccount.IsValid() {
-		return nil, status.Error(codes.InvalidArgument, account.ErrInvalidAddress.Error())
-	}
-	err := adminRpcService.dynasty.AddProducer(address)
+func (adminRpcService *AdminRpcService) RpcChangeProducer(ctx context.Context, in *rpcpb.ChangeProducerRequest) (*rpcpb.ChangeProducerResponse, error) {
+
+	addresses := in.GetAddresses()
+	height := in.GetHeight()
+	adminRpcService.mutex.Lock()
+	_, err := logic.SendProducerChangeTX(addresses, height, adminRpcService.bm.Getblockchain())
+	adminRpcService.mutex.Unlock()
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
+		switch err {
+		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		case transaction.ErrInsufficientFund:
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		default:
+			return nil, status.Error(codes.Unknown, err.Error())
+		}
 	}
+
+	logic.ChangeProducers(addresses, height, adminRpcService.bm, 1)
+	return &rpcpb.ChangeProducerResponse{}, nil
+}
+
+func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
+
+	addresses := in.GetAddresses()
+	height := in.GetHeight()
+	adminRpcService.mutex.Lock()
+	_, err := logic.SendProducerAddTX(addresses, height, adminRpcService.bm.Getblockchain())
+	adminRpcService.mutex.Unlock()
+	if err != nil {
+		switch err {
+		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		case transaction.ErrInsufficientFund:
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		default:
+			return nil, status.Error(codes.Unknown, err.Error())
+		}
+	}
+
+	logic.ChangeProducers(addresses, height, adminRpcService.bm, 2)
 	return &rpcpb.AddProducerResponse{}, nil
+}
+
+func (adminRpcService *AdminRpcService) RpcDeleteProducer(ctx context.Context, in *rpcpb.DeleteProducerRequest) (*rpcpb.DeleteProducerResponse, error) {
+	height := in.GetHeight()
+	adminRpcService.mutex.Lock()
+	_, err := logic.SendProducerDeleteTX(height, adminRpcService.bm.Getblockchain())
+	adminRpcService.mutex.Unlock()
+	if err != nil {
+		switch err {
+		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		case transaction.ErrInsufficientFund:
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		default:
+			return nil, status.Error(codes.Unknown, err.Error())
+		}
+	}
+	logic.ChangeProducers("", height, adminRpcService.bm, 3)
+	return &rpcpb.DeleteProducerResponse{}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
@@ -73,15 +124,6 @@ func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *
 	return &rpcpb.GetPeerInfoResponse{
 		PeerList: getPeerInfo(adminRpcService.node),
 	}, nil
-}
-
-//unlock the account through rpc service
-func (adminRpcService *AdminRpcService) RpcUnlockAccount(ctx context.Context, in *rpcpb.UnlockAccountRequest) (*rpcpb.UnlockAccountResponse, error) {
-	err := logic.SetUnLockAccount()
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	return &rpcpb.UnlockAccountResponse{}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in *rpcpb.SendFromMinerRequest) (*rpcpb.SendFromMinerResponse, error) {

@@ -2,11 +2,13 @@ package logMetrics
 
 import (
 	"encoding/json"
-	"github.com/dappley/go-dappley/common/log"
-	"github.com/dappley/go-dappley/logic/blockproducer"
+	"go/build"
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/dappley/go-dappley/common/log"
+	"github.com/dappley/go-dappley/logic/blockproducer"
 
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/logic/transactionpool"
@@ -14,8 +16,8 @@ import (
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
-	"github.com/shirou/gopsutil/net"
 	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/net"
 	"github.com/shirou/gopsutil/process"
 	logger "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -36,7 +38,9 @@ type cpuStat struct {
 }
 
 type diskStat struct {
+	DBUsed      uint64  `json:"dbUsed"`
 	Used        uint64  `json:"used"`
+	UsedChange  uint64  `json:"UsedChange"`
 	UsedPercent float64 `json:"usedPercent"`
 	ReadBytes   uint64  `json:"readBytes"`
 	WriteBytes  uint64  `json:"writeBytes"`
@@ -101,8 +105,23 @@ func getCPUPercent() interface{} {
 	return cpuStat{percentageUsed, cpuTotalPercent, coreNum}
 }
 
+var preUsed uint64
+
 func getDiskStat() interface{} {
-	diskUsage, err := disk.Usage("/")
+	path := build.Default.GOPATH + "/src/github.com/dappley/go-dappley/bin"
+	info, err := os.Lstat(path)
+	if err != nil {
+		logger.Warn(err)
+		return nil
+	}
+	dbused, err := dbDiskUsage(path, info)
+	if err != nil {
+		logger.Warn(err)
+		return nil
+	}
+
+	var diskUsageChange uint64
+	diskUsage, err := disk.Usage(build.Default.GOPATH)
 	if err != nil {
 		logger.Warn(err)
 		return nil
@@ -112,7 +131,41 @@ func getDiskStat() interface{} {
 		logger.Warn(err)
 		return nil
 	}
-	return diskStat{diskUsage.Used, diskUsage.UsedPercent, disk["disk0"].WriteBytes, disk["disk0"].ReadBytes}
+	if preUsed != 0 && diskUsage.Used > preUsed {
+		diskUsageChange = diskUsage.Used - preUsed
+	}
+	preUsed = diskUsage.Used
+	return diskStat{uint64(dbused), diskUsage.Used, diskUsageChange, diskUsage.UsedPercent, disk["disk0"].WriteBytes, disk["disk0"].ReadBytes}
+}
+
+func dbDiskUsage(currentPath string, info os.FileInfo) (int64, error) {
+	size := info.Size()
+	if !info.IsDir() {
+		return size, nil
+	}
+
+	dir, err := os.Open(currentPath)
+	if err != nil {
+		return size, err
+	}
+	defer dir.Close()
+
+	files, err := dir.Readdir(-1)
+	if err != nil {
+		return size, err
+	}
+
+	for _, file := range files {
+		if file.Name() == "." || file.Name() == ".." {
+			continue
+		}
+		currSize, err := dbDiskUsage(currentPath+"/"+file.Name(), file)
+		if err != nil {
+			return size, err
+		}
+		size += currSize
+	}
+	return size, nil
 }
 
 func getTransactionPoolSize() interface{} {
@@ -198,9 +251,12 @@ func NewMetricsInfo() *MetricsInfo {
 	return mi
 }
 
+var mi = NewMetricsInfo()
+
 func LogMetricsInfo(bc *lblockchain.Blockchain) {
-	mi := NewMetricsInfo()
+	blkHeight := bc.GetMaxHeight()
 	interval := viper.GetInt64("metrics.interval")
+
 	go func() {
 		defer log.CrashHandler()
 
@@ -210,11 +266,30 @@ func LogMetricsInfo(bc *lblockchain.Blockchain) {
 			case <-tick.C:
 				mi.Metrics["cpu"] = getCPUPercent()
 				mi.Metrics["memory"] = getMemoryStats()
-				mi.Metrics["disk"] = getDiskStat()
 				mi.Metrics["block"] = getBlockStats(bc)
 				mi.Metrics["txRequest"] = getTxRequestStats()
 				mi.Metrics["network"] = getNetWorkStats()
+				if bc.GetMaxHeight() > blkHeight {
+					mi.Metrics["disk"] = getDiskStat()
+					blkHeight = bc.GetMaxHeight()
+				}
 				logger.WithField("metrics", mi.ToJsonString()).Infof("")
+				rpc.MetricsInfo = mi.ToJsonString()
+			}
+		}
+	}()
+	go func() {
+		defer log.CrashHandler()
+
+		tick := time.NewTicker(time.Duration(1000) * time.Millisecond)
+		for {
+			select {
+			case <-tick.C:
+				if bc.GetMaxHeight() > blkHeight {
+					mi.Metrics["disk"] = getDiskStat()
+					blkHeight = bc.GetMaxHeight()
+				}
+				rpc.MetricsInfo = mi.ToJsonString()
 			}
 		}
 	}()

@@ -30,6 +30,7 @@ import (
 )
 
 const (
+	confDir    = "../storage/fakeFileLoaders/"
 	test_port1 = 20600 + iota
 	test_port2
 	test_port3
@@ -46,17 +47,17 @@ const (
 	test_port14
 )
 
-func initNode(port int, seedPeer networkmodel.PeerInfo, db storage.Storage) (*Node, error) {
-	n := NewNode(db, nil)
+func initNode(port int, seedPeer networkmodel.PeerInfo, fileloader *storage.FileLoader) (*Node, error) {
+	n := NewNode(fileloader, nil)
 	n.GetNetwork().AddSeed(seedPeer)
 	err := n.Start(port, "")
 	return n, err
 }
 
-func initNodeWithConfig(port, connectionInCount, connectionOutCount int, seedPeer networkmodel.PeerInfo, db storage.Storage) (*Node, error) {
+func initNodeWithConfig(port, connectionInCount, connectionOutCount int, seedPeer networkmodel.PeerInfo, fileloader *storage.FileLoader) (*Node, error) {
 
 	config := networkmodel.NewPeerConnectionConfig(connectionOutCount, connectionInCount)
-	n := NewNodeWithConfig(db, config, nil)
+	n := NewNodeWithConfig(fileloader, config, nil)
 
 	n.GetNetwork().AddSeed(seedPeer)
 
@@ -66,12 +67,11 @@ func initNodeWithConfig(port, connectionInCount, connectionOutCount int, seedPee
 
 func TestNetwork_AddStream(t *testing.T) {
 
-	db := storage.NewRamStorage()
-	defer db.Close()
-
+	rfl := storage.NewRamFileLoader(confDir, "test.conf")
+	defer rfl.DeleteFolder()
 	//create node1
 	var emptyPeerInfo networkmodel.PeerInfo
-	n1, err := initNode(test_port1, emptyPeerInfo, db)
+	n1, err := initNode(test_port1, emptyPeerInfo, rfl.File)
 	defer n1.Stop()
 	assert.Nil(t, err)
 
@@ -79,7 +79,7 @@ func TestNetwork_AddStream(t *testing.T) {
 	assert.Len(t, n1.network.GetHost().Network().Peerstore().Peers(), 1)
 
 	//create node2
-	n2, err := initNode(test_port2, emptyPeerInfo, db)
+	n2, err := initNode(test_port2, emptyPeerInfo, rfl.File)
 	defer n2.Stop()
 	assert.Nil(t, err)
 
@@ -91,18 +91,18 @@ func TestNetwork_AddStream(t *testing.T) {
 
 func TestNode_SyncPeers(t *testing.T) {
 
-	db1 := storage.NewRamStorage()
-	defer db1.Close()
+	rfl1 := storage.NewRamFileLoader(confDir, "test1.conf")
+	defer rfl1.DeleteFolder()
 
 	var emptyPeerInfo networkmodel.PeerInfo
-	n1, err := initNode(test_port7, emptyPeerInfo, db1)
+	n1, err := initNode(test_port7, emptyPeerInfo, rfl1.File)
 	defer n1.Stop()
 	assert.Nil(t, err)
 
 	//create node 2 and add node1 as a peer
-	db2 := storage.NewRamStorage()
-	defer db2.Close()
-	n2, err := initNode(test_port8, n1.GetHostPeerInfo(), db2)
+	rfl2 := storage.NewRamFileLoader(confDir, "test2.conf")
+	defer rfl2.DeleteFolder()
+	n2, err := initNode(test_port8, n1.GetHostPeerInfo(), rfl2.File)
 	defer n2.Stop()
 	assert.Nil(t, err)
 
@@ -112,9 +112,9 @@ func TestNode_SyncPeers(t *testing.T) {
 	}, 1)
 
 	//create node 3 and add node1 as a peer
-	db3 := storage.NewRamStorage()
-	defer db3.Close()
-	n3, err := initNode(test_port9, n1.GetHostPeerInfo(), db3)
+	rfl3 := storage.NewRamFileLoader(confDir, "test3.conf")
+	defer rfl3.DeleteFolder()
+	n3, err := initNode(test_port9, n1.GetHostPeerInfo(), rfl3.File)
 	defer n3.Stop()
 	assert.Nil(t, err)
 
@@ -138,17 +138,17 @@ func TestNode_ConnectionFull(t *testing.T) {
 
 	logrus.SetLevel(logrus.InfoLevel)
 
-	db1 := storage.NewRamStorage()
-	defer db1.Close()
+	rfl1 := storage.NewRamFileLoader(confDir, "test1.conf")
+	defer rfl1.DeleteFolder()
 
-	n1, err := initNodeWithConfig(test_port10, 2, 2, networkmodel.PeerInfo{}, db1)
+	n1, err := initNodeWithConfig(test_port10, 2, 2, networkmodel.PeerInfo{}, rfl1.File)
 	defer n1.Stop()
 	assert.Nil(t, err)
 
 	//create node 2 and add node1 as a peer
-	db2 := storage.NewRamStorage()
-	defer db2.Close()
-	n2, err := initNodeWithConfig(test_port11, 2, 2, n1.GetHostPeerInfo(), db2)
+	rfl2 := storage.NewRamFileLoader(confDir, "test2.conf")
+	defer rfl2.DeleteFolder()
+	n2, err := initNodeWithConfig(test_port11, 2, 2, n1.GetHostPeerInfo(), rfl2.File)
 	defer n2.Stop()
 	assert.Nil(t, err)
 
@@ -162,9 +162,9 @@ func TestNode_ConnectionFull(t *testing.T) {
 	assert.Equal(t, 1, n2.GetNetwork().streamManager.connectionManager.connectionOutCount)
 
 	//create node 3 and add node1 as a peer
-	db3 := storage.NewRamStorage()
-	defer db3.Close()
-	n3, err := initNodeWithConfig(test_port12, 2, 2, n2.GetHostPeerInfo(), db3)
+	rfl3 := storage.NewRamFileLoader(confDir, "test3.conf")
+	defer rfl3.DeleteFolder()
+	n3, err := initNodeWithConfig(test_port12, 2, 2, n2.GetHostPeerInfo(), rfl3.File)
 	defer n3.Stop()
 	assert.Nil(t, err)
 
@@ -181,9 +181,9 @@ func TestNode_ConnectionFull(t *testing.T) {
 	assert.Equal(t, 2, n3.GetNetwork().streamManager.connectionManager.connectionOutCount)
 
 	//create node 4 and add node1 as a peer.
-	db4 := storage.NewRamStorage()
-	defer db4.Close()
-	n4, err := initNodeWithConfig(test_port13, 2, 2, n1.GetHostPeerInfo(), db4)
+	rfl4 := storage.NewRamFileLoader(confDir, "test4.conf")
+	defer rfl4.DeleteFolder()
+	n4, err := initNodeWithConfig(test_port13, 2, 2, n1.GetHostPeerInfo(), rfl4.File)
 	defer n4.Stop()
 	assert.Nil(t, err)
 

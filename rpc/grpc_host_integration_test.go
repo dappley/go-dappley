@@ -23,6 +23,7 @@ package rpc
 import (
 	"errors"
 	"fmt"
+
 	"github.com/dappley/go-dappley/common/deadline"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core/block"
@@ -31,11 +32,14 @@ import (
 	blockchainMock "github.com/dappley/go-dappley/logic/lblockchain/mocks"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 
+	"testing"
+	"time"
+
 	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/core/utxo/pb"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
+	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/blockproducer"
 	"github.com/dappley/go-dappley/logic/blockproducer/mocks"
 	"github.com/dappley/go-dappley/logic/lblock"
@@ -43,8 +47,6 @@ import (
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 	"github.com/stretchr/testify/mock"
-	"testing"
-	"time"
 
 	"github.com/dappley/go-dappley/util"
 
@@ -53,9 +55,8 @@ import (
 
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/rpc/pb"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/vm"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
@@ -83,8 +84,11 @@ func CreateProducer(producerAddr, addr account.Address, db storage.Storage, txPo
 	libPolicy.On("IsBypassingLibCheck").Return(true)
 	consensus := &blockchainMock.Consensus{}
 	consensus.On("Validate", mock.Anything).Return(true)
+	consensus.On("ChangeDynasty", mock.Anything).Return(true)
+	consensus.On("SetDynasty", mock.Anything).Return(true)
+	consensus.On("AddReplacement", mock.Anything).Return(true)
 
-	bc := lblockchain.CreateBlockchain(addr, db, libPolicy, txPool, vm.NewV8EngineManager(account.Address{}), 100000)
+	bc := lblockchain.CreateBlockchain(addr, db, libPolicy, txPool, 100000)
 	bm := lblockchain.NewBlockchainManager(bc, blockchain.NewBlockPool(nil), node, consensus)
 
 	bpConsensus := &mocks.Consensus{}
@@ -101,6 +105,82 @@ func CreateProducer(producerAddr, addr account.Address, db storage.Storage, txPo
 
 	blockproducer := blockproducer.NewBlockProducer(bm, bpConsensus, producer)
 	return bm, blockproducer
+}
+
+func (context *RpcTestContext) destroyContext() {
+	if context.rpcServer != nil {
+		context.rpcServer.Stop()
+	}
+
+	if context.store != nil {
+		context.store.Close()
+	}
+}
+
+func getBalance(utxos []*utxopb.Utxo) *common.Amount {
+	amount := common.NewAmount(0)
+	for _, utxo := range utxos {
+		amount = amount.Add(common.NewAmountFromBytes(utxo.Amount))
+	}
+	return amount
+}
+
+func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
+	context := RpcTestContext{}
+	context.store = storage.NewRamStorage()
+	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
+	defer rfl.DeleteFolder()
+	// Create accounts
+	acc, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
+	if err != nil {
+		context.destroyContext()
+		panic(err)
+	}
+	context.account = acc
+
+	context.node = network.FakeNodeWithPidAndAddr(rfl.File, "a", "b")
+	context.bm, context.bp = CreateProducer(
+		acc.GetAddress(),
+		acc.GetAddress(),
+		context.store,
+		transactionpool.NewTransactionPool(context.node, 128000),
+		context.node,
+	)
+
+	// Start a grpc server
+	dpos := consensus.NewDPOS(nil)
+	dpos.SetDynasty(consensus.NewDynasty(nil, 5, 15))
+	context.rpcServer = NewGrpcServer(context.node, context.bm, dpos, "temp")
+	context.serverPort = defaultRpcPort + startPortOffset // use a different port as other integration tests
+	context.rpcServer.Start(context.serverPort)
+	logic.RemoveAccountTestFile()
+	return &context, nil
+}
+
+func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) ([]*utxo.UTXO, error) {
+	if tip != nil {
+		amount = amount.Add(tip)
+	}
+	if gasLimit != nil {
+		limitedFee := gasLimit.Mul(gasPrice)
+		amount = amount.Add(limitedFee)
+	}
+	var retUtxos []*utxo.UTXO
+	sum := common.NewAmount(0)
+	for _, u := range inputUTXOs {
+		sum = sum.Add(u.Value)
+		retUtxos = append(retUtxos, u)
+		if sum.Cmp(amount) >= 0 {
+			break
+		}
+	}
+
+	if sum.Cmp(amount) < 0 {
+		//return nil, "ErrInsufficientFund"
+		return nil, errors.New("cli: the balance is insufficient")
+	}
+
+	return retUtxos, nil
 }
 
 func TestServer_StartRPC(t *testing.T) {
@@ -131,7 +211,8 @@ func TestRpcSend(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-
+	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
+	defer rfl.DeleteFolder()
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
@@ -145,7 +226,7 @@ func TestRpcSend(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
+	node := network.FakeNodeWithPidAndAddr(rfl.File, "a", "b")
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
 	bm, bp := CreateProducer(
@@ -214,6 +295,8 @@ func TestRpcSendContract(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
+	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
+	defer rfl.DeleteFolder()
 
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
@@ -226,7 +309,7 @@ func TestRpcSendContract(t *testing.T) {
 		panic(err)
 	}
 
-	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
+	node := network.FakeNodeWithPidAndAddr(rfl.File, "a", "b")
 	bm, bp := CreateProducer(
 		minerAccount.GetAddress(),
 		senderAccount.GetAddress(),
@@ -399,7 +482,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	senderResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: rpcContext.account.GetAddress().String()})
+	senderResponse, err := logic.GetUtxoStream(c, &rpcpb.GetUTXORequest{Address: rpcContext.account.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, senderResponse)
 	minedReward := transaction.Subsidy
@@ -410,7 +493,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	assert.Equal(t, int(MinUtxoBlockHeaderCount), len(senderResponse.BlockHeaders))
 	assert.Equal(t, []byte(tailBlock.GetHash()), senderResponse.BlockHeaders[0].GetHash())
 
-	receiverResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: receiverAccount.GetAddress().String()})
+	receiverResponse, err := logic.GetUtxoStream(c, &rpcpb.GetUTXORequest{Address: receiverAccount.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, receiverResponse)
 	assert.Equal(t, common.NewAmount(6), getBalance(receiverResponse.Utxos))
@@ -583,32 +666,6 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	assert.Equal(t, lblockchain.ErrBlockDoesNotExist.Error(), status.Convert(err).Message())
 }
 
-func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) ([]*utxo.UTXO, error) {
-	if tip != nil {
-		amount = amount.Add(tip)
-	}
-	if gasLimit != nil {
-		limitedFee := gasLimit.Mul(gasPrice)
-		amount = amount.Add(limitedFee)
-	}
-	var retUtxos []*utxo.UTXO
-	sum := common.NewAmount(0)
-	for _, u := range inputUTXOs {
-		sum = sum.Add(u.Value)
-		retUtxos = append(retUtxos, u)
-		if sum.Cmp(amount) >= 0 {
-			break
-		}
-	}
-
-	if sum.Cmp(amount) < 0 {
-		//return nil, "ErrInsufficientFund"
-		return nil, errors.New("cli: the balance is insufficient")
-	}
-
-	return retUtxos, nil
-}
-
 func TestRpcVerifyTransaction(t *testing.T) {
 	rpcContext, err := createRpcTestContext(18)
 	defer rpcContext.destroyContext()
@@ -624,10 +681,11 @@ func TestRpcVerifyTransaction(t *testing.T) {
 		panic(err)
 	}
 	//
-	gctx, err := ltransaction.NewGasChangeTx(account.NewTransactionAccountByAddress(fromAcc.GetAddress()), 0, common.NewAmount(uint64(0)), common.NewAmount(uint64(3000)), common.NewAmount(uint64(1)), 1)
 	utxoIndex := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache())
-	utxoIndex.UpdateUtxo(&gctx)
-	utxoIndex.Save()
+	if gctx, exists := ltransaction.NewGasChangeTx(account.NewTransactionAccountByAddress(fromAcc.GetAddress()), 0, common.NewAmount(uint64(0)), common.NewAmount(uint64(3000)), common.NewAmount(uint64(1)), 1);exists{
+		utxoIndex.UpdateUtxo(&gctx)
+		utxoIndex.Save()
+	}
 	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
@@ -635,7 +693,7 @@ func TestRpcVerifyTransaction(t *testing.T) {
 	}
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
-	senderResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
+	senderResponse, err := logic.GetUtxoStream(c, &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, senderResponse)
 
@@ -659,7 +717,7 @@ func TestRpcVerifyTransaction(t *testing.T) {
 	}
 	sendTxParam := transaction.NewSendTxParam(fromAcc.GetAddress(), fromAcc.GetKeyPair(),
 		toAcc.GetAddress(), common.NewAmount(3000), tip, gasLimit, gasPrice, "")
-	tx, err := ltransaction.NewUTXOTransaction(tx_utxos, sendTxParam)
+	tx, err := ltransaction.NewNormalUTXOTransaction(tx_utxos, sendTxParam)
 	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(context.Background(), sendTransactionRequest)
 	rpcContext.bp.Start()
@@ -672,12 +730,13 @@ func TestRpcVerifyTransaction(t *testing.T) {
 		return !rpcContext.bp.IsProducingBlock()
 	}, 20)
 	//send second transaction
-	gctx2, err := ltransaction.NewGasChangeTx(account.NewTransactionAccountByAddress(fromAcc.GetAddress()), 0, common.NewAmount(uint64(0)), common.NewAmount(uint64(1000)), common.NewAmount(uint64(1)), 1)
 	utxoIndex = lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache())
-	utxoIndex.UpdateUtxo(&gctx2)
-	utxoIndex.Save()
+	if gctx2, exists := ltransaction.NewGasChangeTx(account.NewTransactionAccountByAddress(fromAcc.GetAddress()), 0, common.NewAmount(uint64(0)), common.NewAmount(uint64(1000)), common.NewAmount(uint64(1)), 1); exists {
+		utxoIndex.UpdateUtxo(&gctx2)
+		utxoIndex.Save()
+	}
 	rpcContext.bm.Getblockchain()
-	senderResponse2, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
+	senderResponse2, err := logic.GetUtxoStream(c, &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, senderResponse2)
 
@@ -698,7 +757,7 @@ func TestRpcVerifyTransaction(t *testing.T) {
 	}
 	sendTxParam2 := transaction.NewSendTxParam(fromAcc.GetAddress(), fromAcc.GetKeyPair(),
 		toAcc.GetAddress(), common.NewAmount(1000), tip, gasLimit, gasPrice, "")
-	txTmp, err := ltransaction.NewUTXOTransaction(tx_utxos2, sendTxParam2)
+	txTmp, err := ltransaction.NewNormalUTXOTransaction(tx_utxos2, sendTxParam2)
 	sendTransactionRequest2 := &rpcpb.SendTransactionRequest{Transaction: txTmp.ToProto().(*transactionpb.Transaction)}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(context.Background(), sendTransactionRequest2)
 	assert.Nil(t, err)
@@ -732,7 +791,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	c := rpcpb.NewRpcServiceClient(conn)
 
 	pubKeyHash := rpcContext.account.GetPubKeyHash()
-	utxos, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
+	utxos, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsAccordingToAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
 	sendTxParam := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
@@ -743,7 +802,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
-	tx, err := ltransaction.NewUTXOTransaction(utxos, sendTxParam)
+	tx, err := ltransaction.NewNormalUTXOTransaction(utxos, sendTxParam)
 	successResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)})
 	assert.Nil(t, err)
 	assert.NotNil(t, successResponse)
@@ -752,7 +811,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	for (rpcContext.bm.Getblockchain().GetMaxHeight() - maxHeight) < 2 {
 	}
 
-	utxos2, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
+	utxos2, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsAccordingToAmount(pubKeyHash, common.NewAmount(6))
 	sendTxParam2 := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
 		rpcContext.account.GetKeyPair(),
 		receiverAccount.GetAddress(),
@@ -761,7 +820,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
-	errTransaction, err := ltransaction.NewUTXOTransaction(utxos2, sendTxParam2)
+	errTransaction, err := ltransaction.NewNormalUTXOTransaction(utxos2, sendTxParam2)
 	errTransaction.Vin[0].Signature = []byte("invalid")
 	failedResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: errTransaction.ToProto().(*transactionpb.Transaction)})
 	assert.Nil(t, failedResponse)
@@ -825,7 +884,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 
 	pubKeyHash := rpcContext.account.GetPubKeyHash()
 	utxoIndex := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache())
-	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
+	utxos, err := utxoIndex.GetUTXOsAccordingToAmount(pubKeyHash, common.NewAmount(3))
 	assert.Nil(t, err)
 
 	sendTxParam1 := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
@@ -836,9 +895,9 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
-	transaction1, err := ltransaction.NewUTXOTransaction(utxos, sendTxParam1)
+	transaction1, err := ltransaction.NewNormalUTXOTransaction(utxos, sendTxParam1)
 	utxoIndex.UpdateUtxos([]*transaction.Transaction{&transaction1})
-	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(2))
+	utxos, err = utxoIndex.GetUTXOsAccordingToAmount(pubKeyHash, common.NewAmount(2))
 	sendTxParam2 := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
 		rpcContext.account.GetKeyPair(),
 		receiverAccount2.GetAddress(),
@@ -847,10 +906,10 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
-	transaction2, err := ltransaction.NewUTXOTransaction(utxos, sendTxParam2)
+	transaction2, err := ltransaction.NewNormalUTXOTransaction(utxos, sendTxParam2)
 	utxoIndex.UpdateUtxos([]*transaction.Transaction{&transaction2})
 	pubKeyHash1 := receiverAccount1.GetPubKeyHash()
-	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash1, common.NewAmount(1))
+	utxos, err = utxoIndex.GetUTXOsAccordingToAmount(pubKeyHash1, common.NewAmount(1))
 	sendTxParam3 := transaction.NewSendTxParam(receiverAccount1.GetAddress(),
 		receiverAccount1.GetKeyPair(),
 		receiverAccount2.GetAddress(),
@@ -859,7 +918,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
-	transaction3, err := ltransaction.NewUTXOTransaction(utxos, sendTxParam3)
+	transaction3, err := ltransaction.NewNormalUTXOTransaction(utxos, sendTxParam3)
 	utxoIndex.UpdateUtxos([]*transaction.Transaction{&transaction3})
 
 	rpcContext.bp.Stop()
@@ -876,7 +935,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	rpcContext.bp.Stop()
 	time.Sleep(time.Second)
 
-	utxos2, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
+	utxos2, err := utxoIndex.GetUTXOsAccordingToAmount(pubKeyHash, common.NewAmount(3))
 	sendTxParamErr := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
 		rpcContext.account.GetKeyPair(),
 		receiverAccount4.GetAddress(),
@@ -885,7 +944,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
-	errTransaction, err := ltransaction.NewUTXOTransaction(utxos2, sendTxParamErr)
+	errTransaction, err := ltransaction.NewNormalUTXOTransaction(utxos2, sendTxParamErr)
 
 	sendTxParam4 := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
 		rpcContext.account.GetKeyPair(),
@@ -895,7 +954,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
-	transaction4, err := ltransaction.NewUTXOTransaction(utxos2, sendTxParam4)
+	transaction4, err := ltransaction.NewNormalUTXOTransaction(utxos2, sendTxParam4)
 	errTransaction.Vin[0].Signature = []byte("invalid")
 	failedResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transactions: []*transactionpb.Transaction{errTransaction.ToProto().(*transactionpb.Transaction), transaction4.ToProto().(*transactionpb.Transaction)}})
 	assert.Nil(t, failedResponse)
@@ -1051,7 +1110,7 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 
 	// generate new transaction
 	pubKeyHash := rpcContext.account.GetPubKeyHash()
-	utxos, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
+	utxos, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsAccordingToAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
 	sendTxParam := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
@@ -1062,7 +1121,7 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
-	transaction, err := ltransaction.NewUTXOTransaction(utxos, sendTxParam)
+	transaction, err := ltransaction.NewNormalUTXOTransaction(utxos, sendTxParam)
 	// put a tx into txpool
 	c1.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: transaction.ToProto().(*transactionpb.Transaction)})
 
@@ -1216,61 +1275,13 @@ func TestRpcGetLastIrreversibleBlock(t *testing.T) {
 
 }
 
-func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
-	context := RpcTestContext{}
-	context.store = storage.NewRamStorage()
-
-	// Create accounts
-	acc, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
-	if err != nil {
-		context.destroyContext()
-		panic(err)
-	}
-	context.account = acc
-
-	context.node = network.FakeNodeWithPidAndAddr(context.store, "a", "b")
-	context.bm, context.bp = CreateProducer(
-		acc.GetAddress(),
-		acc.GetAddress(),
-		context.store,
-		transactionpool.NewTransactionPool(context.node, 128000),
-		context.node,
-	)
-
-	// Start a grpc server
-	dpos := consensus.NewDPOS(nil)
-	dpos.SetDynasty(consensus.NewDynasty(nil, 5, 15))
-	context.rpcServer = NewGrpcServer(context.node, context.bm, dpos, "temp")
-	context.serverPort = defaultRpcPort + startPortOffset // use a different port as other integration tests
-	context.rpcServer.Start(context.serverPort)
-	logic.RemoveAccountTestFile()
-	return &context, nil
-}
-
-func (context *RpcTestContext) destroyContext() {
-	if context.rpcServer != nil {
-		context.rpcServer.Stop()
-	}
-
-	if context.store != nil {
-		context.store.Close()
-	}
-}
-
-func getBalance(utxos []*utxopb.Utxo) *common.Amount {
-	amount := common.NewAmount(0)
-	for _, utxo := range utxos {
-		amount = amount.Add(common.NewAmountFromBytes(utxo.Amount))
-	}
-	return amount
-}
-
 func TestRpcService_RpcEstimateGas(t *testing.T) {
 	logger.SetLevel(logger.WarnLevel)
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-
+	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
+	defer rfl.DeleteFolder()
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
@@ -1283,7 +1294,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	}
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
+	node := network.FakeNodeWithPidAndAddr(rfl.File, "a", "b")
 	bm, bp := CreateProducer(
 		minerAccount.GetAddress(),
 		senderAccount.GetAddress(),
@@ -1336,7 +1347,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	// estimate contract
 	contract = "{\"function\":\"record\",\"args\":[\"damnkW1X8KtnDLoKErLzAgaBtXDZKRywfF\",\"2000\"]}"
 	pubKeyHash := senderAccount.GetPubKeyHash()
-	utxos, err := lutxo.NewUTXOIndex(bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(1))
+	utxos, err := lutxo.NewUTXOIndex(bm.Getblockchain().GetUtxoCache()).GetUTXOsAccordingToAmount(pubKeyHash, common.NewAmount(1))
 	sendTxParam := transaction.NewSendTxParam(senderAccount.GetAddress(),
 		senderAccount.GetKeyPair(),
 		account.NewAddress(contractAddr),
@@ -1345,7 +1356,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		contract)
-	tx, err := ltransaction.NewUTXOTransaction(utxos, sendTxParam)
+	tx, err := ltransaction.NewNormalUTXOTransaction(utxos, sendTxParam)
 	estimateGasRequest := &rpcpb.EstimateGasRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
 	gasResp, err := rpcClient.RpcEstimateGas(context.Background(), estimateGasRequest)
 	assert.Nil(t, err)
@@ -1362,7 +1373,8 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-
+	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
+	defer rfl.DeleteFolder()
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
@@ -1374,7 +1386,7 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 		panic(err)
 	}
 
-	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
+	node := network.FakeNodeWithPidAndAddr(rfl.File, "a", "b")
 	bm, bp := CreateProducer(
 		minerAccount.GetAddress(),
 		senderAccount.GetAddress(),
@@ -1422,7 +1434,8 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-
+	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
+	defer rfl.DeleteFolder()
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
@@ -1435,7 +1448,7 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 	}
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
+	node := network.FakeNodeWithPidAndAddr(rfl.File, "a", "b")
 	bm, bp := CreateProducer(
 		minerAccount.GetAddress(),
 		senderAccount.GetAddress(),
@@ -1461,8 +1474,7 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 	rpcClient := rpcpb.NewRpcServiceClient(conn)
 
 	// deploy contract
-	contract := "'use strict';var VideoSign=function(){};VideoSign.prototype={put_sign:function(key,value){LocalStorage.set(key,value)},get_sign:function(key){return LocalStorage.get(key)}," +
-		"dapp_schedule:function(){}};module.exports=new VideoSign();"
+	contract := "'use strict';var VideoSign=function(){};VideoSign.prototype={put_sign:function(key,value){LocalStorage.set(key,value)},get_sign:function(key){return LocalStorage.get(key)}};module.exports=new VideoSign();"
 	// Initiate a RPC send request
 	sendResp, err := c.RpcSend(context.Background(), &rpcpb.SendRequest{
 		From:        senderAccount.GetAddress().String(),
@@ -1505,22 +1517,16 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 	bp.Start()
 	for bm.Getblockchain().GetMaxHeight() < maxHeight+2 {
 	}
+	println("=========================================")
+	println(bm.Getblockchain().GetMaxHeight())
 	bp.Stop()
 
 	// send query request
 	queryRequest := &rpcpb.ContractQueryRequest{ContractAddr: contractAddr, Key: key}
 	queryResp, err := rpcClient.RpcContractQuery(context.Background(), queryRequest)
 	assert.Nil(t, err)
-
-	assert.Equal(t, key, queryResp.Key, "RpcContractQuery get key failed")
-	assert.Equal(t, value, queryResp.Value, "RpcContractQuery get value failed")
-
-	queryRequest = &rpcpb.ContractQueryRequest{ContractAddr: contractAddr, Value: value}
-	queryResp, err = rpcClient.RpcContractQuery(context.Background(), queryRequest)
-	assert.Nil(t, err)
-
-	assert.Equal(t, key, queryResp.Key, "RpcContractQuery get key failed")
-	assert.Equal(t, value, queryResp.Value, "RpcContractQuery get value failed")
+	assert.Equal(t, key, queryResp.GetKey(), "RpcContractQuery get key failed")
+	assert.Equal(t, "\"abc\"", queryResp.GetValue(), "RpcContractQuery get value failed")
 
 	logic.RemoveAccountTestFile()
 }

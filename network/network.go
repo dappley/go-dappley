@@ -1,8 +1,10 @@
 package network
 
 import (
-	"github.com/dappley/go-dappley/common/log"
 	"time"
+
+	"github.com/dappley/go-dappley/common/log"
+	"github.com/dappley/go-dappley/storage"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -25,7 +27,7 @@ type NetworkContext struct {
 	netService            NetService
 	config                networkmodel.PeerConnectionConfig
 	streamMsgDispatcherCh chan *networkmodel.DappPacketContext
-	db                    Storage
+	peerInfoConf          *storage.FileLoader
 	onStreamStopCb        OnStreamCbFunc
 	seeds                 []string
 }
@@ -43,7 +45,7 @@ func NewNetwork(netContext *NetworkContext) *Network {
 
 	net.recentlyRcvdDapMsgs, err = lru.New(10240)
 	net.streamManager = NewStreamManager(netContext.config, net.streamMsgRcvCh, net.onStreamStop, net.onStreamConnected)
-	net.peerManager = NewPeerManager(netContext.netService, netContext.db, net.onPeerListReceived, netContext.seeds)
+	net.peerManager = NewPeerManager(netContext.netService, netContext.peerInfoConf, net.onPeerListReceived, netContext.seeds)
 
 	if err != nil {
 		logger.WithError(err).Panic("Network: Can not initialize lru cache for recentlyRcvdDapMsgs!")

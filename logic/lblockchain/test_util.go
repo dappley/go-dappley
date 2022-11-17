@@ -15,7 +15,7 @@ import (
 )
 
 func PrepareBlockContext(bc *Blockchain, blk *block.Block) *BlockContext {
-	state := scState.LoadScStateFromDatabase(bc.GetDb())
+	state := scState.NewScState(bc.GetUtxoCache())
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxos(blk.GetTransactions())
 	ctx := BlockContext{Block: blk, UtxoIndex: utxoIndex, State: state}
@@ -30,7 +30,7 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 	libPolicy.On("GetProducers").Return(nil)
 	libPolicy.On("GetMinConfirmationNum").Return(6)
 	libPolicy.On("IsBypassingLibCheck").Return(true)
-	bc := CreateBlockchain(addr, s, libPolicy, transactionpool.NewTransactionPool(nil, 128000), nil, 100000)
+	bc := CreateBlockchain(addr, s, libPolicy, transactionpool.NewTransactionPool(nil, 128000), 100000)
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()

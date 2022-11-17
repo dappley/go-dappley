@@ -20,8 +20,9 @@ package trie
 
 import (
 	"errors"
+	"strconv"
 
-	"github.com/dappley/go-dappley/common/trie/pb"
+	triepb "github.com/dappley/go-dappley/common/trie/pb"
 	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/storage"
 	proto "github.com/golang/protobuf/proto"
@@ -108,7 +109,7 @@ func (n *node) Type() (ty, error) {
 		}
 		return ty(n.Val[0][0]), nil
 	default:
-		return unknown, errors.New("wrong node value, expect [16][]byte or [3][]byte, get [" + string(len(n.Val)) + "][]byte")
+		return unknown, errors.New("wrong node value, expect [16][]byte or [3][]byte, get [" + strconv.Itoa(len(n.Val)) + "][]byte")
 	}
 }
 

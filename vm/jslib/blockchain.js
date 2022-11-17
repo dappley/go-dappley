@@ -19,13 +19,8 @@ Blockchain.prototype = {
     getCurrBlockHeight: function () {
         return this.nativeBlockchain.getCurrBlockHeight();
     },
-    getNodeAddress: function () {
-        return this.nativeBlockchain.getNodeAddress();
-    },
     deleteContract : function(){
         return this.nativeBlockchain.deleteContract();
-    },
-    dapp_schedule: function () {
     }
 };
 module.exports = new Blockchain();

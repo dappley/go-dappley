@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"reflect"
 
+	"github.com/dappley/go-dappley/storage"
+
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/ltransaction"
@@ -104,7 +106,7 @@ func VerifyHash(b *block.Block) bool {
 	return bytes.Compare(b.GetHash(), CalculateHash(b)) == 0
 }
 
-func VerifyTransactions(b *block.Block, utxoIndex *lutxo.UTXOIndex, scState *scState.ScState, parentBlk *block.Block) bool {
+func VerifyTransactions(b *block.Block, utxoIndex *lutxo.UTXOIndex, contractState *scState.ScState, parentBlk *block.Block, db storage.Storage) bool {
 	if len(b.GetTransactions()) == 0 {
 		logger.WithFields(logger.Fields{
 			"hash":   b.GetHash(),
@@ -126,7 +128,6 @@ func VerifyTransactions(b *block.Block, utxoIndex *lutxo.UTXOIndex, scState *scS
 
 	scEngine := vm.NewV8Engine()
 	defer scEngine.DestroyEngine()
-
 L:
 	for _, tx := range b.GetTransactions() {
 		totalTip = totalTip.Add(tx.Tip)
@@ -141,17 +142,27 @@ L:
 				return false
 			}
 			rewardTX = tx
-			utxoIndex.UpdateUtxo(tx)
+			if !utxoIndex.UpdateUtxo(tx) {
+				logger.Warn("VerifyTransactions warn")
+			}
 			continue L
 		}
 		if adaptedTx.IsContractSend() {
 			originContractGenTxs = append(originContractGenTxs, tx)
 		}
 
+		if err := ltransaction.VerifyTransaction(utxoIndex, tx, b.GetHeight()); err != nil {
+			logger.WithFields(logger.Fields{
+				"hash":   b.GetHash(),
+				"height": b.GetHeight(),
+			}).Warn(err.Error())
+			return false
+		}
+
 		ctx := ltransaction.NewTxContract(tx)
 		if ctx != nil {
 			// Run the contract and collect generated transactions
-			gasCount, generatedTxs, err := ltransaction.VerifyContractTransaction(utxoIndex, ctx, scState, scEngine, b.GetHeight(), parentBlk, rewards)
+			gasCount, generatedTxs, err := ltransaction.VerifyAndCollectContractOutput(utxoIndex, ctx, contractState, scEngine, b.GetHeight(), parentBlk, rewards, db)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"hash":   b.GetHash(),
@@ -173,7 +184,9 @@ L:
 				}).Warn(err.Error())
 				return false
 			}
-			utxoIndex.UpdateUtxo(tx)
+			if !utxoIndex.UpdateUtxo(tx) {
+				logger.Warn("VerifyTransactions warn.")
+			}
 		}
 		if adaptedTx.IsCoinbase() {
 			if coinbaseTx != nil {

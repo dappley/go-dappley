@@ -50,6 +50,10 @@ func (ms *MetricsService) init() *MetricsService {
 	return ms
 }
 
+func (ms *MetricsService) RpcGetMetricsInfo(ctx context.Context, request *rpcpb.MetricsServiceRequest) (*rpcpb.GetMetricsInfoResponse, error) {
+	return &rpcpb.GetMetricsInfoResponse{Data: MetricsInfo}, nil
+}
+
 func (ms *MetricsService) RpcGetStats(ctx context.Context, request *rpcpb.MetricsServiceRequest) (*rpcpb.GetStatsResponse, error) {
 	return &rpcpb.GetStatsResponse{
 		Stats: &metricspb.Metrics{

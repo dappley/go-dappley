@@ -20,11 +20,13 @@ package consensus
 
 import (
 	"bytes"
-	"github.com/dappley/go-dappley/common/deadline"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/golang-lru"
+	"github.com/dappley/go-dappley/common/deadline"
+	"github.com/dappley/go-dappley/config"
+
+	lru "github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/core/blockproducerinfo"
@@ -48,6 +50,8 @@ type DPOS struct {
 	dynasty         *Dynasty
 	slot            *lru.Cache
 	lastProduceTime int64
+	replacement     []*DynastyReplacement
+	filePath        string
 }
 
 //NewDPOS returns a new DPOS instance
@@ -63,6 +67,11 @@ func NewDPOS(producer *blockproducerinfo.BlockProducerInfo) *DPOS {
 	}
 	dpos.slot = slot
 	return dpos
+}
+
+//SetFilePath sets the path
+func (dpos *DPOS) SetFilePath(path string) {
+	dpos.filePath = path
 }
 
 //SetKey sets the producer key
@@ -260,4 +269,60 @@ func (dpos *DPOS) IsBypassingLibCheck() bool {
 //GetTotalProducersNum returns the total number of producers
 func (dpos *DPOS) GetTotalProducersNum() int {
 	return dpos.dynasty.maxProducers
+}
+
+func (dpos *DPOS) ChangeDynasty(height uint64) {
+	for _, r := range dpos.replacement {
+		if height == r.height {
+			newProducers := dpos.dynasty.producers
+		l:
+			for i := 0; i < len(newProducers); i++ {
+				if newProducers[i] == r.original {
+					if r.kind == 1 {
+						for _, o := range newProducers {
+							if o == r.new {
+								continue l
+							}
+						}
+						newProducers[i] = r.new
+						logger.Info("DPOS: Dynasty change ", r.original, " -> ", r.new)
+					} else if r.kind == 2 {
+						for _, o := range newProducers {
+							if o == r.new {
+								continue l
+							}
+						}
+						newProducers = append(newProducers, r.new)
+						logger.Info("DPOS: Dynasty add ", " -> ", r.new)
+					} else if r.kind == 3 {
+						newProducers = append(newProducers[:i], newProducers[i+1:]...)
+						logger.Info("DPOS: Dynasty delete ", " -> ", r.original)
+					}
+				}
+			}
+			logger.Info("DPOS:", len(newProducers))
+			dpos.dynasty.producers = newProducers
+		}
+	}
+	config.UpdateProducer(dpos.filePath, dpos.dynasty.producers, height)
+
+}
+func (dpos *DPOS) AddReplacement(original, new string, height uint64, kind int) {
+	for _, p := range dpos.dynasty.producers {
+		if p == original {
+			for i := 0; i < len(dpos.replacement); i++ {
+				if dpos.replacement[i].original == p {
+					dpos.replacement[i].new = new
+					dpos.replacement[i].height = height
+					dpos.replacement[i].kind = kind
+					return
+				}
+			}
+			replacement := NewDynastyReplacement(original, new, height, kind)
+			dpos.replacement = append(dpos.replacement, replacement)
+			return
+
+		}
+	}
+
 }

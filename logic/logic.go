@@ -19,10 +19,13 @@
 package logic
 
 import (
+	"context"
 	"errors"
-	"time"
+	"io"
+	"strconv"
 
 	"github.com/dappley/go-dappley/logic/ltransaction"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/lblockchain"
@@ -33,13 +36,10 @@ import (
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
 
-	"github.com/dappley/go-dappley/vm"
 	"github.com/dappley/go-dappley/wallet"
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
-
-const unlockduration = 300 * time.Second
 
 var minerPrivateKey string
 var (
@@ -53,13 +53,13 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address account.Address, db storage.Storage, libPolicy lblockchain.LIBPolicy, txPool *transactionpool.TransactionPool, scManager *vm.V8EngineManager, blkSizeLimit int) (*lblockchain.Blockchain, error) {
+func CreateBlockchain(address account.Address, db storage.Storage, libPolicy lblockchain.LIBPolicy, txPool *transactionpool.TransactionPool, blkSizeLimit int) (*lblockchain.Blockchain, error) {
 	addressAccount := account.NewTransactionAccountByAddress(address)
 	if !addressAccount.IsValid() {
 		return nil, ErrInvalidAddress
 	}
 
-	bc := lblockchain.CreateBlockchain(address, db, libPolicy, txPool, scManager, blkSizeLimit)
+	bc := lblockchain.CreateBlockchain(address, db, libPolicy, txPool, blkSizeLimit)
 
 	return bc, nil
 }
@@ -70,12 +70,6 @@ func getAccountFilePath(argv []string) string {
 		return argv[0]
 	}
 	return wallet.GetAccountFilePath()
-}
-
-//Get lock flag
-func IsAccountLocked(optionalAccountFilePath ...string) (bool, error) {
-	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
-	return am.Locked, err
 }
 
 //Tell if the file empty or not exist
@@ -92,8 +86,7 @@ func IsAccountEmpty(optionalAccountFilePath ...string) (bool, error) {
 	return false, nil
 }
 
-//Set lock flag
-func SetLockAccount(optionalAccountFilePath ...string) error {
+func SaveAccount(optionalAccountFilePath ...string) error {
 	am, err1 := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
 
 	if err1 != nil {
@@ -105,18 +98,7 @@ func SetLockAccount(optionalAccountFilePath ...string) error {
 		return nil
 	}
 
-	am.Locked = true
 	am.SaveAccountToFile()
-	return nil
-}
-
-//Set unlock and timer
-func SetUnLockAccount(optionalAccountFilePath ...string) error {
-	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
-	if err != nil {
-		return err
-	}
-	am.SetUnlockTimer(unlockduration)
 	return nil
 }
 
@@ -146,7 +128,6 @@ func CreateAccountWithPassphrase(password string, optionalAccountFilePath ...str
 	logger.Info("Account password is set!")
 	account := account.NewAccount()
 	am.AddAccount(account)
-	am.Locked = true
 	am.SaveAccountToFile()
 	return account, err
 }
@@ -159,17 +140,9 @@ func CreateAccount() (*account.Account, error) {
 	}
 
 	account := account.NewAccount()
-	if len(am.Accounts) == 0 {
-		am.Locked = true
-	}
 	am.AddAccount(account)
 	am.SaveAccountToFile()
 	return account, err
-}
-
-//Get duration
-func GetUnlockDuration() time.Duration {
-	return unlockduration
 }
 
 //get balance
@@ -209,6 +182,29 @@ func SendFromMiner(address account.Address, amount *common.Amount, bc *lblockcha
 	return sendTo(sendTxParam, bc)
 }
 
+func ChangeProducers(address string, height uint64, bm *lblockchain.BlockchainManager, kind int) {
+	minerAccount := account.NewAccountByPrivateKey(minerPrivateKey)
+	bm.SetNewDynasty(minerAccount.GetAddress().String(), address, height, kind)
+}
+
+func SendProducerAddTX(addresses string, height uint64, bc *lblockchain.Blockchain) ([]byte, error) {
+	minerAccount := account.NewAccountByPrivateKey(minerPrivateKey)
+	sendTxParam := transaction.NewSendTxParam(minerAccount.GetAddress(), minerAccount.GetKeyPair(), minerAccount.GetAddress(), common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "{ \"height\":"+strconv.FormatUint(height, 10)+",\"addresses\":\""+addresses+"\",\"kind\":2}")
+	return sendProducerChange(sendTxParam, bc)
+}
+
+func SendProducerDeleteTX(height uint64, bc *lblockchain.Blockchain) ([]byte, error) {
+	minerAccount := account.NewAccountByPrivateKey(minerPrivateKey)
+	sendTxParam := transaction.NewSendTxParam(minerAccount.GetAddress(), minerAccount.GetKeyPair(), minerAccount.GetAddress(), common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "{ \"height\":"+strconv.FormatUint(height, 10)+",\"addresses\":\""+"\",\"kind\":3}")
+	return sendProducerChange(sendTxParam, bc)
+}
+
+func SendProducerChangeTX(addresses string, height uint64, bc *lblockchain.Blockchain) ([]byte, error) {
+	minerAccount := account.NewAccountByPrivateKey(minerPrivateKey)
+	sendTxParam := transaction.NewSendTxParam(minerAccount.GetAddress(), minerAccount.GetKeyPair(), minerAccount.GetAddress(), common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "{ \"height\":"+strconv.FormatUint(height, 10)+",\"addresses\":\""+addresses+"\",\"kind\":1}")
+	return sendProducerChange(sendTxParam, bc)
+}
+
 func GetAccountManager(path string) (*wallet.AccountManager, error) {
 	fl := storage.NewFileLoader(path)
 	am := wallet.NewAccountManager(fl)
@@ -217,6 +213,38 @@ func GetAccountManager(path string) (*wallet.AccountManager, error) {
 		return nil, err
 	}
 	return am, nil
+}
+
+func sendProducerChange(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]byte, error) {
+	fromAccount := account.NewTransactionAccountByAddress(sendTxParam.From)
+	if !fromAccount.IsValid() {
+		return nil, ErrInvalidSenderAddress
+	}
+	if sendTxParam.Amount.Validate() != nil || sendTxParam.Amount.IsZero() {
+		return nil, ErrInvalidAmount
+	}
+
+	acc := account.NewAccountByKey(sendTxParam.SenderKeyPair)
+	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
+	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions(utxoIndex)) {
+		logger.Warn("sendTo error")
+	}
+
+	utxos, err := utxoIndex.GetUTXOsAccordingToAmount([]byte(acc.GetPubKeyHash()), sendTxParam.TotalCost())
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := ltransaction.NewProducerChangeUTXOTransaction(utxos, sendTxParam)
+
+	bc.GetTxPool().Push(tx)
+	bc.GetTxPool().BroadcastTx(&tx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return tx.ID, err
 }
 
 func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]byte, string, error) {
@@ -237,14 +265,16 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 
 	acc := account.NewAccountByKey(sendTxParam.SenderKeyPair)
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
-	utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions())
+	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions(utxoIndex)) {
+		logger.Warn("sendTo error")
+	}
 
-	utxos, err := utxoIndex.GetUTXOsByAmount([]byte(acc.GetPubKeyHash()), sendTxParam.TotalCost())
+	utxos, err := utxoIndex.GetUTXOsAccordingToAmount([]byte(acc.GetPubKeyHash()), sendTxParam.TotalCost())
 	if err != nil {
 		return nil, "", err
 	}
 
-	tx, err := ltransaction.NewUTXOTransaction(utxos, sendTxParam)
+	tx, err := ltransaction.NewNormalUTXOTransaction(utxos, sendTxParam)
 
 	bc.GetTxPool().Push(tx)
 	bc.GetTxPool().BroadcastTx(&tx)
@@ -270,4 +300,39 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 	}
 
 	return tx.ID, contractAddr.String(), err
+}
+
+func GetUtxoStream(streamClient rpcpb.RpcServiceClient, getUTXORequest *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
+	stream, err := streamClient.RpcGetUTXO(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	response := rpcpb.GetUTXOResponse{}
+	for {
+		err := stream.Send(getUTXORequest)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return &response, err
+		}
+		res, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return &response, err
+		}
+		for i := 0; i < len(res.Utxos); i++ {
+			response.Utxos = append(response.Utxos, res.Utxos[i])
+		}
+		for i := 0; i < len(res.BlockHeaders); i++ {
+			response.BlockHeaders = append(response.BlockHeaders, res.BlockHeaders[i])
+		}
+	}
+	err = stream.CloseSend()
+	if err != nil {
+		return &response, err
+	}
+	return &response, nil
 }

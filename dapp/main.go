@@ -20,12 +20,13 @@ package main
 
 import (
 	"flag"
-	"github.com/dappley/go-dappley/core/transaction"
-
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/blockproducerinfo"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockproducer"
 	"github.com/dappley/go-dappley/logic/lblockchain"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/common/log"
@@ -35,7 +36,6 @@ import (
 	"github.com/dappley/go-dappley/config"
 	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
 
 	"github.com/dappley/go-dappley/logic"
@@ -47,16 +47,19 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/vm"
 	"github.com/spf13/viper"
 )
 
 const (
-	genesisAddr     = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
-	configFilePath  = "conf/default.conf"
-	genesisFilePath = "conf/genesis.conf"
-	defaultPassword = "password"
-	size1kB         = 1024
+	producerFilePath = "conf/producer.conf"
+	genesisAddr      = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
+	configFilePath   = "conf/default.conf"
+	genesisFilePath  = "conf/genesis.conf"
+	peerFilePath     = "conf/peer.conf"
+	peerConfDirPath  = "../dapp/"
+	defaultPassword  = "password"
+	size1kB          = 1024
+	version          = "v0.6.0"
 )
 
 func main() {
@@ -75,9 +78,21 @@ func main() {
 
 	var genesisPath string
 	flag.StringVar(&genesisPath, "g", genesisFilePath, "Genesis Configuration File Path. Default to conf/genesis.conf")
+	//flag.Parse()
+	var ver bool
+	flag.BoolVar(&ver, "v", false, "display version")
+	var peerinfoPath string
+	flag.StringVar(&peerinfoPath, "p", peerFilePath, "Peer info configuration file Path. Default to conf/peer_default.conf")
 	flag.Parse()
 
-	logger.Infof("Genesis conf file is %v,node conf file is %v", genesisPath, filePath)
+	if ver {
+		printVersion()
+		return
+	}
+
+	logger.Infof("Genesis conf file is %v,node conf file is %v,peer info conf file is %v", genesisPath, filePath, peerinfoPath)
+
+	// logger.Infof("Genesis conf file is %v,node conf file is %v", genesisPath, filePath)
 	//load genesis file information
 	genesisConf := &configpb.DynastyConfig{}
 	config.LoadConfig(genesisPath, genesisConf)
@@ -94,11 +109,13 @@ func main() {
 		logger.Error("Cannot load configurations from file! Exiting...")
 		return
 	}
+	peerinfoPath = peerConfDirPath + peerinfoPath
+	peerinfoConf := storage.NewFileLoader(peerinfoPath)
 
 	//setup
 	db := storage.OpenDatabase(conf.GetNodeConfig().GetDbPath())
 	defer db.Close()
-	node, err := initNode(conf, db)
+	node, err := initNode(conf, peerinfoConf)
 	if err != nil {
 		return
 	} else {
@@ -107,34 +124,39 @@ func main() {
 
 	//create blockchain
 	conss, _ := initConsensus(genesisConf, conf)
+	conss.SetFilePath(producerFilePath)
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit() * size1kB
-	nodeAddr := conf.GetNodeConfig().GetNodeAddress()
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
-	scManager := vm.NewV8EngineManager(account.NewAddress(nodeAddr))
 	txPool := transactionpool.NewTransactionPool(node, txPoolLimit)
 	//utxo.NewPool()
-	bc, err := lblockchain.GetBlockchain(db, conss, txPool, scManager, int(blkSizeLimit))
+	initYaml()
 
 	var LIBBlk *block.Block = nil
+	var bc *lblockchain.Blockchain
+	err = lblockchain.DataCheckingAndRecovery(db)
 	if err != nil {
-		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddr), db, conss, txPool, scManager, int(blkSizeLimit))
+		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddr), db, conss, txPool, int(blkSizeLimit))
 		if err != nil {
 			logger.Panic(err)
 		}
 	} else {
+		bc, err = lblockchain.GetBlockchain(db, conss, txPool, int(blkSizeLimit))
+		if err != nil {
+			logger.Panic(err)
+		}
 		LIBBlk, _ = bc.GetLIB()
 	}
-	bc.SetState(blockchain.BlockchainInit)
-
-	bm := lblockchain.NewBlockchainManager(bc, blockchain.NewBlockPool(LIBBlk), node, conss)
 
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
 		return
 	}
 
+	bc.SetState(blockchain.BlockchainInit)
+	bm := lblockchain.NewBlockchainManager(bc, blockchain.NewBlockPool(LIBBlk), node, conss)
+
 	//start mining
-	logic.SetLockAccount() //lock the account
+	logic.SaveAccount()
 	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
 
 	//start rpc server
@@ -153,12 +175,6 @@ func main() {
 
 	bm.Getblockchain().SetState(blockchain.BlockchainReady)
 	bm.RequestDownloadBlockchain()
-
-	minerSubsidy := viper.GetInt("log.minerSubsidy")
-	if minerSubsidy == 0{
-		minerSubsidy = 1000000000
-	}
-	transaction.SetSubsidy(minerSubsidy)
 
 	if viper.GetBool("metrics.open") {
 		logMetrics.LogMetricsInfo(bm.Getblockchain())
@@ -183,18 +199,30 @@ func initConsensus(conf *configpb.DynastyConfig, generalConf *configpb.Config) (
 	return conss, dynasty
 }
 
-func initNode(conf *configpb.Config, db storage.Storage) (*network.Node, error) {
+func initNode(conf *configpb.Config, peerinfoConf *storage.FileLoader) (*network.Node, error) {
 
 	nodeConfig := conf.GetNodeConfig()
 	seeds := nodeConfig.GetSeed()
 	port := nodeConfig.GetPort()
 	key := nodeConfig.GetKey()
 
-	node := network.NewNode(db, seeds)
+	node := network.NewNode(peerinfoConf, seeds)
 	err := node.Start(int(port), key)
 	if err != nil {
 		logger.Error(err)
 		return nil, err
 	}
 	return node, nil
+}
+
+func printVersion() {
+	println(version)
+}
+
+func initYaml() {
+	minerSubsidy := viper.GetInt("log.minerSubsidy")
+	if minerSubsidy != 0 {
+		transaction.SetSubsidy(minerSubsidy)
+	}
+	ltransaction.SetGasConsumption(viper.GetBool("log.gasConsumption"))
 }

@@ -19,13 +19,9 @@ package wallet
 
 import (
 	"errors"
-	"fmt"
-	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/storage"
 	storage_mock "github.com/dappley/go-dappley/storage/mock"
 	laccountpb "github.com/dappley/go-dappley/wallet/pb"
 	"github.com/golang/mock/gomock"
@@ -117,7 +113,6 @@ func TestAccountManager_GetAccountByAddress_withPassphrase(t *testing.T) {
 	passPhrase, err := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
 	assert.Equal(t, nil, err)
 	am.PassPhrase = passPhrase
-	am.Locked = true
 	account := account.NewAccount()
 	am.Accounts = append(am.Accounts, account)
 	account1, err := am.GetAccountByAddressWithPassphrase(account.GetAddress(), "password")
@@ -157,35 +152,6 @@ func TestAccountManager_GetKeyPairByAddressNilInput(t *testing.T) {
 	assert.Nil(t, am.GetKeyPairByAddress(account.Address{}))
 }
 
-func TestNewAccountManager_UnlockTimer(t *testing.T) {
-	binFolder, _ := filepath.Split(GetAccountFilePath())
-	fl := storage.NewFileLoader(binFolder + "accounts_test.dat")
-	am := NewAccountManager(fl)
-	err1 := am.LoadFromFile()
-	if err1 != nil {
-		fmt.Println(err1.Error())
-	}
-	passBytes, err := bcrypt.GenerateFromPassword([]byte("test"), bcrypt.DefaultCost)
-	if err != nil {
-		return
-	}
-	account := account.NewAccount()
-	am.AddAccount(account)
-	am.PassPhrase = passBytes
-	am.Locked = true
-	am.SaveAccountToFile()
-
-	am.SetUnlockTimer(10 * time.Second)
-	assert.Equal(t, false, am.Locked)
-	time.Sleep(3 * time.Second)
-	am.mutex.Lock()
-	assert.Equal(t, false, am.Locked)
-	am.mutex.Unlock()
-	time.Sleep(9 * time.Second)
-
-	assert.Equal(t, true, am.Locked)
-}
-
 func TestAccountManager_Proto(t *testing.T) {
 	am := NewAccountManager(nil)
 	acc := account.NewAccount()
@@ -202,5 +168,4 @@ func TestAccountManager_Proto(t *testing.T) {
 	am1.FromProto(amProto)
 	assert.Equal(t, am.Accounts, am1.Accounts)
 	assert.Equal(t, am.PassPhrase, am1.PassPhrase)
-	assert.Equal(t, am.Locked, am1.Locked)
 }

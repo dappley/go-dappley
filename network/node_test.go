@@ -43,8 +43,10 @@ func TestNewNode(t *testing.T) {
 }
 
 func TestNode_Stop(t *testing.T) {
+	rfl := storage.NewRamFileLoader(confDir, "test.conf")
+	defer rfl.DeleteFolder()
 	logger.SetLevel(logger.DebugLevel)
-	node := NewNode(storage.NewRamStorage(), nil)
+	node := NewNode(rfl.File, nil)
 	err := node.Start(22100, "")
 	if err != nil {
 		t.Fatal(err)

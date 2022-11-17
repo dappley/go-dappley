@@ -19,26 +19,34 @@
 package downloadmanager
 
 import (
-	"github.com/dappley/go-dappley/logic/lblockchain/mocks"
-	"github.com/stretchr/testify/mock"
+	blockpb "github.com/dappley/go-dappley/core/block/pb"
+	"io/ioutil"
+	"os"
+	"path"
+	"strconv"
 	"testing"
+
+	"github.com/dappley/go-dappley/logic/lblockchain/mocks"
+	networkpb "github.com/dappley/go-dappley/network/pb"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
 )
 
 const (
-	genesisAddr                  = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 	multiPortEqualStart      int = 10301
 	multiPortSuccessStart    int = 10310
 	multiPortDisconnectStart int = 10320
 	multiPortNotEqualStart   int = 10330
 	multiPortReturnBlocks    int = 10340
+	multiPortDisconnectPeer  int = 10350
+	multiPortCommonBlocks    int = 10360
+	confDir                      = "../../storage/fakeFileLoaders/"
 )
 
 func createTestBlockchains(size int, portStart int) ([]*lblockchain.BlockchainManager, []*network.Node) {
@@ -47,11 +55,14 @@ func createTestBlockchains(size int, portStart int) ([]*lblockchain.BlockchainMa
 	bc := lblockchain.GenerateMockBlockchainWithCoinbaseTxOnly(size)
 	consensus := &mocks.Consensus{}
 	consensus.On("Validate", mock.Anything).Return(true)
+	consensus.On("ChangeDynasty", mock.Anything).Return(true)
+	consensus.On("SetDynasty", mock.Anything).Return(true)
+	consensus.On("AddReplacement", mock.Anything).Return(true)
 	for i := 0; i < size; i++ {
-		db := storage.NewRamStorage()
-		node := network.NewNode(db, nil)
+		rfl := storage.NewRamFileLoader(confDir, "dl"+strconv.Itoa(i)+".conf")
+		node := network.NewNode(rfl.File, nil)
 		node.Start(portStart+i, "")
-		bm := lblockchain.NewBlockchainManager(bc.DeepCopy(), blockchain.NewBlockPool(nil), node, consensus)
+		bm := lblockchain.NewBlockchainManager(bc, blockchain.NewBlockPool(nil), node, consensus)
 		bms[i] = bm
 		nodes[i] = node
 	}
@@ -60,7 +71,7 @@ func createTestBlockchains(size int, portStart int) ([]*lblockchain.BlockchainMa
 
 func TestMultiEqualNode(t *testing.T) {
 	bms, nodes := createTestBlockchains(5, multiPortEqualStart)
-
+	defer deleteConfFolderFiles()
 	//setup download manager for the first node
 	bm := bms[0]
 	bm.Getblockchain().SetState(blockchain.BlockchainInit)
@@ -84,7 +95,7 @@ func TestMultiEqualNode(t *testing.T) {
 
 func TestMultiNotEqualNode(t *testing.T) {
 	bms, nodes := createTestBlockchains(5, multiPortNotEqualStart)
-
+	defer deleteConfFolderFiles()
 	bm := bms[0]
 	bm.Getblockchain().SetState(blockchain.BlockchainInit)
 	node := nodes[0]
@@ -114,7 +125,7 @@ func TestMultiNotEqualNode(t *testing.T) {
 
 func TestMultiSuccessNode(t *testing.T) {
 	bms, nodes := createTestBlockchains(5, multiPortSuccessStart)
-
+	defer deleteConfFolderFiles()
 	bm := bms[0]
 	bm.Getblockchain().SetState(blockchain.BlockchainInit)
 	node := nodes[0]
@@ -144,7 +155,7 @@ func TestMultiSuccessNode(t *testing.T) {
 
 func TestDisconnectNode(t *testing.T) {
 	bms, nodes := createTestBlockchains(5, multiPortDisconnectStart)
-
+	defer deleteConfFolderFiles()
 	bm := bms[0]
 	bm.Getblockchain().SetState(blockchain.BlockchainInit)
 	node := nodes[0]
@@ -166,7 +177,10 @@ func TestDisconnectNode(t *testing.T) {
 	for i := 1; i < len(nodes); i++ {
 		node.GetNetwork().ConnectToSeed(nodes[i].GetHostPeerInfo())
 	}
-
+	info := node.GetPeers()
+	for _, i := range info {
+		println(i.PeerId)
+	}
 	finishCh := make(chan bool, 1)
 	bm.Getblockchain().SetState(blockchain.BlockchainDownloading)
 	downloadManager.StartDownloadBlockchain(finishCh)
@@ -180,7 +194,7 @@ func TestDisconnectNode(t *testing.T) {
 func TestValidateReturnBlocks(t *testing.T) {
 	// Test empty blocks in GetBlocksResponse message
 	bms, nodes := createTestBlockchains(2, multiPortReturnBlocks)
-
+	defer deleteConfFolderFiles()
 	bm := bms[0]
 	bm.Getblockchain().SetState(blockchain.BlockchainInit)
 	node := nodes[0]
@@ -205,4 +219,98 @@ func TestValidateReturnBlocks(t *testing.T) {
 	fakeReturnMsg := &networkpb.ReturnBlocks{Blocks: nil, StartBlockHashes: nil}
 	_, err = downloadManager.validateReturnBlocks(fakeReturnMsg, peerNode.GetHostPeerInfo().PeerId)
 	assert.Equal(t, ErrEmptyBlocks, err)
+}
+
+func TestDownloadManager_DisconnectPeer(t *testing.T) {
+	bms, nodes := createTestBlockchains(5, multiPortDisconnectPeer)
+	defer deleteConfFolderFiles()
+	//setup download manager for the first node
+	bm := bms[0]
+	bm.Getblockchain().SetState(blockchain.BlockchainInit)
+	node := nodes[0]
+
+	downloadManager := NewDownloadManager(node, bm, 0, nil)
+	downloadManager.Start()
+
+	//Connect all other nodes to the first node
+	for i := 1; i < len(nodes); i++ {
+		node.GetNetwork().ConnectToSeed(nodes[i].GetHostPeerInfo())
+	}
+
+	finishCh := make(chan bool, 1)
+	bm.Getblockchain().SetState(blockchain.BlockchainDownloading)
+	downloadManager.StartDownloadBlockchain(finishCh)
+	<-finishCh
+
+	downloadManager.status = DownloadStatusInit
+	assert.Equal(t, 4, len(downloadManager.peersInfo))
+	downloadManager.DisconnectPeer(nodes[3].GetHostPeerInfo().PeerId)
+	assert.Equal(t, 3, len(downloadManager.peersInfo))
+	downloadManager.DisconnectPeer(nodes[2].GetHostPeerInfo().PeerId)
+	assert.Equal(t, 2, len(downloadManager.peersInfo))
+}
+
+func TestDownloadManager_FindCommonBlock(t *testing.T) {
+	bms, nodes := createTestBlockchains(5, multiPortCommonBlocks)
+	defer deleteConfFolderFiles()
+	//setup download manager for the first node
+	bm := bms[0]
+	bm.Getblockchain().SetState(blockchain.BlockchainInit)
+	node := nodes[0]
+
+	downloadManager := NewDownloadManager(node, bm, 0, nil)
+	downloadManager.Start()
+
+	maxHeight := downloadManager.bm.Getblockchain().GetMaxHeight()
+	blockHeaders := downloadManager.GetCommonBlockCheckPoint(0, maxHeight)
+
+	var blockHeaderPbs []*blockpb.BlockHeader
+	for _, blockHeader := range blockHeaders {
+		blockHeaderPbs = append(blockHeaderPbs,
+			&blockpb.BlockHeader{Hash: blockHeader.hash, Height: blockHeader.height})
+	}
+
+	// first block is common block
+	index, block := downloadManager.FindCommonBlock(blockHeaderPbs)
+	expectedIndex := 0
+	expectedBlock, _ := downloadManager.bm.Getblockchain().GetBlockByHeight(blockHeaders[0].height)
+	assert.Equal(t, expectedIndex, index)
+	assert.Equal(t, expectedBlock, block)
+
+	// first block has incorrect hash, second block is common block
+	originalHash := blockHeaderPbs[0].GetHash()
+	blockHeaderPbs[0].Hash = []byte{}
+	index, block = downloadManager.FindCommonBlock(blockHeaderPbs)
+	expectedIndex = 1
+	expectedBlock, _ = downloadManager.bm.Getblockchain().GetBlockByHeight(blockHeaders[1].height)
+	assert.Equal(t, expectedIndex, index)
+	assert.Equal(t, expectedBlock, block)
+	blockHeaderPbs[0].Hash = originalHash
+
+	// first block at height 0
+	blockHeaderPbs[0].Height = 0
+	index, block = downloadManager.FindCommonBlock(blockHeaderPbs)
+	expectedIndex = -1
+	expectedBlock = nil
+	assert.Equal(t, expectedIndex, index)
+	assert.Equal(t, expectedBlock, block)
+
+	// all blocks at non-existent height
+	for _, bh := range blockHeaderPbs {
+		bh.Height = 9999
+	}
+	index, block = downloadManager.FindCommonBlock(blockHeaderPbs)
+	assert.Equal(t, expectedIndex, index)
+	assert.Equal(t, expectedBlock, block)
+}
+
+func deleteConfFolderFiles() error {
+	dir, err := ioutil.ReadDir(confDir)
+	if err != nil {
+		return err
+	}
+	for _, d := range dir {
+		os.RemoveAll(path.Join([]string{confDir, d.Name()}...))
+	}
+	return nil
 }

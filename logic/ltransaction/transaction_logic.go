@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
@@ -13,6 +14,7 @@ import (
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
 )
@@ -25,10 +27,21 @@ var (
 	ErrExecutionFailed       = errors.New("execution failed")
 	ErrUnsupportedSourceType = errors.New("unsupported source type")
 	ErrLoadError             = errors.New("contract load error")
+	GasConsumption           = 0
 )
+
+func SetGasConsumption(isOn bool) {
+	if !isOn{
+		GasConsumption = -1
+	}
+}
 
 // VerifyTransaction ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, blockHeight uint64) error {
+	err := tx.CheckVinNum()
+	if err != nil {
+		return err
+	}
 	txDecorator := NewTxDecorator(tx)
 	if txDecorator != nil {
 		return txDecorator.Verify(utxoIndex, blockHeight)
@@ -36,28 +49,38 @@ func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, 
 	return nil
 }
 
-// VerifyContractTransaction ensures the generated transactions from smart contract are the same with those in block
-func VerifyContractTransaction(utxoIndex *lutxo.UTXOIndex, tx *TxContract, scState *scState.ScState, scEngine ScEngine, currBlkHeight uint64, parentBlk *block.Block, rewards map[string]string) (gasCount uint64, generatedTxs []*transaction.Transaction, err error) {
+// VerifyAndCollectContractOutput ensures the generated transactions from smart contract are the same with those in block
+func VerifyAndCollectContractOutput(utxoIndex *lutxo.UTXOIndex, tx *TxContract, ctState *scState.ScState, scEngine ScEngine, currBlkHeight uint64, parentBlk *block.Block, rewards map[string]string, db storage.Storage) (gasCount uint64, generatedTxs []*transaction.Transaction, err error) {
 	// Run the contract and collect generated transactions
 	if scEngine == nil {
-		return 0, nil, errors.New("VerifyContractTransaction: is missing SCEngineManager when verifying transactions.")
+		return 0, nil, errors.New("VerifyAndCollectContractOutput: is missing SCEngineManager when verifying transactions.")
+	}
+	if tx.GasPrice.Cmp(common.NewAmount(0)) < 0 || tx.GasPrice.Cmp(common.NewAmount(0)) == GasConsumption{
+		err := errors.New("CollectContractOutput: gas price must be a positive number")
+		logger.WithError(err).Error("CollectContractOutput: executeSmartContract error")
+		return 0, nil, err
 	}
 
 	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, tx.Transaction)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"txid": hex.EncodeToString(tx.ID),
-		}).Warn("VerifyContractTransaction: cannot find vin while executing smart contract")
+		}).Warn("VerifyAndCollectContractOutput: cannot find vin while executing smart contract")
 		return 0, nil, err
 	}
-
 	isContractDeployed := tx.IsContractDeployed(utxoIndex)
-	utxoIndex.UpdateUtxo(tx.Transaction)
-
+	if !utxoIndex.UpdateUtxo(tx.Transaction) {
+		logger.Warn("VerifyAndCollectContractOutput warn")
+	}
 	if err := scEngine.SetExecutionLimits(1000, 0); err != nil {
 		return 0, nil, err
 	}
-	gasCount, generatedTxs, err = tx.Execute(prevUtxos, isContractDeployed, utxoIndex, scState, rewards, scEngine, currBlkHeight, parentBlk)
+	gasCount, generatedTxs, err = tx.Execute(prevUtxos, isContractDeployed, utxoIndex, ctState, rewards, scEngine, currBlkHeight, parentBlk)
+	if err != nil {
+		logger.Warn(err)
+		//invoke smart contracts before they are completed deploy, will cause an ErrLoadError.
+		//for example: deploy and invoke contracts in the same block
+	}
 	return gasCount, generatedTxs, nil
 }
 
@@ -88,8 +111,8 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 				ta = account.NewTransactionAccountByPubKey(vin.PubKey)
 
 			}
-			usedUTXO ,err:= utxoIndex.GetUpdatedUtxo(ta.GetPubKeyHash(), vin.Txid, vin.Vout)
-			if err!=nil{
+			usedUTXO, err := utxoIndex.GetUpdatedUtxo(ta.GetPubKeyHash(), vin.Txid, vin.Vout)
+			if err != nil {
 				return nil, nil, nil, nil, err
 			}
 			if usedUTXO != nil {

@@ -27,6 +27,7 @@ require (
 	github.com/mitchellh/mapstructure v1.3.2 // indirect
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multiaddr v0.2.2
+	github.com/otiai10/copy v1.5.0 // indirect
 	github.com/pelletier/go-toml v1.8.0 // indirect
 	github.com/peterh/liner v1.2.0
 	github.com/pkg/errors v0.9.1
@@ -45,11 +46,14 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/tebeka/strftime v0.1.4 // indirect
+	github.com/tidwall/gjson v1.6.1
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
 	golang.org/x/sys v0.0.0-20200610111108-226ff32320da // indirect
+	golang.org/x/tools v0.0.0-20191216052735-49a3e744a425
 	google.golang.org/genproto v0.0.0-20200610212329-df9b449b0ff2 // indirect
 	google.golang.org/grpc v1.29.1
+	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0 // indirect
 	google.golang.org/protobuf v1.24.0
 	gopkg.in/ini.v1 v1.57.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c // indirect

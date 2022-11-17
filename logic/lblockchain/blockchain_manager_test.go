@@ -1,9 +1,10 @@
 package lblockchain
 
 import (
+	"testing"
+
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/ltransaction"
-	"testing"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/common/hash"
@@ -27,7 +28,7 @@ import (
 
 func TestBlockChainManager_NumForks(t *testing.T) {
 	// create BlockChain
-	bc := CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, transactionpool.NewTransactionPool(nil, 100), nil, 100)
+	bc := CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, transactionpool.NewTransactionPool(nil, 100), 100)
 	blk, err := bc.GetTailBlock()
 	require.Nil(t, err)
 
@@ -37,11 +38,11 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 	b6 := block.NewBlockWithRawInfo(nil, b3.GetHash(), 6, 0, 3, nil)
 	b6.SetHash(lblock.CalculateHash(b6))
 
-	err = bc.AddBlockContextToTail(&BlockContext{Block: b1, UtxoIndex: lutxo.NewUTXOIndex(nil), State: scState.NewScState()})
+	err = bc.AddBlockContextToTail(&BlockContext{Block: b1, UtxoIndex: lutxo.NewUTXOIndex(nil), State: scState.NewScState(bc.GetUtxoCache())})
 	require.Nil(t, err)
-	err = bc.AddBlockContextToTail(&BlockContext{Block: b3, UtxoIndex: lutxo.NewUTXOIndex(nil), State: scState.NewScState()})
+	err = bc.AddBlockContextToTail(&BlockContext{Block: b3, UtxoIndex: lutxo.NewUTXOIndex(nil), State: scState.NewScState(bc.GetUtxoCache())})
 	require.Nil(t, err)
-	err = bc.AddBlockContextToTail(&BlockContext{Block: b6, UtxoIndex: lutxo.NewUTXOIndex(nil), State: scState.NewScState()})
+	err = bc.AddBlockContextToTail(&BlockContext{Block: b6, UtxoIndex: lutxo.NewUTXOIndex(nil), State: scState.NewScState(bc.GetUtxoCache())})
 	require.Nil(t, err)
 
 	// create first fork of height 3
@@ -120,7 +121,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 
 	// prepareBlockchainWithBlocks returns a blockchain that contains the given blocks with correct utxoIndex in RAM
 	prepareBlockchainWithBlocks := func(blks []*block.Block) *Blockchain {
-		bc := CreateBlockchain(genesisAddr, storage.NewRamStorage(), nil, transactionpool.NewTransactionPool(nil, 128000), nil, 100000)
+		bc := CreateBlockchain(genesisAddr, storage.NewRamStorage(), nil, transactionpool.NewTransactionPool(nil, 128000), 100000)
 		for _, blk := range blks {
 			err := bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 			if err != nil {
@@ -207,7 +208,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	bcs := []*Blockchain{
 		prepareBlockchainWithBlocks([]*block.Block{normalBlock}),
 		prepareBlockchainWithBlocks([]*block.Block{normalBlock, normalBlock2}),
-		CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, transactionpool.NewTransactionPool(nil, 128000), nil, 100000),
+		CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, transactionpool.NewTransactionPool(nil, 128000), 100000),
 		prepareBlockchainWithBlocks([]*block.Block{prevBlock, emptyBlock}),
 		prepareBlockchainWithBlocks([]*block.Block{normalBlock, normalBlock2}),
 		prepareBlockchainWithBlocks([]*block.Block{normalBlock, abnormalBlock}),
@@ -239,7 +240,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 			bc:       bcs[2],
 			hash:     hash.Hash("not there"),
 			expected: lutxo.NewUTXOIndex(bcs[2].GetUtxoCache()),
-			err:      ErrBlockDoesNotExist,
+			err:      ErrBlockDoesNotFound,
 		},
 		{
 			name:     "no txs in blocks",
@@ -286,7 +287,7 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 	defer db.Close()
 
 	coinbaseAddr := account.NewAddress("testaddress")
-	bc := CreateBlockchain(coinbaseAddr, db, nil, transactionpool.NewTransactionPool(nil, 128000), nil, 100000)
+	bc := CreateBlockchain(coinbaseAddr, db, nil, transactionpool.NewTransactionPool(nil, 128000), 100000)
 
 	blk1 := core.GenerateUtxoMockBlockWithoutInputs() // contains 2 UTXOs for address1
 	blk2 := core.GenerateUtxoMockBlockWithInputs()    // contains tx that transfers address1's UTXOs to address2 with a change

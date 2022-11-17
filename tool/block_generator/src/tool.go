@@ -3,9 +3,10 @@ package tool
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/dappley/go-dappley/logic/ltransaction"
 	"io/ioutil"
 	"os"
+
+	"github.com/dappley/go-dappley/logic/ltransaction"
 
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/transaction"
@@ -67,7 +68,7 @@ func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys, co
 	numOfTx = config.NumOfNormalTx
 	numOfScTx = config.NumOfScTx
 	for i := range files {
-		bc := lblockchain.CreateBlockchain(addr, files[i].Db, nil, transactionpool.NewTransactionPool(nil, 200), nil, 1000000)
+		bc := lblockchain.CreateBlockchain(addr, files[i].Db, nil, transactionpool.NewTransactionPool(nil, 200), 1000000)
 		bcs[i] = bc
 	}
 
@@ -253,10 +254,10 @@ func generateTransaction(addrs []account.Address, wm *wallet.AccountManager, utx
 }
 
 func newTransaction(sender, receiver account.Address, senderKeyPair *account.KeyPair, utxoIndex *lutxo.UTXOIndex, senderPkh account.PubKeyHash, amount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string) *transaction.Transaction {
-	utxos, _ := utxoIndex.GetUTXOsByAmount([]byte(senderPkh), amount)
+	utxos, _ := utxoIndex.GetUTXOsAccordingToAmount([]byte(senderPkh), amount)
 
 	sendTxParam := transaction.NewSendTxParam(sender, senderKeyPair, receiver, amount, common.NewAmount(0), gasLimit, gasPrice, contract)
-	tx, err := ltransaction.NewUTXOTransaction(utxos, sendTxParam)
+	tx, err := ltransaction.NewNormalUTXOTransaction(utxos, sendTxParam)
 
 	if err != nil {
 		logger.WithError(err).Panic("Create transaction failed!")

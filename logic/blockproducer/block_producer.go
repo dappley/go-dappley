@@ -1,9 +1,9 @@
 package blockproducer
 
 import (
-	"encoding/hex"
-	"github.com/dappley/go-dappley/common/log"
 	"time"
+
+	"github.com/dappley/go-dappley/common/log"
 
 	"github.com/dappley/go-dappley/common/deadline"
 	"github.com/dappley/go-dappley/core/blockchain"
@@ -88,15 +88,25 @@ func (bp *BlockProducer) GetProduceBlockStatus() bool {
 //produceBlock produces a new block and add it to blockchain
 func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline deadline.Deadline) {
 	// Do not produce block if block pool is syncing
+	bp.bm.Getblockchain().GetBlockMutex().Lock()
 	if bp.bm.Getblockchain().GetState() != blockchain.BlockchainReady {
 		logger.Infof("BlockProducer: block producer paused because blockchain is not ready. Current status is %v", bp.bm.Getblockchain().GetState())
+		bp.bm.Getblockchain().GetBlockMutex().Unlock()
 		return
 	}
 	bp.bm.Getblockchain().SetState(blockchain.BlockchainProduce)
-	defer bp.bm.Getblockchain().SetState(blockchain.BlockchainReady)
+	bp.bm.Getblockchain().GetBlockMutex().Unlock()
+
+	defer func() {
+		bp.bm.Getblockchain().GetBlockMutex().Lock()
+		bp.bm.Getblockchain().SetState(blockchain.BlockchainReady)
+		bp.bm.Getblockchain().GetBlockMutex().Unlock()
+		logger.Info("BlockProducer: set blockchain status to ready.")
+	}()
+
 	//makeup a block, fill in necessary information to check lib policy.
-	blk := block.NewBlockByHash(bp.bm.Getblockchain().GetTailBlockHash(),bp.producer.Beneficiary())
-	if !bp.bm.Getblockchain().CheckLibPolicy(blk) {
+	blk := block.NewBlockByHash(bp.bm.Getblockchain().GetTailBlockHash(), bp.producer.Beneficiary())
+	if !bp.bm.Getblockchain().CheckMinProducerPolicy(blk) {
 		logger.Warn("BlockProducer: the number of producers is not enough.")
 		tailBlock, _ := bp.bm.Getblockchain().GetTailBlock()
 		bp.bm.BroadcastBlock(tailBlock)
@@ -118,9 +128,7 @@ func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline d
 		logger.Error("BlockProducer: produced an invalid block!")
 		return
 	}
-
 	bp.addBlockToBlockchain(ctx)
-
 }
 
 //prepareBlock generates a new block
@@ -140,7 +148,9 @@ func (bp *BlockProducer) prepareBlock(deadline deadline.Deadline) *lblockchain.B
 	totalTips := bp.calculateTips(validTxs)
 	cbtx := ltransaction.NewCoinbaseTX(account.NewAddress(bp.producer.Beneficiary()), "", bp.bm.Getblockchain().GetMaxHeight()+1, totalTips)
 	validTxs = append(validTxs, &cbtx)
-	utxoIndex.UpdateUtxo(&cbtx)
+	if !utxoIndex.UpdateUtxo(&cbtx) {
+		logger.Warn("prepareBlock warn")
+	}
 
 	logger.WithFields(logger.Fields{
 		"valid_txs": len(validTxs),
@@ -157,17 +167,21 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 	totalSize := 0
 	count := 0
 
-	scStorage := scState.LoadScStateFromDatabase(bp.bm.Getblockchain().GetDb())
 	engine := vm.NewV8Engine()
 	defer engine.DestroyEngine()
 	rewards := make(map[string]string)
 	currBlkHeight := parentBlk.GetHeight() + 1
 
+	contractState := scState.NewScState(bp.bm.Getblockchain().GetUtxoCache())
+
 	for totalSize < bp.bm.Getblockchain().GetBlockSizeLimit() && bp.bm.Getblockchain().GetTxPool().GetNumOfTxInPool() > 0 && !deadline.IsPassed() {
 
-		txNode := bp.bm.Getblockchain().GetTxPool().PopTransactionWithMostTips(utxoIndex)
-		if txNode == nil {
+		txNode, err := bp.bm.Getblockchain().GetTxPool().PopTransactionWithMostTips(utxoIndex)
+		if err != nil {
 			break
+		}
+		if txNode == nil {
+			continue
 		}
 		totalSize += txNode.Size
 		count++
@@ -175,27 +189,32 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 		ctx := ltransaction.NewTxContract(txNode.Value)
 		if ctx != nil {
 			minerAddr := account.NewAddress(bp.producer.Beneficiary())
-			prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, txNode.Value)
+			gasCount, generatedTxs, err := ltransaction.VerifyAndCollectContractOutput(utxoIndex, ctx, contractState, engine, currBlkHeight, parentBlk, rewards, bp.bm.Getblockchain().GetDb())
 			if err != nil {
-				logger.WithError(err).WithFields(logger.Fields{
-					"txid": hex.EncodeToString(txNode.Value.ID),
-				}).Warn("BlockProducer: cannot find vin while executing smart contract")
+				logger.Warn("VerifyAndCollectContractOutput error: ", err)
 				continue
 			}
-			isContractDeployed := ctx.IsContractDeployed(utxoIndex)
+
+			if grtx, exists := ltransaction.NewGasRewardTx(account.NewTransactionAccountByAddress(minerAddr), currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice, count); exists {
+				generatedTxs = append(generatedTxs, &grtx)
+			}
+
+			if gctx, exists := ltransaction.NewGasChangeTx(ctx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice, count); exists {
+				generatedTxs = append(generatedTxs, &gctx)
+			}
 			validTxs = append(validTxs, txNode.Value)
-			utxoIndex.UpdateUtxo(txNode.Value)
-			generatedTxs, err := ctx.CollectContractOutput(utxoIndex, prevUtxos, isContractDeployed, scStorage, engine, currBlkHeight, parentBlk, minerAddr, rewards, count)
-			if err != nil {
-				continue
-			}
+
 			if generatedTxs != nil {
 				validTxs = append(validTxs, generatedTxs...)
-				utxoIndex.UpdateUtxos(generatedTxs)
+				if !utxoIndex.UpdateUtxos(generatedTxs) {
+					logger.Warn("collectTransactions warn: generatedTxs != nil")
+				}
 			}
 		} else {
 			validTxs = append(validTxs, txNode.Value)
-			utxoIndex.UpdateUtxo(txNode.Value)
+			if !utxoIndex.UpdateUtxo(txNode.Value) {
+				logger.Warn("collectTransactions warn: update utxo error")
+			}
 		}
 	}
 
@@ -203,10 +222,11 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 	if len(rewards) > 0 {
 		rtx := ltransaction.NewRewardTx(currBlkHeight, rewards)
 		validTxs = append(validTxs, &rtx)
-		utxoIndex.UpdateUtxo(&rtx)
+		if !utxoIndex.UpdateUtxo(&rtx) {
+			logger.Warn("collectTransactions warn: rewards update utxo error")
+		}
 	}
-
-	return validTxs, scStorage
+	return validTxs, contractState
 }
 
 //calculateTips calculate how much tips are earned from the input transactions
@@ -240,8 +260,14 @@ func (bp *BlockProducer) addBlockToBlockchain(ctx *lblockchain.BlockContext) {
 		if tx.CreateTime > 0 {
 			TxAddToBlockCost.Update((time.Now().UnixNano()/1e6 - tx.CreateTime) / 1e3)
 		}
+
+		if tx.IsChangeProducter() {
+
+			bp.bm.SetNewDynastyByString(tx.Vout[0].Contract, tx.Vout[0].PubKeyHash.GenerateAddress().String())
+		}
 	}
 
 	bp.bm.BroadcastBlock(ctx.Block)
 	logger.Info("BlockProducer: Broadcast block")
+	bp.bm.CheckDynast(ctx.Block.GetHeight())
 }

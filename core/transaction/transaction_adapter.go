@@ -20,6 +20,7 @@ package transaction
 
 import (
 	"bytes"
+
 	"github.com/dappley/go-dappley/core/account"
 )
 
@@ -54,6 +55,8 @@ func (adapter *TxAdapter) fillType() {
 		txType = TxTypeReward
 	} else if adapter.isContractSendTx() {
 		txType = TxTypeContractSend
+	} else if adapter.IsChangeProducter() {
+		txType = TxTypeProducerChange
 	} else {
 		txType = TxTypeNormal
 	}
@@ -116,6 +119,24 @@ func (adapter *TxAdapter) isGasRewardTx() bool {
 	if !bytes.Equal(adapter.Vin[0].PubKey, GasRewardData) {
 		return false
 	}
+	return true
+}
+
+// IsChangeProducter returns true if the transaction is change producter
+func (adapter *TxAdapter) isChangeProducter() bool {
+	if len(adapter.Vin) == 0 {
+		return false
+	}
+
+	if len(adapter.Vout) == 0 {
+		return false
+	}
+	for _, vout := range adapter.Vout {
+		if !bytes.Equal(account.PubKeyHash(adapter.Vin[0].PubKey), vout.PubKeyHash) {
+			return false
+		}
+	}
+
 	return true
 }
 

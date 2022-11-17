@@ -23,7 +23,6 @@ import (
 	"errors"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/dappley/go-dappley/core/account"
 	accountpb "github.com/dappley/go-dappley/core/account/pb"
@@ -46,8 +45,6 @@ type AccountManager struct {
 	fileLoader storage.FileStorage
 	PassPhrase []byte
 	mutex      sync.Mutex
-	timer      time.Timer
-	Locked     bool
 }
 
 //GetAccountFilePath return account file Path
@@ -88,10 +85,6 @@ func Exists(path string) bool {
 		return false
 	}
 	return true
-}
-
-func (am *AccountManager) NewTimer(timeout time.Duration) {
-	am.timer = *time.NewTimer(timeout)
 }
 
 func (am *AccountManager) LoadFromFile() error {
@@ -199,24 +192,6 @@ func (am *AccountManager) GetAccountByAddressWithPassphrase(address account.Addr
 
 }
 
-func (am *AccountManager) SetUnlockTimer(timeout time.Duration) {
-	am.Locked = false
-	am.SaveAccountToFile()
-	am.NewTimer(timeout)
-	am.timer.Reset(timeout)
-	go am.UnlockExpire()
-}
-
-func (am *AccountManager) UnlockExpire() {
-	defer am.timer.Stop()
-	select {
-	case <-am.timer.C:
-		am.LoadFromFile()
-		am.Locked = true
-		am.SaveAccountToFile()
-	}
-}
-
 func (am *AccountManager) ToProto() proto.Message {
 	pbAccounts := []*accountpb.Account{}
 	for _, account := range am.Accounts {
@@ -226,7 +201,6 @@ func (am *AccountManager) ToProto() proto.Message {
 	return &laccountpb.AccountManager{
 		Accounts:   pbAccounts,
 		PassPhrase: am.PassPhrase,
-		Locked:     am.Locked,
 	}
 }
 
@@ -240,5 +214,5 @@ func (am *AccountManager) FromProto(pb proto.Message) {
 
 	am.Accounts = accounts
 	am.PassPhrase = pb.(*laccountpb.AccountManager).PassPhrase
-	am.Locked = pb.(*laccountpb.AccountManager).Locked
+
 }

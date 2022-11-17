@@ -19,11 +19,8 @@
 package utxo
 
 import (
-	"bytes"
-	"github.com/dappley/go-dappley/common"
 	"github.com/raviqqe/hamt"
 	"hash/fnv"
-	"strconv"
 )
 
 // UTXOTx holds txid_vout and UTXO pairs
@@ -56,8 +53,7 @@ func NewUTXOTx() UTXOTx {
 
 // Construct with UTXO data
 func NewUTXOTxWithData(utxo *UTXO) UTXOTx {
-	key := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
-	return UTXOTx{Indices: map[string]*UTXO{key: utxo}}
+	return UTXOTx{Indices: map[string]*UTXO{GetUTXOKey(utxo.Txid, utxo.TxIndex): utxo}}
 }
 
 // Construct with map size
@@ -67,33 +63,21 @@ func NewUTXOTxWithSize(size int) *UTXOTx {
 
 // Returns utxo info by transaction id and vout index
 func (utxoTx UTXOTx) GetUtxo(txid []byte, vout int) *UTXO {
-	key := string(txid) + "_" + strconv.Itoa(vout)
-	utxo, ok := utxoTx.Indices[key]
+	utxo, ok := utxoTx.Indices[GetUTXOKey(txid, vout)]
 	if !ok {
 		return nil
 	}
 	return utxo
 }
 
-func (utxoTx UTXOTx) GetPerUtxoByKey(utxokey []byte) *UTXO {
-	for _,utxo:= range utxoTx.Indices{
-		if bytes.Equal(utxo.NextUtxoKey,utxokey){
-			return utxo
-		}
-	}
-	return nil
-}
-
 // Add new utxo to map
 func (utxoTx UTXOTx) PutUtxo(utxo *UTXO) {
-	key := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
-	utxoTx.Indices[key] = utxo
+	utxoTx.Indices[utxo.GetUTXOKey()] = utxo
 }
 
 // Delete invalid element in map
 func (utxoTx UTXOTx) RemoveUtxo(txid []byte, vout int) {
-	key := string(txid) + "_" + strconv.Itoa(vout)
-	delete(utxoTx.Indices, key)
+	delete(utxoTx.Indices, GetUTXOKey(txid, vout))
 }
 
 func (utxoTx UTXOTx) Size() int {
@@ -107,28 +91,6 @@ func (utxoTx UTXOTx) GetAllUtxos() []*UTXO {
 		utxos = append(utxos, utxo)
 	}
 	return utxos
-}
-
-func (utxoTx UTXOTx) PrepareUtxos(amount *common.Amount) ([]*UTXO, bool) {
-	sum := common.NewAmount(0)
-
-	if utxoTx.Size() < 1 {
-		return nil, false
-	}
-
-	var utxos []*UTXO
-	for _, utxo := range utxoTx.Indices {
-		if utxo.UtxoType == UtxoCreateContract {
-			continue
-		}
-
-		sum = sum.Add(utxo.Value)
-		utxos = append(utxos, utxo)
-		if sum.Cmp(amount) >= 0 {
-			return utxos, true
-		}
-	}
-	return nil, false
 }
 
 func (utxoTx UTXOTx) DeepCopy() *UTXOTx {

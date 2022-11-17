@@ -24,7 +24,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
@@ -37,10 +36,6 @@ import (
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
-)
-
-const (
-	scheduleFuncName = "dapp_schedule"
 )
 
 // Normal transaction
@@ -132,7 +127,7 @@ func (tx *TxContract) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) err
 		}).Warn("Verify: cannot find vin while verifying contract tx")
 		return err
 	}
-	err = tx.verifyInEstimate(utxoIndex, prevUtxos)
+	err = tx.Transaction.Verify(prevUtxos)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"txid":        hex.EncodeToString(tx.ID),
@@ -204,12 +199,10 @@ func NewTxContract(tx *transaction.Transaction) *TxContract {
 	return nil
 }
 
-// IsScheduleContract returns if the contract contains 'dapp_schedule'
-func (ctx *TxContract) IsScheduleContract() bool {
-	if !strings.Contains(ctx.GetContract(), scheduleFuncName) {
-		return true
-	}
-	return false
+// IsInvokeContract returns if the contract is invoke Contract
+func (ctx *TxContract) IsInvokeContract(utxoIndex *lutxo.UTXOIndex) bool {
+	return utxoIndex.IsIndexAddExist(ctx.Vout[transaction.ContractTxouputIndex].PubKeyHash) ||
+		utxoIndex.IsLastUtxoKeyExist(ctx.Vout[transaction.ContractTxouputIndex].PubKeyHash)
 }
 
 //GetContract returns the smart contract code in a transaction
@@ -270,15 +263,7 @@ func (tx *TxContract) VerifyInEstimate(utxoIndex *lutxo.UTXOIndex) error {
 	if err != nil {
 		return err
 	}
-	return tx.verifyInEstimate(utxoIndex, prevUtxos)
-}
-
-func (tx *TxContract) verifyInEstimate(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO) error {
-	if tx.IsScheduleContract() && !tx.IsContractDeployed(utxoIndex) {
-		return errors.New("Transaction: contract state check failed")
-	}
-	err := tx.Transaction.Verify(prevUtxos)
-	return err
+	return tx.Transaction.Verify(prevUtxos)
 }
 
 // IsContractDeployed returns if the current contract is deployed
@@ -294,7 +279,7 @@ func (tx *TxContract) IsContractDeployed(utxoIndex *lutxo.UTXOIndex) bool {
 func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	isContractDeployed bool,
 	utxoIndex *lutxo.UTXOIndex,
-	scStorage *scState.ScState,
+	ctState *scState.ScState,
 	rewards map[string]string,
 	engine ScEngine,
 	currblkHeight uint64,
@@ -303,8 +288,9 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	if engine == nil {
 		return 0, nil, nil
 	}
-	if !isContractDeployed {
-		return 0, nil, nil
+	baseGas, _ := tx.GasCountOfTxBase()
+	if !isContractDeployed { //means this is a contract deploy transaction
+		return (baseGas).Uint64(), nil, nil
 	}
 
 	vout := tx.Vout[transaction.ContractTxouputIndex]
@@ -330,7 +316,7 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 		return 0, nil, ErrLoadError
 	}
 	engine.ImportSourceCode(createContractUtxo.Contract)
-	engine.ImportLocalStorage(scStorage)
+	engine.ImportLocalStorage(ctState)
 	engine.ImportContractAddr(address)
 	engine.ImportSourceTXID(tx.ID)
 	engine.ImportRewardStorage(rewards)
@@ -342,40 +328,11 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	engine.ImportUtxoIndex(utxoIndex)
 	_, err := engine.Execute(function, totalArgs)
 	gasCount := engine.ExecutionInstructions()
-	// record base gas
-	baseGas, _ := tx.GasCountOfTxBase()
 	gasCount += baseGas.Uint64()
 	if err != nil {
 		return gasCount, nil, err
 	}
 	return gasCount, engine.GetGeneratedTXs(), err
-}
-
-// Execute contract and return the generated transactions
-func (tx *TxContract) CollectContractOutput(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO, isContractDeployed bool, scStorage *scState.ScState,
-	engine ScEngine, currBlkHeight uint64, parentBlk *block.Block, minerAddr account.Address, rewards map[string]string, count int) (generatedTxs []*transaction.Transaction, err error) {
-	if tx.GasPrice.Cmp(common.NewAmount(0)) <= 0 {
-		err := errors.New("CollectContractOutput: gas price must be a positive number")
-		logger.WithError(err).Error("CollectContractOutput: executeSmartContract error")
-		return nil, err
-	}
-	gasCount, generatedTxs, err := tx.Execute(prevUtxos, isContractDeployed, utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
-	if err != nil {
-		logger.WithError(err).Error("CollectContractOutput: executeSmartContract error")
-	}
-	// record gas used
-	if gasCount > 0 {
-		minerTA := account.NewTransactionAccountByAddress(minerAddr)
-		grtx, err := NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), tx.GasPrice, count)
-		if err == nil {
-			generatedTxs = append(generatedTxs, &grtx)
-		}
-	}
-	gctx, err := NewGasChangeTx(tx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), tx.GasLimit, tx.GasPrice, count)
-	if err == nil {
-		generatedTxs = append(generatedTxs, &gctx)
-	}
-	return generatedTxs, nil
 }
 
 //NewRewardTx creates a new transaction that gives reward to addresses according to the input rewards
@@ -421,33 +378,42 @@ func (tx *TxGasReward) GetRewardValue() *common.Amount {
 }
 
 // NewGasRewardTx returns a reward to miner, earned for contract execution gas fee
-func NewGasRewardTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasPrice *common.Amount, uniqueNum int) (transaction.Transaction, error) {
-	fee := actualGasCount.Mul(gasPrice)
+func NewGasRewardTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasPrice *common.Amount, uniqueNum int) (transaction.Transaction, bool) {
+	if actualGasCount.Cmp(common.NewAmount(0)) <= 0 {
+		return transaction.Transaction{}, false
+	}
+		fee := actualGasCount.Mul(gasPrice)
+	if fee.IsZero() {
+		return transaction.Transaction{}, false
+	}
 	txin := transactionbase.TXInput{nil, -1, getUniqueByte(blockHeight, uniqueNum), transaction.GasRewardData}
 	txout := transactionbase.NewTXOutput(fee, to)
 	tx := transaction.Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeGasReward}
 	tx.ID = tx.Hash()
-	return tx, nil
+	return tx, true
 }
 
 // NewGasChangeTx returns a change to contract invoker, pay for the change of unused gas
-func NewGasChangeTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, uniqueNum int) (transaction.Transaction, error) {
+func NewGasChangeTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, uniqueNum int) (transaction.Transaction, bool) {
 	if gasLimit.Cmp(actualGasCount) <= 0 {
-		return transaction.Transaction{}, transaction.ErrNoGasChange
+		logger.Warn(transaction.ErrNoGasChange)
+		return transaction.Transaction{}, false
 	}
 	change, err := gasLimit.Sub(actualGasCount)
-
 	if err != nil {
-		return transaction.Transaction{}, err
+		logger.Warn(err)
+		return transaction.Transaction{}, false
 	}
 	changeValue := change.Mul(gasPrice)
-
+	if changeValue.IsZero() {
+		return transaction.Transaction{}, false
+	}
 	txin := transactionbase.TXInput{nil, -1, getUniqueByte(blockHeight, uniqueNum), transaction.GasChangeData}
 	txout := transactionbase.NewTXOutput(changeValue, to)
 	tx := transaction.Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeGasChange}
 
 	tx.ID = tx.Hash()
-	return tx, nil
+	return tx, true
 }
 
 // NewCoinbaseTX creates a new coinbase transaction
@@ -466,8 +432,23 @@ func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *com
 	return tx
 }
 
+func NewProducerChangeUTXOTransaction(utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam) (transaction.Transaction, error) {
+	txType := transaction.TxTypeProducerChange
+	return NewUTXOTransaction(txType, utxos, sendTxParam)
+}
+
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam) (transaction.Transaction, error) {
+func NewNormalUTXOTransaction(utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam) (transaction.Transaction, error) {
+	txType := transaction.TxTypeNormal
+	if sendTxParam.Contract != "" {
+		txType = transaction.TxTypeContract
+
+	}
+	return NewUTXOTransaction(txType, utxos, sendTxParam)
+}
+
+// NewUTXOTransaction creates a new transaction
+func NewUTXOTransaction(txType transaction.TxType, utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam) (transaction.Transaction, error) {
 	fromAccount := account.NewTransactionAccountByAddress(sendTxParam.From)
 	toAccount := account.NewTransactionAccountByAddress(sendTxParam.To)
 	sum := transaction.CalculateUtxoSum(utxos)
@@ -475,10 +456,7 @@ func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam)
 	if err != nil {
 		return transaction.Transaction{}, err
 	}
-	txType := transaction.TxTypeNormal
-	if sendTxParam.Contract != "" {
-		txType = transaction.TxTypeContract
-	}
+
 	tx := transaction.Transaction{
 		nil,
 		prepareInputLists(utxos, sendTxParam.SenderKeyPair.GetPublicKey(), nil),

@@ -30,7 +30,7 @@ func (txSender *UnexistingUtxoTxSender) Generate(params transaction.SendTxParam)
 	}
 	ta := account.NewAccountByKey(params.SenderKeyPair)
 
-	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(ta.GetPubKeyHash(), params.Amount)
+	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsAccordingToAmount(ta.GetPubKeyHash(), params.Amount)
 
 	if err != nil {
 		logger.WithError(err).Panic("UnexisitingUtxoTx: Unable to get UTXOs to match the amount")

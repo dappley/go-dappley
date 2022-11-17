@@ -35,9 +35,7 @@ type Address struct {
 }
 
 func NewAddress(addressString string) Address {
-	address := Address{}
-	address.address = addressString
-	return address
+	return Address{addressString}
 }
 func (a Address) decode() []byte {
 	pubKeyHash := base58.Decode(a.String())

@@ -16,7 +16,7 @@ type ScEngineManager interface {
 type ScEngine interface {
 	DestroyEngine()
 	ImportSourceCode(source string)
-	ImportLocalStorage(state *scState.ScState)
+	ImportLocalStorage(ctState *scState.ScState)
 	ImportContractAddr(contractAddr account.Address)
 	ImportSourceTXID(txid []byte)
 	ImportUtxoIndex(utxoIndex *lutxo.UTXOIndex)
@@ -26,7 +26,6 @@ type ScEngine interface {
 	ImportPrevUtxos(utxos []*utxo.UTXO)
 	ImportCurrBlockHeight(currBlkHeight uint64)
 	ImportSeed(seed int64)
-	ImportNodeAddress(addr account.Address)
 	GetGeneratedTXs() []*transaction.Transaction
 	Execute(function, args string) (string, error)
 	SetExecutionLimits(uint64, uint64) error

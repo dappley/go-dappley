@@ -68,7 +68,7 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 			{common.NewAmount(5), ta3.GetPubKeyHash(), ""},
 			{common.NewAmount(3), ta4.GetPubKeyHash(), ""},
 		},
-		Tip: common.NewAmount(2),
+		Tip:  common.NewAmount(2),
 		Type: transaction.TxTypeNormal,
 	}
 	dependentTx2.ID = dependentTx2.Hash()
@@ -81,7 +81,7 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(1), ta4.GetPubKeyHash(), ""},
 		},
-		Tip: common.NewAmount(4),
+		Tip:  common.NewAmount(4),
 		Type: transaction.TxTypeNormal,
 	}
 	dependentTx3.ID = dependentTx3.Hash()
@@ -95,7 +95,7 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(3), ta1.GetPubKeyHash(), ""},
 		},
-		Tip: common.NewAmount(1),
+		Tip:  common.NewAmount(1),
 		Type: transaction.TxTypeNormal,
 	}
 	dependentTx4.ID = dependentTx4.Hash()
@@ -109,29 +109,30 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(4), ta5.GetPubKeyHash(), ""},
 		},
-		Tip: common.NewAmount(4),
+		Tip:  common.NewAmount(4),
 		Type: transaction.TxTypeNormal,
 	}
 	dependentTx5.ID = dependentTx5.Hash()
-
-	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	db := storage.NewRamStorage()
+	defer db.Close()
+	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
 
 	utxoTx2 := utxo.NewUTXOTx()
-	utxoTx2.PutUtxo(&utxo.UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1, utxo.UtxoNormal,[]byte{}})
+	utxoTx2.PutUtxo(&utxo.UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1, utxo.UtxoNormal, []byte{}, []byte{}})
 
 	utxoTx1 := utxo.NewUTXOTx()
-	utxoTx1.PutUtxo(&utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal,[]byte{}})
+	utxoTx1.PutUtxo(&utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal, []byte{}, []byte{}})
 
 	utxoIndex.SetIndexAdd(map[string]*utxo.UTXOTx{
 		ta2.GetPubKeyHash().String(): &utxoTx2,
 		ta1.GetPubKeyHash().String(): &utxoTx1,
 	})
 
-	tx2Utxo1 := utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal,[]byte{}}
-	tx2Utxo2 := utxo.UTXO{dependentTx2.Vout[1], dependentTx2.ID, 1, utxo.UtxoNormal,[]byte{}}
-	tx2Utxo3 := utxo.UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, utxo.UtxoNormal,[]byte{}}
-	tx2Utxo4 := utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal,[]byte{}}
-	tx2Utxo5 := utxo.UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, utxo.UtxoNormal,[]byte{}}
+	tx2Utxo1 := utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal, []byte{}, []byte{}}
+	tx2Utxo2 := utxo.UTXO{dependentTx2.Vout[1], dependentTx2.ID, 1, utxo.UtxoNormal, []byte{}, []byte{}}
+	tx2Utxo3 := utxo.UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, utxo.UtxoNormal, []byte{}, []byte{}}
+	tx2Utxo4 := utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal, []byte{}, []byte{}}
+	tx2Utxo5 := utxo.UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, utxo.UtxoNormal, []byte{}, []byte{}}
 	ltransaction.NewTxDecorator(dependentTx2).Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).GetAllUtxos())
 	ltransaction.NewTxDecorator(dependentTx3).Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
 	ltransaction.NewTxDecorator(dependentTx4).Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo2, &tx2Utxo3})
@@ -152,21 +153,21 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 
 	// test a transaction whose Vin is from another transaction in transaction pool
 	utxoIndex2 := *utxoIndex.DeepCopy()
-	utxoIndex2.UpdateUtxos(txPool.GetTransactions())
+	utxoIndex2.UpdateUtxos(txPool.GetTransactions(&utxoIndex2))
 	err2 := ltransaction.VerifyTransaction(&utxoIndex2, dependentTx3, 0)
 	assert.Nil(t, err2)
 	txPool.Push(*dependentTx3)
 
 	// test a transaction whose Vin is from another two transactions in transaction pool
 	utxoIndex3 := *utxoIndex.DeepCopy()
-	utxoIndex3.UpdateUtxos(txPool.GetTransactions())
+	utxoIndex3.UpdateUtxos(txPool.GetTransactions(&utxoIndex3))
 	err3 := ltransaction.VerifyTransaction(&utxoIndex3, dependentTx4, 0)
 	assert.Nil(t, err3)
 	txPool.Push(*dependentTx4)
 
 	// test a transaction whose Vin is from another transaction in transaction pool and UtxoIndex
 	utxoIndex4 := *utxoIndex.DeepCopy()
-	utxoIndex4.UpdateUtxos(txPool.GetTransactions())
+	utxoIndex4.UpdateUtxos(txPool.GetTransactions(&utxoIndex4))
 	err4 := ltransaction.VerifyTransaction(&utxoIndex4, dependentTx5, 0)
 	assert.Nil(t, err4)
 	txPool.Push(*dependentTx5)
@@ -183,7 +184,9 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 
 func TestTransactionPool_PopTransactionsWithMostTipsNoDependency(t *testing.T) {
 	txPool := NewTransactionPool(nil, 1280000)
-	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	db := storage.NewRamStorage()
+	defer db.Close()
+	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
 	var prevUTXOs []*utxo.UTXOTx
 	var txs []*transaction.Transaction
 	var accounts []*account.Account
@@ -199,20 +202,23 @@ func TestTransactionPool_PopTransactionsWithMostTipsNoDependency(t *testing.T) {
 	//Create 4 transactions that can pass the transaction verification
 	for i := 0; i < 4; i++ {
 		sendTxParam := transaction.NewSendTxParam(accounts[i].GetAddress(), accounts[i].GetKeyPair(), accounts[i+1].GetAddress(), common.NewAmount(1), common.NewAmount(uint64(i)), common.NewAmount(0), common.NewAmount(0), "")
-		tx, err := ltransaction.NewUTXOTransaction(prevUTXOs[i].GetAllUtxos(), sendTxParam)
+		tx, err := ltransaction.NewNormalUTXOTransaction(prevUTXOs[i].GetAllUtxos(), sendTxParam)
 		assert.Nil(t, err)
 		txPool.Push(tx)
 		txs = append(txs, &tx)
 	}
 
 	//pop out the transactions with most tips
-	poppedTx := txPool.PopTransactionWithMostTips(utxoIndex)
+	poppedTx, err := txPool.PopTransactionWithMostTips(utxoIndex)
+	assert.Nil(t, err)
 	assert.Equal(t, txs[3], poppedTx.Value)
 }
 
 func TestTransactionPool_PopTransactionsWithMostTipsWithDependency(t *testing.T) {
 	txPool := NewTransactionPool(nil, 1280000)
-	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	db := storage.NewRamStorage()
+	defer db.Close()
+	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
 	var accounts []*account.Account
 	var txs []*transaction.Transaction
 
@@ -228,15 +234,16 @@ func TestTransactionPool_PopTransactionsWithMostTipsWithDependency(t *testing.T)
 	//Create 4 transactions that can pass the transaction verification
 	for i := 0; i < 4; i++ {
 		prevUTXO := tempUtxoIndex.GetAllUTXOsByPubKeyHash(accounts[i].GetPubKeyHash())
-		sendTxParam := transaction.NewSendTxParam(accounts[i].GetAddress(), accounts[i].GetKeyPair(), accounts[i+1].GetAddress(), common.NewAmount(uint64(100-i*4)), common.NewAmount(uint64(i)), common.NewAmount(0), common.NewAmount(0), "")
-		tx, err := ltransaction.NewUTXOTransaction(prevUTXO.GetAllUtxos(), sendTxParam)
+		sendTxParam := transaction.NewSendTxParam(accounts[i].GetAddress(), accounts[i].GetKeyPair(), accounts[i+1].GetAddress(), common.NewAmount(uint64(100-i*4)), common.NewAmount(uint64(1)), common.NewAmount(0), common.NewAmount(0), "")
+		tx, err := ltransaction.NewNormalUTXOTransaction(prevUTXO.GetAllUtxos(), sendTxParam)
 		assert.Nil(t, err)
 		tempUtxoIndex.UpdateUtxo(&tx)
 		txPool.Push(tx)
 		txs = append(txs, &tx)
 	}
 	//pop out the transactions with most tips. Each tx is about 263 bytes
-	poppedTx := txPool.PopTransactionWithMostTips(utxoIndex)
+	poppedTx, err := txPool.PopTransactionWithMostTips(utxoIndex)
+	assert.Nil(t, err)
 
 	//tx 0 should be popped first since it is the parent of all other transactions
 	assert.Equal(t, txs[0], poppedTx.Value)

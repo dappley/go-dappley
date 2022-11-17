@@ -19,6 +19,7 @@
 package storage
 
 import (
+	"strconv"
 	"sync"
 	"testing"
 
@@ -47,7 +48,7 @@ func TestRamStorage_GetandPut(t *testing.T) {
 
 	//for each key value pair. Store it, read it and compare if the value stays unchanged
 	for i, kv := range keyValuePairs {
-		t.Run(string(i), func(t *testing.T) {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			r.Put(kv.key, kv.value)
 			v, err := r.Get(kv.key)
 			assert.Nil(t, err)

@@ -21,6 +21,7 @@ package transactionpool
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"sort"
 	"sync"
 
@@ -139,10 +140,10 @@ func (txPool *TransactionPool) GetSizeLimit() uint32 {
 	return txPool.sizeLimit
 }
 
-func (txPool *TransactionPool) GetTransactions() []*transaction.Transaction {
+func (txPool *TransactionPool) GetTransactions(utxoIndex *lutxo.UTXOIndex) []*transaction.Transaction {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
-	return txPool.getSortedTransactions()
+	return txPool.getSortedTransactions(utxoIndex)
 }
 
 func (txPool *TransactionPool) GetNumOfTxInPool() int {
@@ -159,7 +160,7 @@ func (txPool *TransactionPool) ResetPendingTransactions() {
 	txPool.pendingTxs = make([]*transaction.Transaction, 0)
 }
 
-func (txPool *TransactionPool) GetAllTransactions() []*transaction.Transaction {
+func (txPool *TransactionPool) GetAllTransactions(utxoIndex *lutxo.UTXOIndex) []*transaction.Transaction {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
 
@@ -168,21 +169,21 @@ func (txPool *TransactionPool) GetAllTransactions() []*transaction.Transaction {
 		txs = append(txs, tx)
 	}
 
-	for _, tx := range txPool.getSortedTransactions() {
+	for _, tx := range txPool.getSortedTransactions(utxoIndex) {
 		txs = append(txs, tx)
-	}
 
+	}
 	return txs
 }
 
 //PopTransactionWithMostTips pops the transactions with the most tips
-func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *lutxo.UTXOIndex) *transaction.TransactionNode {
+func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *lutxo.UTXOIndex) (*transaction.TransactionNode,error) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 
 	txNode := txPool.getMaxTipTransaction()
 	if txNode == nil {
-		return txNode
+		return txNode,errors.New("txNode is nil")
 	}
 	//remove the transaction from tip order
 	txPool.tipOrder = txPool.tipOrder[1:]
@@ -193,11 +194,11 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *lutxo.UTXOI
 	} else {
 		logger.WithError(err).Warn("Transaction Pool: Pop max tip transaction failed!")
 		txPool.removeTransactionNodeAndChildren(txNode.Value)
-		return nil
+		return nil ,nil
 	}
 
 	txPool.pendingTxs = append(txPool.pendingTxs, txNode.Value)
-	return txNode
+	return txNode,nil
 }
 
 //Rollback adds a popped transaction back to the transaction pool. The existing transactions in txpool may be dependent on the input transactionbase. However, the input transaction should never be dependent on any transaction in the current pool
@@ -288,17 +289,7 @@ func (txPool *TransactionPool) removeFromTipOrder(txID []byte) {
 
 }
 
-func (txPool *TransactionPool) cleanUpTxSort() {
-	newTxOrder := []string{}
-	for _, txid := range txPool.tipOrder {
-		if _, ok := txPool.txs[txid]; ok {
-			newTxOrder = append(newTxOrder, txid)
-		}
-	}
-	txPool.tipOrder = newTxOrder
-}
-
-func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transaction {
+func (txPool *TransactionPool) getSortedTransactions(utxoIndex *lutxo.UTXOIndex) []*transaction.Transaction {
 
 	nodes := make(map[string]*transaction.TransactionNode)
 	scDeploymentTxExists := make(map[string]bool)
@@ -306,7 +297,7 @@ func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transactio
 	for key, node := range txPool.txs {
 		nodes[key] = node
 		ctx := ltransaction.NewTxContract(node.Value)
-		if ctx != nil && !ctx.IsScheduleContract() {
+		if ctx != nil && !ctx.IsInvokeContract(utxoIndex) {
 			scDeploymentTxExists[ctx.GetContractPubKeyHash().GenerateAddress().String()] = true
 		}
 	}
@@ -318,7 +309,7 @@ func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transactio
 				ctx := ltransaction.NewTxContract(node.Value)
 				if ctx != nil {
 					ctxPkhStr := ctx.GetContractPubKeyHash().GenerateAddress().String()
-					if ctx.IsScheduleContract() {
+					if ctx.IsInvokeContract(utxoIndex) {
 						if !scDeploymentTxExists[ctxPkhStr] {
 							sortedTxs = append(sortedTxs, node.Value)
 							delete(nodes, key)
@@ -358,32 +349,9 @@ func (txPool *TransactionPool) GetTransactionById(txid []byte) *transaction.Tran
 	return txNode.Value
 }
 
-func (txPool *TransactionPool) getDependentTxs(txNode *transaction.TransactionNode) map[string]*transaction.TransactionNode {
-
-	toRemoveTxs := make(map[string]*transaction.TransactionNode)
-	toCheckTxs := []*transaction.TransactionNode{txNode}
-
-	for len(toCheckTxs) > 0 {
-		currentTxNode := toCheckTxs[0]
-		toCheckTxs = toCheckTxs[1:]
-		for key, _ := range currentTxNode.Children {
-			toCheckTxs = append(toCheckTxs, txPool.txs[key])
-		}
-		toRemoveTxs[hex.EncodeToString(currentTxNode.Value.ID)] = currentTxNode
-	}
-
-	return toRemoveTxs
-}
-
-// The param toRemoveTxs must be calculated by function getDependentTxs
-func (txPool *TransactionPool) removeSelectedTransactions(toRemoveTxs map[string]*transaction.TransactionNode) {
-	for _, txNode := range toRemoveTxs {
-		txPool.removeTransactionNodeAndChildren(txNode.Value)
-	}
-}
-
 //removeTransactionNodeAndChildren removes the txNode from tx pool and all its children.
 //Note: this function does not remove the node from tipOrder!
+//todo:delete  node from tipOrder
 func (txPool *TransactionPool) removeTransactionNodeAndChildren(tx *transaction.Transaction) {
 
 	txStack := stack.New()
@@ -486,7 +454,7 @@ func (txPool *TransactionPool) insertIntoTipOrder(txNode *transaction.Transactio
 				"txid":             txPool.tipOrder[i],
 				"len_of_tip_order": len(txPool.tipOrder),
 				"len_of_txs":       len(txPool.txs),
-			}).Warn("TransactionPool: the transaction in tip order does not exist in txs!")
+			}).Warn("TransactionPool: the tip order does not exist in txs!")
 			return false
 		}
 		if txPool.txs[txPool.tipOrder[i]].Value == nil {
@@ -495,6 +463,7 @@ func (txPool *TransactionPool) insertIntoTipOrder(txNode *transaction.Transactio
 				"len_of_tip_order": len(txPool.tipOrder),
 				"len_of_txs":       len(txPool.txs),
 			}).Warn("TransactionPool: the transaction in tip order does not exist in txs!")
+			return false
 		}
 		return txPool.txs[txPool.tipOrder[i]].GetTipsPerByte().Cmp(txNode.GetTipsPerByte()) == -1
 	})
@@ -556,7 +525,6 @@ func (txPool *TransactionPool) BroadcastTx(tx *transaction.Transaction) {
 }
 
 func (txPool *TransactionPool) BroadcastTxHandler(input interface{}) {
-
 	var command *networkmodel.DappRcvdCmdContext
 	command = input.(*networkmodel.DappRcvdCmdContext)
 
