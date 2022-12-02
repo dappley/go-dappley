@@ -283,6 +283,7 @@ func verifyGasTxs(blockTxs []*transaction.Transaction, totalGasFee *common.Amoun
 			}
 		}
 	}
+
 	if !totalGasFee.IsZero() {
 		return false
 	}
