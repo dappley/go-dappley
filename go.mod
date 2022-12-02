@@ -3,13 +3,11 @@ module github.com/dappley/go-dappley
 go 1.13
 
 require (
-	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/asaskevich/EventBus v0.0.0-20200428142821-4fc0642a29f3
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
-	github.com/go-ole/go-ole v1.2.4 // indirect
-	github.com/gogo/protobuf v1.3.1
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
 	github.com/golang/mock v1.4.3
 	github.com/golang/protobuf v1.4.2
@@ -17,7 +15,6 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 // indirect
-	github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
 	github.com/lestrrat-go/file-rotatelogs v2.3.0+incompatible
 	github.com/lestrrat-go/strftime v1.0.1 // indirect
 	github.com/libp2p/go-libp2p v0.10.0
@@ -25,12 +22,10 @@ require (
 	github.com/libp2p/go-libp2p-crypto v0.1.0
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mitchellh/mapstructure v1.3.2 // indirect
-	github.com/mr-tron/base58 v1.2.0
+	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/multiformats/go-multiaddr v0.2.2
-	github.com/otiai10/copy v1.5.0 // indirect
 	github.com/pelletier/go-toml v1.8.0 // indirect
 	github.com/peterh/liner v1.2.0
-	github.com/pkg/errors v0.9.1
 	github.com/raviqqe/hamt v0.0.0-20190615202029-864fb7caef85
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0
 	github.com/rifflock/lfshook v0.0.0-20180920164130-b9218ef580f5
@@ -48,13 +43,12 @@ require (
 	github.com/tebeka/strftime v0.1.4 // indirect
 	github.com/tidwall/gjson v1.6.1
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
-	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
-	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
+	github.com/yusufpapurcu/wmi v1.2.2 // indirect
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	golang.org/x/net v0.0.0-20201021035429-f5854403a974
 	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
-	golang.org/x/tools v0.0.0-20191216052735-49a3e744a425
 	google.golang.org/genproto v0.0.0-20200610212329-df9b449b0ff2 // indirect
 	google.golang.org/grpc v1.29.1
-	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0 // indirect
 	google.golang.org/protobuf v1.24.0
 	gopkg.in/ini.v1 v1.57.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c // indirect
