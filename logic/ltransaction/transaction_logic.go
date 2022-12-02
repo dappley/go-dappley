@@ -3,7 +3,6 @@ package ltransaction
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"fmt"
 
 	"github.com/dappley/go-dappley/common"
@@ -13,6 +12,7 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
@@ -20,18 +20,11 @@ import (
 )
 
 var (
-	ErrInvalidGasPrice = errors.New("invalid gas price, should be in (0, 10^12]")
-	ErrInvalidGasLimit = errors.New("invalid gas limit, should be in (0, 5*10^10]")
-
-	// vm error
-	ErrExecutionFailed       = errors.New("execution failed")
-	ErrUnsupportedSourceType = errors.New("unsupported source type")
-	ErrLoadError             = errors.New("contract load error")
-	GasConsumption           = 0
+	GasConsumption = 0
 )
 
 func SetGasConsumption(isOn bool) {
-	if !isOn{
+	if !isOn {
 		GasConsumption = -1
 	}
 }
@@ -53,10 +46,10 @@ func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, 
 func VerifyAndCollectContractOutput(utxoIndex *lutxo.UTXOIndex, tx *TxContract, ctState *scState.ScState, scEngine ScEngine, currBlkHeight uint64, parentBlk *block.Block, rewards map[string]string, db storage.Storage) (gasCount uint64, generatedTxs []*transaction.Transaction, err error) {
 	// Run the contract and collect generated transactions
 	if scEngine == nil {
-		return 0, nil, errors.New("VerifyAndCollectContractOutput: is missing SCEngineManager when verifying transactions.")
+		return 0, nil, errval.MissingEngineManager
 	}
-	if tx.GasPrice.Cmp(common.NewAmount(0)) < 0 || tx.GasPrice.Cmp(common.NewAmount(0)) == GasConsumption{
-		err := errors.New("CollectContractOutput: gas price must be a positive number")
+	if tx.GasPrice.Cmp(common.NewAmount(0)) < 0 || tx.GasPrice.Cmp(common.NewAmount(0)) == GasConsumption {
+		err := errval.NegativeGasPrice
 		logger.WithError(err).Error("CollectContractOutput: executeSmartContract error")
 		return 0, nil, err
 	}

@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	"github.com/dappley/go-dappley/core/utxo"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
@@ -93,7 +94,7 @@ func readOld(db storage.Storage) *UTXOIndexOld {
 // LoadUTXOIndexOld returns the UTXOIndex fetched from db.
 func LoadUTXOIndexOld(db storage.Storage) *UTXOIndexOld {
 	utxoBytes, err := db.Get([]byte(utxoMapKeyOld))
-	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(utxoBytes) == 0 {
+	if err != nil && err == errval.InvalidKey || len(utxoBytes) == 0 {
 		logger.Error("Utxo_data_transfer: utxo does not exists in database.")
 		return nil
 	}

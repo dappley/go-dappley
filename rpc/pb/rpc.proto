@@ -13,6 +13,7 @@ service RpcService {
   rpc RpcGetBalance (GetBalanceRequest) returns (GetBalanceResponse) {}
   rpc RpcGetBlockchainInfo (GetBlockchainInfoRequest) returns (GetBlockchainInfoResponse) {}
   rpc RpcGetUTXO(stream GetUTXORequest) returns (stream GetUTXOResponse) {}
+  rpc RpcGetUTXOWithAmount(stream GetUTXOWithAmountRequest) returns (stream GetUTXOResponse) {}
   rpc RpcGetBlocks(GetBlocksRequest) returns (GetBlocksResponse) {}
   rpc RpcGetBlockByHash(GetBlockByHashRequest) returns (GetBlockByHashResponse) {}
   rpc RpcGetBlockByHeight(GetBlockByHeightRequest) returns (GetBlockByHeightResponse) {}
@@ -31,10 +32,7 @@ service AdminService{
   rpc RpcAddPeer(AddPeerRequest) returns (AddPeerResponse) {}
   rpc RpcSend (SendRequest) returns (SendResponse) {}
   rpc RpcGetPeerInfo (GetPeerInfoRequest) returns (GetPeerInfoResponse) {}
-  rpc RpcSendFromMiner (SendFromMinerRequest) returns (SendFromMinerResponse) {}
   rpc RpcChangeProducer (ChangeProducerRequest) returns (ChangeProducerResponse) {}
-  rpc RpcAddProducer (AddProducerRequest) returns (AddProducerResponse) {}
-  rpc RpcDeleteProducer (DeleteProducerRequest) returns (DeleteProducerResponse) {}
 }
 
 service MetricService {
@@ -53,14 +51,7 @@ message CreateAccountRequest {
 message ChangeProducerRequest {
   uint64 height = 1;
   string addresses = 2;
-}
-
-message DeleteProducerRequest {
-  uint64 height = 1;
-}
-message AddProducerRequest {
-  uint64 height = 1;
-  string addresses = 2;
+  uint64 kind = 3;
 }
 
 message GetBalanceRequest {
@@ -97,6 +88,11 @@ message GetVersionRequest {
 
 message GetUTXORequest {
   string address = 1;  //account address
+}
+
+message GetUTXOWithAmountRequest {
+  string address = 1;  //account address
+  uint64 amount = 2;  // Amount requested, UTXOs returned will be the minimum number needed to reach this amount
 }
 
 message GetBlocksRequest {
@@ -146,8 +142,6 @@ message ContractQueryRequest {
 // Responses
 
 message ChangeProducerResponse {}
-message AddProducerResponse {}
-message DeleteProducerResponse {}
 
 message GetBalanceResponse {
   int64 amount = 1;

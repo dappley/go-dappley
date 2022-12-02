@@ -2,10 +2,10 @@ package account
 
 import (
 	"encoding/hex"
-	"errors"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/dappley/go-dappley/crypto/hash"
+	errval "github.com/dappley/go-dappley/errors"
 )
 
 const versionUser = byte(0x5A)
@@ -13,12 +13,6 @@ const versionContract = byte(0x58)
 const addressChecksumLen = 4
 
 type PubKeyHash []byte
-
-var (
-	ErrIncorrectPublicKey       = errors.New("public key not correct")
-	ErrEmptyPublicKeyHash       = errors.New("empty public key hash")
-	ErrInvalidPubKeyHashVersion = errors.New("invalid public key hash version")
-)
 
 //NewUserPubKeyHash hashes a public key and returns a user type public key hash
 func newUserPubKeyHash(pubKey []byte) PubKeyHash {
@@ -51,7 +45,7 @@ func (pkh PubKeyHash) GenerateAddress() Address {
 func (pkh PubKeyHash) IsContract() (bool, error) {
 
 	if len(pkh) == 0 {
-		return false, ErrEmptyPublicKeyHash
+		return false, errval.EmptyPublicKeyHash
 	}
 
 	if pkh[0] == versionUser {
@@ -62,7 +56,7 @@ func (pkh PubKeyHash) IsContract() (bool, error) {
 		return true, nil
 	}
 
-	return false, ErrInvalidPubKeyHashVersion
+	return false, errval.InvalidPubKeyHashVersion
 }
 
 //generatePubKeyHash hashes a public key
@@ -75,7 +69,7 @@ func generatePubKeyHash(pubKey []byte) []byte {
 //IsValidPubKey return true if pubkey is valid
 func IsValidPubKey(pubKey []byte) (bool, error) {
 	if pubKey == nil || len(pubKey) < 32 {
-		return false, ErrIncorrectPublicKey
+		return false, errval.IncorrectPublicKey
 	}
 	return true, nil
 }

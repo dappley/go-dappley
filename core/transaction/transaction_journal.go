@@ -18,18 +18,13 @@
 package transaction
 
 import (
-	"errors"
-
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	transactionbasepb "github.com/dappley/go-dappley/core/transactionbase/pb"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
-)
-
-var (
-	ErrVoutNotFound = errors.New("vout not found in current transaction")
 )
 
 // TxJournal refers to transaction log data.
@@ -69,7 +64,7 @@ func GetTxOutput(vin transactionbase.TXInput, db storage.Storage) (transactionba
 		return transactionbase.TXOutput{}, err
 	}
 	if vin.Vout >= len(txJournal.Vout) {
-		return transactionbase.TXOutput{}, ErrVoutNotFound
+		return transactionbase.TXOutput{}, errval.VoutNotFound
 	}
 	return txJournal.Vout[vin.Vout], nil
 }

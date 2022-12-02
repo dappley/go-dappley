@@ -1,10 +1,11 @@
 package utxo
 
 import (
+	"testing"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 var utxo1 = &UTXO{
@@ -117,4 +118,40 @@ func TestStringEntry_Hash(t *testing.T) {
 
 	assert.Equal(t, uint32(0x4f9f2cab), se1.Hash())
 	assert.Equal(t, uint32(0x37a3e893), se2.Hash())
+}
+
+func TestStringEntry_Equal(t *testing.T) {
+	se1 := StringEntry("string1")
+	se2 := StringEntry("string1")
+	se3 := StringEntry("string2")
+
+	assert.True(t, se1.Equal(&se2))
+	assert.False(t, se1.Equal(&se3))
+}
+
+func TestSyncPool_Free(t *testing.T) {
+	utxoTx := NewUTXOTx()
+	utxoTx.PutUtxo(utxo1)
+	utxoTx.PutUtxo(utxo2)
+	indices := utxoTx.Indices
+	assert.NotNil(t, indices[utxo1.GetUTXOKey()])
+	assert.NotNil(t, indices[utxo2.GetUTXOKey()])
+
+	Free(&utxoTx)
+	assert.Nil(t, indices[utxo1.GetUTXOKey()])
+	assert.Nil(t, indices[utxo2.GetUTXOKey()])
+}
+
+func TestSyncPool_NewSyncPool(t *testing.T) {
+	testPool := NewSyncPool(10, 100, 2)
+	assert.Equal(t, 4, len(testPool.classes))
+	assert.Equal(t, 4, len(testPool.classesSize))
+	assert.Equal(t, 10, testPool.classesSize[0])
+	assert.NotNil(t, testPool.classes[0])
+	assert.Equal(t, 20, testPool.classesSize[1])
+	assert.NotNil(t, testPool.classes[1])
+	assert.Equal(t, 40, testPool.classesSize[2])
+	assert.NotNil(t, testPool.classes[2])
+	assert.Equal(t, 80, testPool.classesSize[3])
+	assert.NotNil(t, testPool.classes[3])
 }

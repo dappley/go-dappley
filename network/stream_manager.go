@@ -2,11 +2,12 @@ package network
 
 import (
 	"context"
-	"errors"
-	"github.com/dappley/go-dappley/common/log"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/dappley/go-dappley/common/log"
+	errval "github.com/dappley/go-dappley/errors"
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -15,11 +16,6 @@ import (
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/network/networkmodel"
-)
-
-var (
-	ErrConnectionsFull        = errors.New("connection is full")
-	ErrStreamAlreadyConnected = errors.New("stream is already connected")
 )
 
 type OnStreamCbFunc func(stream *Stream)
@@ -229,11 +225,11 @@ func (sm *StreamManager) connectPeer(peerInfo networkmodel.PeerInfo, connectionT
 	}
 
 	if sm.isStreamConnected(peerInfo.PeerId) {
-		return ErrStreamAlreadyConnected
+		return errval.StreamAlreadyConnected
 	}
 
 	if sm.connectionManager.IsConnectionFull(connectionType) {
-		return ErrConnectionsFull
+		return errval.ConnectionsFull
 	}
 
 	sm.host.Peerstore().AddAddrs(peerInfo.PeerId, peerInfo.Addrs, peerstore.PermanentAddrTTL)

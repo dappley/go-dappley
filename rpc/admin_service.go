@@ -23,10 +23,10 @@ import (
 	"sync"
 
 	"github.com/dappley/go-dappley/consensus"
+	errval "github.com/dappley/go-dappley/errors"
 
 	"time"
 
-	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 
 	"google.golang.org/grpc/codes"
@@ -60,63 +60,23 @@ func (adminRpcService *AdminRpcService) RpcChangeProducer(ctx context.Context, i
 
 	addresses := in.GetAddresses()
 	height := in.GetHeight()
+	kind := in.GetKind()
 	adminRpcService.mutex.Lock()
-	_, err := logic.SendProducerChangeTX(addresses, height, adminRpcService.bm.Getblockchain())
+	_, err := logic.SendProducerModifyTX(addresses, height, adminRpcService.bm.Getblockchain(), kind)
 	adminRpcService.mutex.Unlock()
 	if err != nil {
 		switch err {
-		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
+		case errval.InvalidSenderAddress, errval.InvalidRcverAddress, errval.InvalidAmount:
 			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case transaction.ErrInsufficientFund:
+		case errval.InsufficientFund:
 			return nil, status.Error(codes.FailedPrecondition, err.Error())
 		default:
 			return nil, status.Error(codes.Unknown, err.Error())
 		}
 	}
 
-	logic.ChangeProducers(addresses, height, adminRpcService.bm, 1)
+	logic.ChangeProducers(addresses, height, adminRpcService.bm, int(kind))
 	return &rpcpb.ChangeProducerResponse{}, nil
-}
-
-func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
-
-	addresses := in.GetAddresses()
-	height := in.GetHeight()
-	adminRpcService.mutex.Lock()
-	_, err := logic.SendProducerAddTX(addresses, height, adminRpcService.bm.Getblockchain())
-	adminRpcService.mutex.Unlock()
-	if err != nil {
-		switch err {
-		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
-			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case transaction.ErrInsufficientFund:
-			return nil, status.Error(codes.FailedPrecondition, err.Error())
-		default:
-			return nil, status.Error(codes.Unknown, err.Error())
-		}
-	}
-
-	logic.ChangeProducers(addresses, height, adminRpcService.bm, 2)
-	return &rpcpb.AddProducerResponse{}, nil
-}
-
-func (adminRpcService *AdminRpcService) RpcDeleteProducer(ctx context.Context, in *rpcpb.DeleteProducerRequest) (*rpcpb.DeleteProducerResponse, error) {
-	height := in.GetHeight()
-	adminRpcService.mutex.Lock()
-	_, err := logic.SendProducerDeleteTX(height, adminRpcService.bm.Getblockchain())
-	adminRpcService.mutex.Unlock()
-	if err != nil {
-		switch err {
-		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
-			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case transaction.ErrInsufficientFund:
-			return nil, status.Error(codes.FailedPrecondition, err.Error())
-		default:
-			return nil, status.Error(codes.Unknown, err.Error())
-		}
-	}
-	logic.ChangeProducers("", height, adminRpcService.bm, 3)
-	return &rpcpb.DeleteProducerResponse{}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
@@ -124,40 +84,6 @@ func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *
 	return &rpcpb.GetPeerInfoResponse{
 		PeerList: getPeerInfo(adminRpcService.node),
 	}, nil
-}
-
-func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in *rpcpb.SendFromMinerRequest) (*rpcpb.SendFromMinerResponse, error) {
-	start := time.Now().UnixNano() / 1e6
-	txRequestFromMinerStats.concurrentCounter.Inc(1)
-	defer func() {
-		if txRequestFromMinerStats.responseTime.Count()/100 == 0 {
-			txRequestFromMinerStats.responseTime.Clear()
-		}
-		txRequestFromMinerStats.responseTime.Update(time.Now().UnixNano()/1e6 - start)
-	}()
-	defer txRequestFromMinerStats.requestPerSec.Mark(1)
-	defer txRequestFromMinerStats.concurrentCounter.Dec(1)
-
-	sendToAddress := account.NewAddress(in.GetTo())
-	sendAmount := common.NewAmountFromBytes(in.GetAmount())
-	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAmount.Error())
-	}
-
-	adminRpcService.mutex.Lock()
-	_, _, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.bm.Getblockchain())
-	adminRpcService.mutex.Unlock()
-	if err != nil {
-		switch err {
-		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
-			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case transaction.ErrInsufficientFund:
-			return nil, status.Error(codes.FailedPrecondition, err.Error())
-		default:
-			return nil, status.Error(codes.Unknown, err.Error())
-		}
-	}
-	return &rpcpb.SendFromMinerResponse{}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
@@ -180,7 +106,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	gasPrice := common.NewAmountFromBytes(in.GetGasPrice())
 
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return nil, status.Error(codes.InvalidArgument, transaction.ErrInvalidAmount.Error())
+		return nil, status.Error(codes.InvalidArgument, errval.InvalidAmount.Error())
 	}
 	path := in.GetAccountPath()
 	if len(path) == 0 {
@@ -194,7 +120,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 
 	senderAccount := am.GetAccountByAddress(sendFromAddress)
 	if senderAccount == nil || senderAccount.GetKeyPair() == nil {
-		return nil, status.Error(codes.NotFound, wallet.ErrAddressNotFound.Error())
+		return nil, status.Error(codes.NotFound, errval.AddressNotFound.Error())
 	}
 
 	adminRpcService.mutex.Lock()
@@ -205,9 +131,9 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	txHashStr := hex.EncodeToString(txHash)
 	if err != nil {
 		switch err {
-		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
+		case errval.InvalidSenderAddress, errval.InvalidRcverAddress, errval.InvalidAmount:
 			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case transaction.ErrInsufficientFund:
+		case errval.InsufficientFund:
 			return nil, status.Error(codes.FailedPrecondition, err.Error())
 		default:
 			return nil, status.Error(codes.Unknown, err.Error())

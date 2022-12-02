@@ -19,15 +19,9 @@
 package account
 
 import (
-	"errors"
-
 	"github.com/btcsuite/btcutil/base58"
 	accountpb "github.com/dappley/go-dappley/core/account/pb"
 	"github.com/golang/protobuf/proto"
-)
-
-var (
-	ErrInvalidAddress = errors.New("invalid address")
 )
 
 type Address struct {

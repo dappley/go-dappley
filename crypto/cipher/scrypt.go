@@ -24,11 +24,11 @@ import (
 	"crypto/cipher"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 
 	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/crypto/utils"
-	"github.com/satori/go.uuid"
+	errval "github.com/dappley/go-dappley/errors"
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/scrypt"
 )
 
@@ -57,20 +57,6 @@ const (
 
 	// mac calculate hash type
 	macHash = "sha3256"
-)
-
-var (
-	// ErrVersionInvalid version not supported
-	ErrVersionInvalid = errors.New("version not supported")
-
-	// ErrKDFInvalid cipher not supported
-	ErrKDFInvalid = errors.New("kdf not supported")
-
-	// ErrCipherInvalid cipher not supported
-	ErrCipherInvalid = errors.New("cipher not supported")
-
-	// ErrDecrypt decrypt failed
-	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
 )
 
 type cipherparamsJSON struct {
@@ -201,7 +187,7 @@ func (s *Scrypt) DecryptKey(keyjson []byte, passphrase []byte) ([]byte, error) {
 	}
 	version := keyJSON.Version
 	if version != currentVersion && version != version3 {
-		return nil, ErrVersionInvalid
+		return nil, errval.VersionInvalid
 	}
 	return s.scryptDecrypt(&keyJSON.Crypto, passphrase, version)
 }
@@ -209,7 +195,7 @@ func (s *Scrypt) DecryptKey(keyjson []byte, passphrase []byte) ([]byte, error) {
 func (s *Scrypt) scryptDecrypt(crypto *cryptoJSON, passphrase []byte, version int) ([]byte, error) {
 
 	if crypto.Cipher != cipherName {
-		return nil, ErrCipherInvalid
+		return nil, errval.CipherInvalid
 	}
 
 	mac, err := hex.DecodeString(crypto.MAC)
@@ -243,7 +229,7 @@ func (s *Scrypt) scryptDecrypt(crypto *cryptoJSON, passphrase []byte, version in
 			return nil, err
 		}
 	} else {
-		return nil, ErrKDFInvalid
+		return nil, errval.KDFInvalid
 	}
 
 	var calculatedMAC []byte
@@ -257,11 +243,11 @@ func (s *Scrypt) scryptDecrypt(crypto *cryptoJSON, passphrase []byte, version in
 			calculatedMAC = hash.Keccak256(derivedKey[16:32], cipherText)
 		}
 	} else {
-		return nil, ErrVersionInvalid
+		return nil, errval.VersionInvalid
 	}
 
 	if !bytes.Equal(calculatedMAC, mac) {
-		return nil, ErrDecrypt
+		return nil, errval.Decrypt
 	}
 
 	key, err := s.aesCTRXOR(derivedKey[:16], cipherText, iv)

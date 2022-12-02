@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"context"
+
 	"github.com/dappley/go-dappley/logic"
 
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
@@ -91,9 +92,10 @@ func (sdk *DappSdk) SendBatchTransactions(txs []*transactionpb.Transaction) erro
 }
 
 //RequestFund sends a fund request to the server
+//RpcSendFromMiner has been removed; redesign this function if needed
 func (sdk *DappSdk) RequestFund(fundAddr string, amount *common.Amount) {
-	sendFromMinerRequest := &rpcpb.SendFromMinerRequest{To: fundAddr, Amount: amount.Bytes()}
-	sdk.conn.adminClient.RpcSendFromMiner(context.Background(), sendFromMinerRequest)
+	//	sendFromMinerRequest := &rpcpb.SendFromMinerRequest{To: fundAddr, Amount: amount.Bytes()}
+	//	sdk.conn.adminClient.RpcSendFromMiner(context.Background(), sendFromMinerRequest)
 }
 
 //GetUtxoByAddr gets all utxos related to an address from the server

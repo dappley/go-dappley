@@ -20,12 +20,12 @@ package lblockchain
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
@@ -43,16 +43,9 @@ import (
 
 var tailBlockHash = []byte("tailBlockHash")
 
-var UtxoSaveHash =[]byte("utxoSaved")
+var UtxoSaveHash = []byte("utxoSaved")
 
 var (
-	ErrBlockDoesNotExist       = errors.New("block does not exist in db")
-	ErrBlockDoesNotFound       = errors.New("the block does not found after lib")
-	ErrPrevHashVerifyFailed    = errors.New("prevhash verify failed")
-	ErrTransactionNotFound     = errors.New("transaction not found")
-	ErrTransactionVerifyFailed = errors.New("transaction verification failed")
-	ErrRewardTxVerifyFailed    = errors.New("Verify reward transaction failed")
-	ErrProducerNotEnough       = errors.New("producer number is less than ConsensusSize")
 	// DefaultGasPrice default price of per gas
 	DefaultGasPrice uint64 = 1
 )
@@ -150,7 +143,7 @@ func (bc *Blockchain) GetUpdatedUTXOIndex() (*lutxo.UTXOIndex, bool) {
 
 	errFlag := true
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
-	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions(utxoIndex)) {
+	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions()) {
 		logger.Warn("GetUpdatedUTXOIndex error")
 		errFlag = false
 	}
@@ -195,7 +188,7 @@ func (bc *Blockchain) GetLIBHeight() uint64 {
 func (bc *Blockchain) GetBlockByHash(hash hash.Hash) (*block.Block, error) {
 	rawBytes, err := bc.db.Get(hash)
 	if err != nil {
-		return nil, ErrBlockDoesNotExist
+		return nil, errval.BlockDoesNotExist
 	}
 	return block.Deserialize(rawBytes), nil
 }
@@ -203,7 +196,7 @@ func (bc *Blockchain) GetBlockByHash(hash hash.Hash) (*block.Block, error) {
 func (bc *Blockchain) GetBlockByHeight(height uint64) (*block.Block, error) {
 	hash, err := bc.db.Get(util.UintToHex(height))
 	if err != nil {
-		return nil, ErrBlockDoesNotExist
+		return nil, errval.BlockDoesNotExist
 	}
 
 	return bc.GetBlockByHash(hash)
@@ -234,7 +227,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		logger.WithFields(logger.Fields{
 			"blockHeight": ctx.Block.GetHeight(),
 		}).Warn("AddBlockContextToTail : prevhash verify failed.")
-		return ErrPrevHashVerifyFailed
+		return errval.PrevHashVerifyFailed
 	}
 
 	blockLogger := logger.WithFields(logger.Fields{
@@ -259,7 +252,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	}).Info("Blockchain : update tx pool")
 
 	blockLogger.WithFields(logger.Fields{
-		"numOfTx":  len(ctx.Block.GetTransactions()),
+		"numOfTx": len(ctx.Block.GetTransactions()),
 	}).Info("Blockchain: added a new block to tail.")
 
 	return nil
@@ -349,15 +342,15 @@ func (bc *Blockchain) IsHigherThanBlockchain(block *block.Block) bool {
 
 func (bc *Blockchain) IsFoundBeforeLib(hash hash.Hash) bool {
 	bci := bc.Iterator()
-	for{
+	for {
 		blk, err := bci.Next()
-		if err!=nil{
+		if err != nil {
 			return false
 		}
-		if blk.GetHash().Equals(hash){
+		if blk.GetHash().Equals(hash) {
 			return true
 		}
-		if blk.GetHash().Equals(bc.GetLIBHash()){
+		if blk.GetHash().Equals(bc.GetLIBHash()) {
 			return false
 		}
 	}
@@ -387,7 +380,9 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 		}
 		parentblockHash = block.GetPrevHash()
 
-		for _, tx := range block.GetTransactions() {
+		// rollback the transactions in reverse order
+		for i := len(block.GetTransactions()) - 1; i >= 0; i-- {
+			tx := block.GetTransactions()[i]
 			adaptedTx := transaction.NewTxAdapter(tx)
 			if !adaptedTx.IsCoinbase() && !adaptedTx.IsRewardTx() && !adaptedTx.IsGasRewardTx() && !adaptedTx.IsGasChangeTx() {
 				bc.txPool.Rollback(*tx)
@@ -436,27 +431,8 @@ func (bc *Blockchain) savedHash(bytes []byte) {
 	}
 }
 
-func (bc *Blockchain) SetLIBHash(hash hash.Hash)  {
+func (bc *Blockchain) SetLIBHash(hash hash.Hash) {
 	bc.bc.SetLIBHash(hash)
-}
-
-func (bc *Blockchain) IsLIB(blk *block.Block) bool {
-	blkFromDb, err := bc.GetBlockByHash(blk.GetHash())
-	if err != nil {
-		logger.Error("Blockchain:get block by hash from blockchain error: ", err)
-		return false
-	}
-	if blkFromDb == nil {
-		logger.Error("Blockchain:blk is not exist in blockchain")
-		return false
-	}
-
-	lib, _ := bc.GetLIB()
-
-	if lib.GetHeight() >= blkFromDb.GetHeight() {
-		return true
-	}
-	return false
 }
 
 // GasPrice returns gas price in current blockchain
@@ -515,7 +491,7 @@ func (bc *Blockchain) isAliveProducerSufficient(blk *block.Block) bool {
 }
 
 func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
-	libHash,err:=bc.getLIB(currBlkHeight)
+	libHash, err := bc.getLIB(currBlkHeight)
 	if err != nil {
 		logger.Warn("updateLIB failed")
 		return
@@ -523,9 +499,9 @@ func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
 	bc.SetLIBHash(libHash)
 }
 
-func (bc *Blockchain) getLIB(currBlkHeight uint64) (hash.Hash, error){
+func (bc *Blockchain) getLIB(currBlkHeight uint64) (hash.Hash, error) {
 	if bc.libPolicy == nil {
-		return []byte{} , errors.New("libPolicy is nil")
+		return []byte{}, errval.LibPolicyNil
 	}
 
 	minConfirmationNum := bc.libPolicy.GetMinConfirmationNum()
@@ -537,10 +513,10 @@ func (bc *Blockchain) getLIB(currBlkHeight uint64) (hash.Hash, error){
 	LIBBlk, err := bc.GetBlockByHeight(LIBHeight)
 	if err != nil {
 		logger.WithError(err).Warn("Blockchain: Can not find LIB block in database")
-		return []byte{} , err
+		return []byte{}, err
 	}
 
-	return LIBBlk.GetHash(),nil
+	return LIBBlk.GetHash(), nil
 }
 
 func (bc *Blockchain) DeleteBlockByHash(hash hash.Hash) {
@@ -568,7 +544,7 @@ func DataCheckingAndRecovery(db storage.Storage) error {
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(uHash,tbHash){ //checking and recovering utxo and scState
+	if !bytes.Equal(uHash, tbHash) { //checking and recovering utxo and scState
 		logger.Info("Incomplete data found, recovering utxo and scState...")
 		getBlock := func(hash hash.Hash) *block.Block {
 			rawBytes, err := db.Get(hash)
@@ -584,7 +560,7 @@ func DataCheckingAndRecovery(db storage.Storage) error {
 		if !lblock.VerifyTransactions(blk, utxo, contractStates, parentBlk, db) {
 			logger.Warn("get check utxo failed")
 		}
-		if err = contractStates.Save(tbHash); err != nil {//recover scState
+		if err = contractStates.Save(tbHash); err != nil { //recover scState
 			logger.Warn(err)
 		}
 
@@ -596,7 +572,7 @@ func DataCheckingAndRecovery(db storage.Storage) error {
 
 		err = db.Put(UtxoSaveHash, tbHash)
 		if err != nil {
-			logger.Warn("put hash to db faild:",err)
+			logger.Warn("put hash to db faild:", err)
 		}
 
 		logger.Info("Data have been recovered.")
@@ -614,7 +590,7 @@ func (bc *Blockchain) saveDataToDb(ctx *BlockContext) error {
 		return err
 	}
 
-	err = bc.setTailBlockHash(ctx.Block.GetHash())//2.save tail block hash
+	err = bc.setTailBlockHash(ctx.Block.GetHash()) //2.save tail block hash
 	if err != nil {
 		logger.Error("Failed to set tail block hash!")
 		return err

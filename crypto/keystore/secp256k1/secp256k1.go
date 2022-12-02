@@ -37,38 +37,15 @@ import "C"
 //#cgo CFLAGS: -Wno-error
 
 import (
-	"errors"
 	"unsafe"
 
 	"github.com/dappley/go-dappley/crypto/utils"
+	errval "github.com/dappley/go-dappley/errors"
 )
 
 const (
 	// EcdsaPrivateKeyLength private key length
 	EcdsaPrivateKeyLength = 32
-)
-
-var (
-	// ErrInvalidMsgLen invalid message length
-	ErrInvalidMsgLen = errors.New("invalid message length, need 32 bytes")
-
-	// ErrGetPublicKeyFailed private key to public failed
-	ErrGetPublicKeyFailed = errors.New("private key to public failed")
-
-	// ErrInvalidSignature invalid signature length
-	ErrInvalidSignature = errors.New("invalid signature")
-
-	// ErrInvalidPrivateKey invalid private key
-	ErrInvalidPrivateKey = errors.New("invalid private key")
-
-	// ErrInvalidPublicKey invalid public key
-	ErrInvalidPublicKey = errors.New("invalid public key")
-
-	// ErrSignFailed sign failed
-	ErrSignFailed = errors.New("sign failed")
-
-	// ErrRecoverFailed recover failed
-	ErrRecoverFailed = errors.New("recovery failed")
 )
 
 var ctx *C.secp256k1_context
@@ -106,14 +83,14 @@ func GetPublicKey(seckey []byte) ([]byte, error) {
 	var pubkey C.secp256k1_pubkey
 	result := int(C.secp256k1_ec_pubkey_create(ctx, &pubkey, cBuf(seckey)))
 	if result != 1 {
-		return nil, ErrGetPublicKeyFailed
+		return nil, errval.GetPublicKeyFailed
 	}
 
 	output := make([]C.uchar, 65)
 	outputLen := C.size_t(65)
 	result = int(C.secp256k1_ec_pubkey_serialize(ctx, &output[0], &outputLen, &pubkey, C.SECP256K1_EC_UNCOMPRESSED))
 	if result != 1 {
-		return nil, ErrGetPublicKeyFailed
+		return nil, errval.GetPublicKeyFailed
 	}
 	return goBytes(output, C.int(outputLen)), nil
 }
@@ -121,10 +98,10 @@ func GetPublicKey(seckey []byte) ([]byte, error) {
 // RecoverECDSAPublicKey recover verifies the compact signature "signature" of "hash"
 func RecoverECDSAPublicKey(msg []byte, signature []byte) ([]byte, error) {
 	if len(msg) != 32 {
-		return nil, ErrInvalidMsgLen
+		return nil, errval.InvalidMsgLen
 	}
 	if len(signature) != 65 {
-		return nil, ErrInvalidSignature
+		return nil, errval.InvalidSignature
 	}
 	var (
 		sig    C.secp256k1_ecdsa_recoverable_signature
@@ -133,16 +110,16 @@ func RecoverECDSAPublicKey(msg []byte, signature []byte) ([]byte, error) {
 
 	result := int(C.secp256k1_ecdsa_recoverable_signature_parse_compact(ctx, &sig, (*C.uchar)(unsafe.Pointer(&signature[0])), (C.int(signature[64]))))
 	if result != 1 {
-		return nil, ErrRecoverFailed
+		return nil, errval.RecoverFailed
 	}
 	if int(C.secp256k1_ecdsa_recover(ctx, &pubkey, &sig, cBuf(msg))) != 1 {
-		return nil, ErrRecoverFailed
+		return nil, errval.RecoverFailed
 	}
 	output := make([]C.uchar, 65)
 	outputLen := C.size_t(65)
 	result = int(C.secp256k1_ec_pubkey_serialize(ctx, &output[0], &outputLen, &pubkey, C.SECP256K1_EC_UNCOMPRESSED))
 	if result != 1 {
-		return nil, ErrRecoverFailed
+		return nil, errval.RecoverFailed
 	}
 	return goBytes(output, C.int(outputLen)), nil
 }
@@ -150,11 +127,11 @@ func RecoverECDSAPublicKey(msg []byte, signature []byte) ([]byte, error) {
 // Sign sign hash with private key
 func Sign(msg []byte, seckey []byte) ([]byte, error) {
 	if len(msg) != 32 {
-		return nil, ErrInvalidMsgLen
+		return nil, errval.InvalidMsgLen
 	}
 
 	if C.secp256k1_ec_seckey_verify(ctx, cBuf(seckey)) != 1 {
-		return nil, ErrInvalidPrivateKey
+		return nil, errval.InvalidPrivateKey
 	}
 
 	var (
@@ -162,7 +139,7 @@ func Sign(msg []byte, seckey []byte) ([]byte, error) {
 		sigstruct C.secp256k1_ecdsa_recoverable_signature
 	)
 	if C.secp256k1_ecdsa_sign_recoverable(ctx, &sigstruct, cBuf(msg), cBuf(seckey), noncefunc, nil) == 0 {
-		return nil, ErrSignFailed
+		return nil, errval.SignFailed
 	}
 
 	var (
@@ -177,7 +154,7 @@ func Sign(msg []byte, seckey []byte) ([]byte, error) {
 // Verify verify with public key
 func Verify(msg []byte, signature []byte, pub []byte) (bool, error) {
 	if len(msg) != 32 {
-		return false, ErrInvalidMsgLen
+		return false, errval.InvalidMsgLen
 	}
 
 	var (
@@ -186,11 +163,11 @@ func Verify(msg []byte, signature []byte, pub []byte) (bool, error) {
 	)
 	result := int(C.secp256k1_ec_pubkey_parse(ctx, &pubkey, cBuf(pub), C.size_t(len(pub))))
 	if result != 1 {
-		return false, ErrInvalidPublicKey
+		return false, errval.InvalidPublicKey
 	}
 	result = int(C.secp256k1_ecdsa_signature_parse_compact(ctx, &sig, cBuf(signature)))
 	if result != 1 {
-		return false, ErrInvalidSignature
+		return false, errval.InvalidSignature
 	}
 	result = int(C.secp256k1_ecdsa_verify(ctx, &sig, cBuf(msg), &pubkey))
 	return result == 1, nil

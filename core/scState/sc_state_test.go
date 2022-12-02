@@ -1,14 +1,15 @@
 package scState
 
 import (
-	"errors"
+	"testing"
+
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/stateLog"
 	"github.com/dappley/go-dappley/core/utxo"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestScState_Save(t *testing.T) {
@@ -75,7 +76,7 @@ func TestScState_Save(t *testing.T) {
 			key:      "Account3",
 			value:    ScStateValueIsNotExist,
 			block:    util.Str2bytes("blkHash5"),
-			expected: errors.New("key is invalid"),
+			expected: errval.InvalidKey,
 			statelog: map[string]map[string]string{
 				"dUuPPYshbBgkzUrgScEHWvdGbSxC8z4R12": {"Account3": "399"},
 			},
@@ -134,15 +135,18 @@ func TestScState_GetStateValue(t *testing.T) {
 	scState := NewScState(cache)
 
 	scState.states = map[string]map[string]string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf": {"Account1": "399"}}
-	assert.Equal(t, "399", scState.GetStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account1"))
+	resultValue, _ := scState.GetStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account1")
+	assert.Equal(t, "399", resultValue)
 
 	scState.states = map[string]map[string]string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf": {"Account1": ScStateValueIsNotExist}}
-	assert.Equal(t, "", scState.GetStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account1"))
+	resultValue, _ = scState.GetStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account1")
+	assert.Equal(t, "", resultValue)
 
 	scState.states = map[string]map[string]string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf": {"Account2": "99"}}
 	assert.Nil(t, scState.Save(util.Str2bytes("blkHash")))
 	scState = NewScState(cache)
-	assert.Equal(t, "99", scState.GetStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account2"))
+	resultValue, _ = scState.GetStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account2")
+	assert.Equal(t, "99", resultValue)
 }
 
 func TestScState_SetStateValue(t *testing.T) {

@@ -20,15 +20,19 @@ package downloadmanager
 
 import (
 	blockpb "github.com/dappley/go-dappley/core/block/pb"
+	errval "github.com/dappley/go-dappley/errors"
+	"github.com/dappley/go-dappley/logic/lblockchain/mocks"
+	networkpb "github.com/dappley/go-dappley/network/pb"
+	"github.com/dappley/go-dappley/util"
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/mock"
 	"io/ioutil"
 	"os"
 	"path"
+	"reflect"
 	"strconv"
 	"testing"
-
-	"github.com/dappley/go-dappley/logic/lblockchain/mocks"
-	networkpb "github.com/dappley/go-dappley/network/pb"
-	"github.com/stretchr/testify/mock"
+	"time"
 
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/lblockchain"
@@ -39,14 +43,17 @@ import (
 )
 
 const (
-	multiPortEqualStart      int = 10301
-	multiPortSuccessStart    int = 10310
-	multiPortDisconnectStart int = 10320
-	multiPortNotEqualStart   int = 10330
-	multiPortReturnBlocks    int = 10340
-	multiPortDisconnectPeer  int = 10350
-	multiPortCommonBlocks    int = 10360
-	confDir                      = "../../storage/fakeFileLoaders/"
+	multiPortEqualStart              int = 10301
+	multiPortSuccessStart            int = 10310
+	multiPortDisconnectStart         int = 10320
+	multiPortNotEqualStart           int = 10330
+	multiPortReturnBlocks            int = 10340
+	multiPortDisconnectPeer          int = 10350
+	multiPortCommonBlocks            int = 10360
+	multiPortGetTopicHandler         int = 10370
+	multiPortAddPeerBlockChainInfo   int = 10380
+	multiPortDownloadRequestListener int = 10390
+	confDir                              = "../../storage/fakeFileLoaders/"
 )
 
 func createTestBlockchains(size int, portStart int) ([]*lblockchain.BlockchainManager, []*network.Node) {
@@ -153,6 +160,78 @@ func TestMultiSuccessNode(t *testing.T) {
 	assert.Equal(t, highestChain.Getblockchain().GetMaxHeight(), bm.Getblockchain().GetMaxHeight())
 }
 
+func TestDownloadManager_GetTopicHandler(t *testing.T) {
+	bms, nodes := createTestBlockchains(5, multiPortGetTopicHandler)
+	defer deleteConfFolderFiles()
+	bm := bms[0]
+	bm.Getblockchain().SetState(blockchain.BlockchainInit)
+	node := nodes[0]
+	downloadManager := NewDownloadManager(node, bm, 0, nil)
+	downloadManager.Start()
+
+	tests := []struct {
+		name            string
+		topic           string
+		expectedHandler interface{}
+	}{
+		{
+			name:            "TopicOnStreamStop",
+			topic:           network.TopicOnStreamStop,
+			expectedHandler: downloadManager.OnStreamStopHandler,
+		},
+		{
+			name:            "BlockchainInfoRequest",
+			topic:           BlockchainInfoRequest,
+			expectedHandler: downloadManager.GetBlockchainInfoRequestHandler,
+		},
+		{
+			name:            "BlockchainInfoResponse",
+			topic:           BlockchainInfoResponse,
+			expectedHandler: downloadManager.GetBlockchainInfoResponseHandler,
+		},
+		{
+			name:            "GetBlocksRequest",
+			topic:           GetBlocksRequest,
+			expectedHandler: downloadManager.GetBlocksRequestHandler,
+		},
+		{
+			name:            "GetBlocksResponse",
+			topic:           GetBlocksResponse,
+			expectedHandler: downloadManager.GetBlocksResponseHandler,
+		},
+		{
+			name:            "GetCommonBlocksRequest",
+			topic:           GetCommonBlocksRequest,
+			expectedHandler: downloadManager.GetCommonBlockRequestHandler,
+		},
+		{
+			name:            "GetCommonBlocksResponse",
+			topic:           GetCommonBlocksResponse,
+			expectedHandler: downloadManager.GetCommonBlockResponseHandler,
+		},
+		{
+			name:            "nonexistent handler",
+			topic:           "nonexistent",
+			expectedHandler: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := downloadManager.GetTopicHandler(tt.topic)
+
+			if tt.expectedHandler == nil {
+				assert.Nil(t, result)
+			} else {
+				// cannot directly compare functions so pointers are used
+				expectedFuncPtr := reflect.ValueOf(tt.expectedHandler).Pointer()
+				actualFuncPtr := reflect.ValueOf(result).Pointer()
+				assert.Equal(t, expectedFuncPtr, actualFuncPtr)
+			}
+		})
+	}
+}
+
 func TestDisconnectNode(t *testing.T) {
 	bms, nodes := createTestBlockchains(5, multiPortDisconnectStart)
 	defer deleteConfFolderFiles()
@@ -213,12 +292,41 @@ func TestValidateReturnBlocks(t *testing.T) {
 
 	// test invalid peer id
 	_, err := downloadManager.validateReturnBlocks(nil, "foo")
-	assert.Equal(t, ErrPeerNotFound, err)
+	assert.Equal(t, errval.PeerNotFound, err)
 
 	// test empty blocks
 	fakeReturnMsg := &networkpb.ReturnBlocks{Blocks: nil, StartBlockHashes: nil}
 	_, err = downloadManager.validateReturnBlocks(fakeReturnMsg, peerNode.GetHostPeerInfo().PeerId)
-	assert.Equal(t, ErrEmptyBlocks, err)
+	assert.Equal(t, errval.EmptyBlocks, err)
+}
+
+func TestDownloadManager_AddPeerBlockChainInfo(t *testing.T) {
+	bms, nodes := createTestBlockchains(5, multiPortAddPeerBlockChainInfo)
+	defer deleteConfFolderFiles()
+	//setup download manager for the first node
+	bm := bms[0]
+	bm.Getblockchain().SetState(blockchain.BlockchainInit)
+	node := nodes[0]
+
+	downloadManager := NewDownloadManager(node, bm, 0, nil)
+	downloadManager.Start()
+
+	//Connect all other nodes to the first node
+	for i := 1; i < len(nodes); i++ {
+		node.GetNetwork().ConnectToSeed(nodes[i].GetHostPeerInfo())
+	}
+
+	finishCh := make(chan bool, 1)
+	bm.Getblockchain().SetState(blockchain.BlockchainDownloading)
+	downloadManager.StartDownloadBlockchain(finishCh)
+	<-finishCh
+
+	downloadManager.status = DownloadStatusInit
+	pid := nodes[1].GetHostPeerInfo().PeerId
+	downloadManager.AddPeerBlockChainInfo(pid, 2, 1)
+	assert.Equal(t, uint64(2), downloadManager.peersInfo[pid].height)
+	assert.Equal(t, uint64(1), downloadManager.peersInfo[pid].libHeight)
+	assert.Equal(t, PeerStatusReady, downloadManager.peersInfo[pid].status)
 }
 
 func TestDownloadManager_DisconnectPeer(t *testing.T) {
@@ -248,6 +356,38 @@ func TestDownloadManager_DisconnectPeer(t *testing.T) {
 	assert.Equal(t, 3, len(downloadManager.peersInfo))
 	downloadManager.DisconnectPeer(nodes[2].GetHostPeerInfo().PeerId)
 	assert.Equal(t, 2, len(downloadManager.peersInfo))
+}
+
+func TestDownloadManager_GetCommonBlockCheckPoint(t *testing.T) {
+	bms, nodes := createTestBlockchains(5, multiPortCommonBlocks)
+	defer deleteConfFolderFiles()
+	//setup download manager for the first node
+	bm := bms[0]
+	bm.Getblockchain().SetState(blockchain.BlockchainInit)
+	node := nodes[0]
+
+	downloadManager := NewDownloadManager(node, bm, 0, nil)
+	downloadManager.Start()
+
+	resultSlice := downloadManager.GetCommonBlockCheckPoint(0, 3)
+	assert.Equal(t, 4, len(resultSlice))
+	for i, result := range resultSlice {
+		expectedHeight := uint64(len(resultSlice) - (i + 1))
+		expectedBlk, err := downloadManager.bm.Getblockchain().GetBlockByHeight(expectedHeight)
+		assert.Nil(t, err)
+		assert.Equal(t, expectedBlk.GetHash(), result.hash)
+		assert.Equal(t, expectedHeight, result.height)
+	}
+
+	resultSlice = downloadManager.GetCommonBlockCheckPoint(0, 10)
+	assert.Equal(t, 6, len(resultSlice))
+	for i, result := range resultSlice {
+		expectedHeight := uint64(len(resultSlice) - (i + 1))
+		expectedBlk, err := downloadManager.bm.Getblockchain().GetBlockByHeight(expectedHeight)
+		assert.Nil(t, err)
+		assert.Equal(t, expectedBlk.GetHash(), result.hash)
+		assert.Equal(t, expectedHeight, result.height)
+	}
 }
 
 func TestDownloadManager_FindCommonBlock(t *testing.T) {
@@ -302,6 +442,47 @@ func TestDownloadManager_FindCommonBlock(t *testing.T) {
 	index, block = downloadManager.FindCommonBlock(blockHeaderPbs)
 	assert.Equal(t, expectedIndex, index)
 	assert.Equal(t, expectedBlock, block)
+}
+
+func TestDownloadManager_StartDownloadRequestListener(t *testing.T) {
+	bms, nodes := createTestBlockchains(5, multiPortDownloadRequestListener)
+	defer deleteConfFolderFiles()
+	//setup download manager for the first node
+	bm := bms[0]
+	bm.Getblockchain().SetState(blockchain.BlockchainInit)
+	node := nodes[0]
+
+	downloadManager := NewDownloadManager(node, bm, 0, nil)
+	downloadManager.Start()
+
+	//Connect all other nodes to the first node
+	for i := 1; i < len(nodes); i++ {
+		node.GetNetwork().ConnectToSeed(nodes[i].GetHostPeerInfo())
+	}
+
+	downloadManager.StartDownloadRequestListener()
+	time.Sleep(time.Millisecond * 500)
+
+	// should stay idle until finishCh is passed to the bm
+	assert.Equal(t, DownloadStatusIdle, downloadManager.status)
+	finishCh := make(chan bool)
+	downloadManager.bm.GetDownloadRequestCh() <- finishCh
+
+	logger.Info("waiting for DownloadStatusInit")
+	util.WaitDoneOrTimeout(func() bool {
+		return downloadManager.status == DownloadStatusIdle
+	}, 5)
+	logger.Info("waiting for DownloadStatusIdle")
+	util.WaitDoneOrTimeout(func() bool {
+		return downloadManager.status == DownloadStatusIdle
+	}, 10)
+
+	// check that download was finished
+	result := <-finishCh
+	assert.Equal(t, DownloadStatusIdle, downloadManager.status)
+	assert.Nil(t, downloadManager.downloadingPeer)
+	assert.Nil(t, downloadManager.currentCmd)
+	assert.True(t, result)
 }
 
 func deleteConfFolderFiles() error {

@@ -2,7 +2,6 @@ package vm
 
 import "C"
 import (
-	"errors"
 	"regexp"
 	"unsafe"
 
@@ -20,8 +19,6 @@ var (
 	StorageKeyPattern = regexp.MustCompile("^@([a-zA-Z_$][a-zA-Z0-9_]+?)\\[(.*?)\\]$")
 	// DefaultDomainKey the default domain key
 	DefaultDomainKey = "_"
-	// ErrInvalidStorageKey invalid state key error
-	ErrInvalidStorageKey = errors.New("invalid state key")
 )
 
 //export StorageGetFunc
@@ -38,8 +35,8 @@ func StorageGetFunc(address unsafe.Pointer, key *C.char) *C.char {
 		return nil
 	}
 
-	val := engine.state.GetStateValue(engine.contractAddr.String(), goKey)
-	if val == "" {
+	val, exsit := engine.state.GetStateValue(engine.contractAddr.String(), goKey)
+	if !exsit {
 		logger.WithFields(logger.Fields{
 			"contract_address": addr,
 			"key":              goKey,

@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/dappley/go-dappley/core/transaction"
+	errval "github.com/dappley/go-dappley/errors"
 
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
@@ -36,7 +37,10 @@ import (
 
 const InvalidAddress = "Invalid Address"
 
+// TestMain prevents race conditions related to the account test file
 func TestMain(m *testing.M) {
+	AccountTestFileMutex.Lock()
+	defer AccountTestFileMutex.Unlock()
 	cleanUpDatabase()
 	logger.SetLevel(logger.WarnLevel)
 	retCode := m.Run()
@@ -45,10 +49,11 @@ func TestMain(m *testing.M) {
 }
 
 func TestCreateAccount(t *testing.T) {
-	acc, err := CreateAccountWithPassphrase("test", GetTestAccountPath())
+	acc, err := CreateAccount()
 	assert.Nil(t, err)
 	_, err = account.IsValidPubKey(acc.GetKeyPair().GetPublicKey())
 	assert.Nil(t, err)
+	assert.True(t, acc.IsValid())
 	cleanUpDatabase()
 }
 
@@ -89,14 +94,14 @@ func TestLoopCreateBlockchain(t *testing.T) {
 
 	//create a account address
 
-	err := ErrInvalidAddress
+	err := errval.InvalidAddress
 	//create a blockchain loop
 	for i := 0; i < 2000; i++ {
 		err = nil
 		account := account.NewAccount()
 		if !account.IsValid() {
 			fmt.Println(i, account.GetAddress())
-			err = ErrInvalidAddress
+			err = errval.InvalidAddress
 			break
 		}
 	}
@@ -110,7 +115,7 @@ func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
 
 	//create a blockchain with an invalid address
 	bc, err := CreateBlockchain(account.NewAddress(InvalidAddress), store, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
-	assert.Equal(t, ErrInvalidAddress, err)
+	assert.Equal(t, errval.InvalidAddress, err)
 	assert.Nil(t, bc)
 }
 
@@ -149,7 +154,7 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	assert.Equal(t, common.NewAmount(0), balance1)
 
 	balance2, err := GetBalance(account.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAtfSs"), bc)
-	assert.Equal(t, ErrInvalidAddress, err)
+	assert.Equal(t, errval.InvalidAddress, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
 }
 
@@ -163,6 +168,7 @@ func TestGetAllAddresses(t *testing.T) {
 	//create a account address
 	account, err := CreateAccountWithPassphrase("test", GetTestAccountPath())
 	assert.NotEmpty(t, account)
+	assert.Nil(t, err)
 	addr := account.GetAddress()
 
 	expectedRes = append(expectedRes, addr)

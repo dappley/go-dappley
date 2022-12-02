@@ -20,17 +20,19 @@ package utxo
 
 import (
 	"bytes"
-	"errors"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/stateLog"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
 	lru "github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
+	"github.com/tidwall/gjson"
 )
 
 const (
@@ -83,7 +85,7 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkeyHash string) error {
 	lastestUtxoKey := utxoCache.getLastUTXOKey(pubkeyHash)
 	for key, utxo := range utxoTx.Indices {
 		if bytes.Equal(util.Str2bytes(key), lastestUtxoKey) {
-			return errors.New("add utxo failed: the utxo is same as the last utxo")
+			return errval.AddSameUtxo
 		}
 
 		if !bytes.Equal([]byte{}, lastestUtxoKey) { //this pubkeyHash already has a UTXO
@@ -106,6 +108,8 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkeyHash string) error {
 				return err
 			}
 		}
+
+		utxoCache.saveHardCodeData(utxo)
 	}
 	err := utxoCache.putLastUTXOKey(pubkeyHash, lastestUtxoKey)
 	if err != nil {
@@ -142,7 +146,7 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkeyHash string) error
 			}
 		} else {
 			if bytes.Equal(utxo.NextUtxoKey, util.Str2bytes(preUTXO.GetUTXOKey())) {
-				return errors.New("remove utxo error: find duplicate utxo in db")
+				return errval.RemoveDuplicateUtxo
 			}
 			preUTXO.NextUtxoKey = utxo.NextUtxoKey
 			err = utxoCache.putUTXOToDB(preUTXO)
@@ -169,6 +173,9 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkeyHash string) error
 		if err != nil {
 			return err
 		}
+
+		utxoCache.delHardCodeData(utxo)
+
 	}
 	return nil
 }
@@ -219,6 +226,27 @@ func (utxoCache *UTXOCache) GetUTXOTx(pubKeyHash account.PubKeyHash) *UTXOTx {
 			break
 		}
 		utxoTx.Indices[utxoKey] = utxo
+		utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
+	}
+	return &utxoTx
+}
+
+func (utxoCache *UTXOCache) GetUTXOTxWithAmount(pubKeyHash account.PubKeyHash, amount *common.Amount) *UTXOTx {
+	lastUtxokey := utxoCache.getLastUTXOKey(pubKeyHash.String())
+	utxoTx := NewUTXOTx()
+	utxoKey := util.Bytes2str(lastUtxokey)
+	sum := common.NewAmount(0)
+	for utxoKey != "" {
+		utxo, err := utxoCache.GetUtxo(utxoKey)
+		if err != nil {
+			logger.Error("GetUTXOTx:", err)
+			break
+		}
+		utxoTx.Indices[utxoKey] = utxo
+		sum = sum.Add(utxo.Value)
+		if sum.Cmp(amount) >= 0 {
+			break
+		}
 		utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
 	}
 	return &utxoTx
@@ -327,7 +355,7 @@ func (utxoCache *UTXOCache) deleteUTXOInfo(pubkeyHash string) error {
 
 func (utxoCache *UTXOCache) putCreateContractUTXOKey(pubkeyHash string, createContractUTXOKey []byte) error {
 	if _, err := utxoCache.db.Get(util.Str2bytes(pubkeyHash)); err == nil {
-		return errors.New("this utxoInfo already exists")
+		return errval.UtxoInfoExists
 	}
 
 	utxoInfo := NewUTXOInfo()
@@ -427,7 +455,6 @@ func (utxoCache *UTXOCache) DelStateLog(scStateLogKey string) error {
 	return nil
 }
 
-//get UTXOS from db, if the utxo already exist in UTXOIndex remove list, then the utxo will not be included.
 func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash account.PubKeyHash, amount *common.Amount, utxoTxRemove *UTXOTx) ([]*UTXO, error) {
 	lastUtxokey := utxoCache.getLastUTXOKey(pubKeyHash.String())
 	var utxoSlice []*UTXO
@@ -456,7 +483,7 @@ func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash accou
 
 		utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
 	}
-	return nil, errors.New("transaction: insufficient balance")
+	return nil, errval.InsufficientFund
 }
 
 func GetscStateKey(address, key string) string {
@@ -465,3 +492,40 @@ func GetscStateKey(address, key string) string {
 func GetscStateLogKey(blockHash hash.Hash) string {
 	return "scLog" + util.Bytes2str(blockHash)
 }
+
+func (utxoCache *UTXOCache) saveHardCodeData(utxo *UTXO)  {
+	scStateKey, value, exist := getScKeyValue(utxo.Contract, utxo.PubKeyHash)
+	if !exist {
+		return
+	}
+	if err := utxoCache.db.Put(scStateKey, value); err != nil {
+		logger.Warn("save hard code data failed: ", err)
+	}
+}
+
+func (utxoCache *UTXOCache) delHardCodeData(utxo *UTXO)  {
+	scStateKey, _, exist := getScKeyValue(utxo.Contract, utxo.PubKeyHash)
+	if !exist {
+		return
+	}
+	if err := utxoCache.db.Del(scStateKey); err != nil {
+		logger.Warn("delete hard code data failed: ", err)
+	}
+}
+
+func getScKeyValue(data string, pubkeyHash account.PubKeyHash) ([]byte, []byte,bool){
+	if !gjson.Valid(data){
+		return nil,nil,false
+	}
+
+	key := gjson.Get(data, "data.key").String()
+	value := gjson.Get(data, "data.value").String()
+	if key==""||value==""{
+		return nil,nil,false
+	}
+
+	address := pubkeyHash.GenerateAddress().String()
+	scStateKey := GetscStateKey(address, key)
+	return util.Str2bytes(scStateKey), util.Str2bytes(value),true
+}
+

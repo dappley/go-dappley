@@ -1,9 +1,9 @@
 package account
 
 import (
-	"errors"
 	"testing"
 
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -43,13 +43,13 @@ func TestPubKeyHash_IsContract(t *testing.T) {
 			name:        "InvalidAddress",
 			pubKeyHash:  []byte{0x00},
 			expectedRes: false,
-			expectedErr: ErrInvalidPubKeyHashVersion,
+			expectedErr: errval.InvalidPubKeyHashVersion,
 		},
 		{
 			name:        "EmptyAddress",
 			pubKeyHash:  []byte{},
 			expectedRes: false,
-			expectedErr: ErrEmptyPublicKeyHash,
+			expectedErr: errval.EmptyPublicKeyHash,
 		},
 	}
 
@@ -80,7 +80,7 @@ func TestPubKeyHash_GenerateAddress(t *testing.T) {
 func TestGeneratePubKeyHash(t *testing.T) {
 	pubKey := []uint8([]byte{versionUser, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c})
 	pubKeyHash := generatePubKeyHash(pubKey)
-	assert.Equal(t, []byte{118,190,241,208,155,158,113,47,115,229,101,237,223,142,29,219,129,187,19,126}, pubKeyHash)
+	assert.Equal(t, []byte{118, 190, 241, 208, 155, 158, 113, 47, 115, 229, 101, 237, 223, 142, 29, 219, 129, 187, 19, 126}, pubKeyHash)
 }
 
 func TestIsValidPubKey(t *testing.T) {
@@ -93,11 +93,17 @@ func TestIsValidPubKey(t *testing.T) {
 	isPubKey3Valid, err3 := IsValidPubKey(pubKey3)
 
 	assert.False(t, isPubKey1Valid)
-	assert.Equal(t, errors.New("public key not correct"),err1)
+	assert.Equal(t, errval.IncorrectPublicKey, err1)
 
 	assert.False(t, isPubKey2Valid)
-	assert.Equal(t, errors.New("public key not correct"),err2)
+	assert.Equal(t, errval.IncorrectPublicKey, err2)
 
 	assert.True(t, isPubKey3Valid)
 	assert.Nil(t, err3)
+}
+
+func TestString(t *testing.T) {
+	pubKey := []uint8([]byte{versionUser, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c})
+	pubKeyHash := PubKeyHash(generatePubKeyHash(pubKey))
+	assert.Equal(t, "76bef1d09b9e712f73e565eddf8e1ddb81bb137e", pubKeyHash.String())
 }

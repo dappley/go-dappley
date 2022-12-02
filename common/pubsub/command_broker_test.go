@@ -1,10 +1,12 @@
 package pubsub_test
 
 import (
+	"testing"
+
 	"github.com/dappley/go-dappley/common/pubsub"
 	"github.com/dappley/go-dappley/common/pubsub/mocks"
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestCommandBroker_Subscribe(t *testing.T) {
@@ -30,7 +32,7 @@ func TestCommandBroker_Subscribe(t *testing.T) {
 			name:        "Listen same unreserved topics",
 			cmd1:        "cmd",
 			cmd2:        "cmd",
-			expectedErr: pubsub.ErrTopicOccupied,
+			expectedErr: errval.TopicOccupied,
 		},
 		{
 			name:        "Listen same reserved topics",
@@ -77,7 +79,7 @@ func TestCommandBroker_Dispatch(t *testing.T) {
 			name:          "unsubscribed cmd",
 			subScribedCmd: "cmd",
 			dispatchedCmd: "cmd1",
-			expectedErr:   pubsub.ErrNoSubscribersFound,
+			expectedErr:   errval.NoSubscribersFound,
 		},
 	}
 	for _, tt := range tests {

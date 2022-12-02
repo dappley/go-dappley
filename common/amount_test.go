@@ -19,9 +19,11 @@
 package common
 
 import (
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+
+	errval "github.com/dappley/go-dappley/errors"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -48,7 +50,7 @@ func TestAmount(t *testing.T) {
 	}{
 		{"0", bigInt0, []byte{}, nil},
 		{"1", bigInt1, []byte{1}, nil},
-		{"-1", bigIntNeg1, []byte{}, ErrAmountUnderflow},
+		{"-1", bigIntNeg1, []byte{}, errval.AmountUnderflow},
 		{"max uint64", bigMaxUint64, []byte{255, 255, 255, 255, 255, 255, 255, 255}, nil},
 		{"uint64 and above", bigUint128, []byte{61, 48, 241, 156, 209, 0, 255, 255, 194, 207, 14, 99, 46, 255}, nil},
 	}
@@ -91,7 +93,7 @@ func TestAmountOperation(t *testing.T) {
 	assert.Equal(t, diffExpect.Bytes(), diffResult.Bytes())
 
 	result, err := b.Sub(a)
-	assert.Equal(t, ErrAmountUnderflow, err)
+	assert.Equal(t, errval.AmountUnderflow, err)
 	assert.Nil(t, result)
 
 	productExpect := NewAmount(90)

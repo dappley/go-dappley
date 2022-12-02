@@ -19,6 +19,7 @@ package intergationTest
 import (
 	"bytes"
 	"fmt"
+	logger "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path"
@@ -27,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/downloadmanager"
 
 	"github.com/dappley/go-dappley/common/deadline"
@@ -69,6 +71,17 @@ const testport_fork_download = 10600
 const InvalidAddress = "Invalid Address"
 const confDir = "../storage/fakeFileLoaders/"
 
+// TestMain prevents race conditions related to the account test file
+func TestMain(m *testing.M) {
+	logic.AccountTestFileMutex.Lock()
+	defer logic.AccountTestFileMutex.Unlock()
+	logic.RemoveAccountTestFile()
+	logger.SetLevel(logger.WarnLevel)
+	retCode := m.Run()
+	logic.RemoveAccountTestFile()
+	os.Exit(retCode)
+}
+
 //test logic.Send
 func TestSend(t *testing.T) {
 	var mineReward = transaction.Subsidy
@@ -86,8 +99,8 @@ func TestSend(t *testing.T) {
 		{"Deploy contract", common.NewAmount(7), common.NewAmount(0), "dapp_schedule!", common.NewAmount(30000), common.NewAmount(1), common.NewAmount(7), common.NewAmount(0), nil},
 		{"Send with no tip", common.NewAmount(7), common.NewAmount(0), "", common.NewAmount(0), common.NewAmount(0), common.NewAmount(7), common.NewAmount(0), nil},
 		{"Send with tips", common.NewAmount(6), common.NewAmount(2), "", common.NewAmount(0), common.NewAmount(0), common.NewAmount(6), common.NewAmount(2), nil},
-		{"Send zero with no tip", common.NewAmount(0), common.NewAmount(0), "", common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), logic.ErrInvalidAmount},
-		{"Send zero with tips", common.NewAmount(0), common.NewAmount(2), "", common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), logic.ErrInvalidAmount},
+		{"Send zero with no tip", common.NewAmount(0), common.NewAmount(0), "", common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), errval.InvalidAmount},
+		{"Send zero with tips", common.NewAmount(0), common.NewAmount(2), "", common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), errval.InvalidAmount},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -547,7 +560,7 @@ func TestAddBalance(t *testing.T) {
 		expectedErr  error
 	}{
 		{"Add 5", common.NewAmount(5), common.NewAmount(5), nil},
-		{"Add zero", common.NewAmount(0), common.NewAmount(0), logic.ErrInvalidAmount},
+		{"Add zero", common.NewAmount(0), common.NewAmount(0), errval.InvalidAmount},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -619,7 +632,7 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			logic.SetMinerKeyPair(key)
 
 			_, _, err = logic.SendFromMiner(account.NewAddress(tc.address), common.NewAmount(8), bc)
-			assert.Equal(t, logic.ErrInvalidRcverAddress, err)
+			assert.Equal(t, errval.InvalidRcverAddress, err)
 		})
 	}
 }
@@ -657,8 +670,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, account.NewAddress(""), common.NewAmount(1), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
-	utxoIndex, _ := bm.Getblockchain().GetUpdatedUTXOIndex()
-	txp := bm.Getblockchain().GetTxPool().GetTransactions(utxoIndex)[0]
+	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
 	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 
 	// Create a miner account; Balance is 0 initially
@@ -711,7 +723,6 @@ func CreateProducer(producerAddr, addr account.Address, db *storage.RamStorage, 
 	producer := blockproducerinfo.NewBlockProducerInfo(producerAddr.String())
 
 	libPolicy := &blockchainMock.LIBPolicy{}
-	libPolicy.On("GetProducers").Return(nil)
 	libPolicy.On("GetMinConfirmationNum").Return(6)
 	libPolicy.On("IsBypassingLibCheck").Return(true)
 	consensus := &blockchainMock.Consensus{}
@@ -1200,8 +1211,7 @@ func TestSmartContractOfContractTransfer(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, account.NewAddress(""), common.NewAmount(30000), common.NewAmount(0), common.NewAmount(30000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
-	utxoIndex, _ := bm.Getblockchain().GetUpdatedUTXOIndex()
-	txp := bm.Getblockchain().GetTxPool().GetTransactions(utxoIndex)[0]
+	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
 	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 
 	if err != nil {
@@ -1291,8 +1301,7 @@ func TestSmartContractOfContractDelete(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, account.NewAddress(""), toAmount, common.NewAmount(0), common.NewAmount(30000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
-	utxoIndex, _ := bm.Getblockchain().GetUpdatedUTXOIndex()
-	txp := bm.Getblockchain().GetTxPool().GetTransactions(utxoIndex)[0]
+	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
 	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 
 	if err != nil {

@@ -2,10 +2,11 @@ package metrics
 
 import (
 	"encoding/json"
-	"errors"
-	"github.com/dappley/go-dappley/common/log"
 	"sync"
 	"time"
+
+	"github.com/dappley/go-dappley/common/log"
+	errval "github.com/dappley/go-dappley/errors"
 
 	"github.com/sirupsen/logrus"
 
@@ -77,7 +78,7 @@ func (ds *DataStore) RegisterNewMetric(name string, updateMetric func() metricsp
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 	if _, ok := ds.Metrics[name]; ok {
-		return errors.New("unable to register duplicate metric")
+		return errval.DuplicateMetric
 	}
 
 	ds.Metrics[name] = &metric{common.NewEvictingQueue(ds.statCapacity), updateMetric}

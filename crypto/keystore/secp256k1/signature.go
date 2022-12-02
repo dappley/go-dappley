@@ -19,10 +19,10 @@
 package secp256k1
 
 import (
-	"errors"
 
 	//"github.com/nebulasio/go-nebulas/crypto/keystore"
 	"github.com/dappley/go-dappley/crypto/keystore"
+	errval "github.com/dappley/go-dappley/errors"
 )
 
 // Signature signature ecdsa
@@ -46,7 +46,7 @@ func (s *Signature) InitSign(priv keystore.PrivateKey) error {
 // Sign ecdsa sign
 func (s *Signature) Sign(data []byte) (out []byte, err error) {
 	if s.privateKey == nil {
-		return nil, errors.New("please get private key first")
+		return nil, errval.GetPvtKeyFirst
 	}
 	signature, err := s.privateKey.Sign(data)
 	if err != nil {
@@ -74,7 +74,7 @@ func (s *Signature) InitVerify(pub keystore.PublicKey) error {
 // Verify ecdsa verify
 func (s *Signature) Verify(data []byte, signature []byte) (bool, error) {
 	if s.publicKey == nil {
-		return false, errors.New("please give public key first")
+		return false, errval.GivePubKeyFirst
 	}
 	return s.publicKey.Verify(data, signature)
 }
