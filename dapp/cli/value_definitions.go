@@ -12,6 +12,7 @@ const (
 	cliGetPeerInfo       = "getPeerInfo"
 	cliSend              = "send"
 	cliSendAmount        = "sendAmount"
+	cliSendData          = "sendData"
 	cliAddPeer           = "addPeer"
 	cliCreateAccount     = "createAccount"
 	cliAddAccount        = "addAccount"
@@ -87,6 +88,7 @@ var cmdList = []string{
 	cliGetPeerInfo,
 	cliSend,
 	cliSendAmount,
+	cliSendData,
 	cliAddPeer,
 	cliCreateAccount,
 	cliAddAccount,
@@ -262,6 +264,38 @@ var cmdFlagsMap = map[string][]flagPars{
 			"Gas price of smart contract execution.",
 		},
 	},
+	cliSendData: {
+		flagPars{
+			flagFromAddress,
+			"",
+			valueTypeString,
+			"Sender's account address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+		},
+		flagPars{
+			flagToAddress,
+			"",
+			valueTypeString,
+			"Receiver's account address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+		},
+		flagPars{
+			flagAmount,
+			0,
+			valueTypeInt,
+			"The amount to send from the sender to the receiver.",
+		},
+		flagPars{
+			flagKey,
+			"",
+			valueTypeString,
+			"The data key.",
+		},
+		flagPars{
+			flagValue,
+			"",
+			valueTypeString,
+			"The data value.",
+		},
+	},
 	cliAddAccount: {flagPars{
 		flagKey,
 		"",
@@ -385,6 +419,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGetPeerInfo:       {adminRpcService, getPeerInfoCommandHandler},
 	cliSend:              {rpcService, sendCommandHandler},
 	cliSendAmount:        {rpcService, sendAmountCommandHandler},
+	cliSendData:          {rpcService, cliSendDataCommandHandler},
 	cliAddPeer:           {adminRpcService, addPeerCommandHandler},
 	cliCreateAccount:     {rpcService, createAccountCommandHandler},
 	cliAddAccount:        {rpcService, addAccountCommandHandler},

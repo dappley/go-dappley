@@ -279,3 +279,96 @@ func sendAmountCommandHandler(ctx context.Context, c interface{}, flags cmdFlags
 
 	fmt.Println("Transaction is sent! Pending approval from network.")
 }
+
+func cliSendDataCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
+	fromAddress := *(flags[flagFromAddress].(*string))
+	if fromAddress == "" {
+		fmt.Println("Error: from address is missing!")
+		return
+	}
+	toAddress := *(flags[flagToAddress].(*string))
+	if toAddress == "" {
+		fmt.Println("Error: to address is missing!")
+		return
+	}
+
+	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(fromAddress))
+	if !addressAccount.IsValid() {
+		fmt.Println("Error: 'from' address is not valid!")
+		return
+	}
+	addressAccount = account.NewTransactionAccountByAddress(account.NewAddress(toAddress))
+	if !addressAccount.IsValid() {
+		fmt.Println("Error: 'to' address is not valid!")
+		return
+	}
+
+	key := *(flags[flagKey].(*string))
+	value := *(flags[flagValue].(*string))
+	if key == "" || value == "" {
+		fmt.Println("Error:  key and value cannot be null!")
+		return
+	}
+	data := `{"data":{"key":"` + key + `","value":"` + value + `"}}`
+
+	response, err := logic.GetUtxoStreamWithAmount(c.(rpcpb.RpcServiceClient), &rpcpb.GetUTXOWithAmountRequest{
+		Address: account.NewAddress(*(flags[flagFromAddress].(*string))).String(),
+		Amount:  uint64(*(flags[flagAmount].(*int))),
+	})
+
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error:", status.Convert(err).Message())
+		}
+		return
+	}
+	utxos := response.GetUtxos()
+	var inputUtxos []*utxo.UTXO
+	for _, u := range utxos {
+		utxo := utxo.UTXO{}
+		utxo.FromProto(u)
+		inputUtxos = append(inputUtxos, &utxo)
+	}
+	sort.Sort(utxoSlice(inputUtxos))
+	tip := common.NewAmount(0)
+	gasLimit := common.NewAmount(0)
+	gasPrice := common.NewAmount(0)
+
+	tx_utxos, err := getUTXOsfromAmount(inputUtxos, common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice)
+	if err != nil {
+		fmt.Println("Error:", err.Error())
+		return
+	}
+
+	am, err := logic.GetAccountManager(wallet.GetAccountFilePath())
+	if err != nil {
+		fmt.Println("Error:", err.Error())
+		return
+	}
+	senderAccount := am.GetAccountByAddress(account.NewAddress(*(flags[flagFromAddress].(*string))))
+
+	if senderAccount == nil {
+		fmt.Println("Error: invalid account address.")
+		return
+	}
+	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
+		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
+	tx, err := ltransaction.NewHardCodeTransaction(transaction.TxTypeNormal, tx_utxos, sendTxParam)
+	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
+	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
+
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error:", status.Convert(err).Message())
+		}
+		return
+	}
+
+	fmt.Println("Transaction is sent! Pending approval from network.")
+}
