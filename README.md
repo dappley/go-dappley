@@ -96,6 +96,36 @@ cd ../
 ./dapp -f conf/node2.conf
 ```
 
+## Using Smart Contracts
+In the below examples, replace `dYwryyWVZZiRBQA8KcEqNgGqRBdAGvMnZH` with your own account address.
+
+### Deploy a smart contract
+``` bash 
+./cli send -amount 1 -from dYwryyWVZZiRBQA8KcEqNgGqRBdAGvMnZH -tip 1 -gasLimit 30000 -gasPrice 1 -data "'usestrict'; var StepRecorder = function () { }; StepRecorder.prototype = { record: function (addr, steps) { LocalStorage.set(addr, steps); }, dapp_schedule: function () { }, deleteContract: function () { } }; module.exports = new StepRecorder();"
+```
+Example output: `cR9BQtBQA2mxJNyUNfzgia29ubas1WrkN9` (this is a contract address, use it to call and query the contract that was deployed)
+
+### Call a smart contract
+``` bash
+./cli send -amount 1 -from dYwryyWVZZiRBQA8KcEqNgGqRBdAGvMnZH -to cR9BQtBQA2mxJNyUNfzgia29ubas1WrkN9 -tip 1 -gasLimit 30000 -gasPrice 1 -data '{"function":"record","args":["Test","2000"]}'
+```
+
+### Query a smart contract
+``` bash
+./cli contractQuery -contractAddr cR9BQtBQA2mxJNyUNfzgia29ubas1WrkN9 -key Test
+```
+
+## Using Hardcode Data Transactions
+### Send the transaction with data
+``` bash
+./cli sendData -from dZRX8D2GZ6JqRss4AodBvDx2ESgyZoDrPk -to dTATK5vnJFHs391av9DKBomB1hvwkAkvFM -amount 1 -key Test -value 3333 
+```
+
+### Query the data
+``` bash
+./cli contractQuery -contractAddr dTATK5vnJFHs391av9DKBomB1hvwkAkvFM -key Test
+```
+
 ## Contribution
 Thank you for considering helping with go-dappley project. Any contributions or suggestions are welcome. Please read the following instructions to get started.
 
