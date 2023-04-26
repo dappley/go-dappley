@@ -15,4 +15,5 @@ message Utxo {
  message UtxoInfo {
      bytes   lastUtxoKey = 1;
      bytes   utxoCreateContractKey = 2;
+     uint64  nonce = 3;
  }

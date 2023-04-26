@@ -26,16 +26,18 @@ import (
 type UTXOInfo struct {
 	lastUTXOKey           []byte
 	createContractUTXOKey []byte
+	nonce                 uint64
 }
 
 func NewUTXOInfo() *UTXOInfo {
-	return &UTXOInfo{[]byte{}, []byte{}}
+	return &UTXOInfo{[]byte{}, []byte{}, 0}
 }
 
 func (utxoHead *UTXOInfo) ToProto() proto.Message {
 	return &utxopb.UtxoInfo{
 		LastUtxoKey:           utxoHead.lastUTXOKey,
 		UtxoCreateContractKey: utxoHead.createContractUTXOKey,
+		Nonce:                 utxoHead.nonce,
 	}
 }
 
@@ -43,9 +45,10 @@ func (utxoHead *UTXOInfo) FromProto(pb proto.Message) {
 	utxoHeadpb := pb.(*utxopb.UtxoInfo)
 	utxoHead.lastUTXOKey = utxoHeadpb.LastUtxoKey
 	utxoHead.createContractUTXOKey = utxoHeadpb.UtxoCreateContractKey
+	utxoHead.nonce = utxoHeadpb.Nonce
 }
 
-func (utxoHead *UTXOInfo) GetLastUtxoKey  () []byte {
+func (utxoHead *UTXOInfo) GetLastUtxoKey() []byte {
 	return utxoHead.lastUTXOKey
 }
 
@@ -53,10 +56,18 @@ func (utxoHead *UTXOInfo) SetLastUtxoKey(lastUTXOKey []byte) {
 	utxoHead.lastUTXOKey = lastUTXOKey
 }
 
-func (utxoHead *UTXOInfo) GetCreateContractUTXOKey  () []byte {
+func (utxoHead *UTXOInfo) GetCreateContractUTXOKey() []byte {
 	return utxoHead.createContractUTXOKey
 }
 
 func (utxoHead *UTXOInfo) SetCreateContractUTXOKey(createContractUTXOKey []byte) {
 	utxoHead.createContractUTXOKey = createContractUTXOKey
+}
+
+func (utxoHead *UTXOInfo) GetNonce() uint64 {
+	return utxoHead.nonce
+}
+
+func (utxoHead *UTXOInfo) SetNonce(nonce uint64) {
+	utxoHead.nonce = nonce
 }

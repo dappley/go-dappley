@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewUTXOInfo(t *testing.T) {
-	assert.Equal(t, &UTXOInfo{[]byte{}, []byte{}}, NewUTXOInfo())
+	assert.Equal(t, &UTXOInfo{[]byte{}, []byte{}, 0}, NewUTXOInfo())
 }
 
 func TestUTXOInfo_ToProto(t *testing.T) {
