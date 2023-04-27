@@ -26,6 +26,7 @@ service RpcService {
   rpc RpcEstimateGas(EstimateGasRequest) returns (EstimateGasResponse) {}
   rpc RpcGasPrice(GasPriceRequest) returns (GasPriceResponse) {}
   rpc RpcContractQuery(ContractQueryRequest) returns (ContractQueryResponse) {}
+  rpc RpcGetNonce(GetNonceRequest) returns (GetNonceResponse) {}
 }
 
 service AdminService{
@@ -110,10 +111,11 @@ message GetBlockByHeightRequest {
 
 message SendTransactionRequest {
   transactionpb.Transaction transaction = 1;
+  uint64 nonce = 2;
 }
 
 message SendBatchTransactionRequest {
-  repeated transactionpb.Transaction transactions = 1;
+  repeated SendTransactionRequest transactions = 1;
 }
 
 message GetNewTransactionRequest {}
@@ -137,6 +139,10 @@ message ContractQueryRequest {
   string contract_addr = 1;
   string key = 2;
   string value = 3;
+}
+
+message GetNonceRequest {
+  string address = 1;
 }
 
 // Responses
@@ -268,4 +274,8 @@ message GasPriceResponse {
 message ContractQueryResponse {
     string key = 1;
     string value = 2;
+}
+
+message GetNonceResponse {
+  uint64 nonce = 1;
 }

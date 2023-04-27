@@ -132,7 +132,8 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		return
 	}
 
-	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
+	nonce := uint64(0) // TODO: get actual nonce from RPC
+	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction), Nonce: nonce}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
 	if err != nil {
@@ -260,7 +261,8 @@ func sendAmountCommandHandler(ctx context.Context, c interface{}, flags cmdFlags
 		return
 	}
 
-	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
+	nonce := uint64(0) // TODO: get actual nonce from RPC
+	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction), Nonce: nonce}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
 	if err != nil {
@@ -357,7 +359,8 @@ func cliSendDataCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
 		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
 	tx, err := ltransaction.NewHardCodeTransaction(transaction.TxTypeNormal, tx_utxos, sendTxParam)
-	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
+	nonce := uint64(0) // TODO: get actual nonce from RPC
+	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction), Nonce: nonce}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
 	if err != nil {

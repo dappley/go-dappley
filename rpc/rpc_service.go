@@ -70,12 +70,12 @@ type RpcService struct {
 	mutex          sync.Mutex
 }
 
-func (rpcSerivce *RpcService) GetBlockchain() *lblockchain.Blockchain {
-	if rpcSerivce.bm == nil {
+func (rpcService *RpcService) GetBlockchain() *lblockchain.Blockchain {
+	if rpcService.bm == nil {
 		return nil
 	}
 
-	return rpcSerivce.bm.Getblockchain()
+	return rpcService.bm.Getblockchain()
 }
 
 func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVersionRequest) (*rpcpb.GetVersionResponse, error) {
@@ -593,4 +593,9 @@ func (rpcService *RpcService) RpcContractQuery(ctx context.Context, in *rpcpb.Co
 		return nil, errval.InvalidKey
 	}
 	return &rpcpb.ContractQueryResponse{Key: queryKey, Value: resultValue}, nil
+}
+
+func (rpcService *RpcService) RpcGetNonce(ctx context.Context, request *rpcpb.GetNonceRequest) (*rpcpb.GetNonceResponse, error) {
+	// TODO: implement by getting from UTXOInfo
+	return &rpcpb.GetNonceResponse{Nonce: 0}, nil
 }
