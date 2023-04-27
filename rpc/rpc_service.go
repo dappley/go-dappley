@@ -596,6 +596,17 @@ func (rpcService *RpcService) RpcContractQuery(ctx context.Context, in *rpcpb.Co
 }
 
 func (rpcService *RpcService) RpcGetNonce(ctx context.Context, request *rpcpb.GetNonceRequest) (*rpcpb.GetNonceResponse, error) {
-	// TODO: implement by getting from UTXOInfo
-	return &rpcpb.GetNonceResponse{Nonce: 0}, nil
+	acc := account.NewTransactionAccountByAddress(account.NewAddress(request.Address))
+	if !acc.IsValid() {
+		return nil, status.Error(codes.InvalidArgument, errval.InvalidAddress.Error())
+	}
+	bc := rpcService.GetBlockchain()
+	rpcService.mutex.Lock()
+	if rpcService.dbUtxoIndex == nil || rpcService.blockMaxHeight < bc.GetMaxHeight() {
+		rpcService.dbUtxoIndex = lutxo.NewUTXOIndex(bc.GetUtxoCache())
+		rpcService.blockMaxHeight = bc.GetMaxHeight()
+	}
+	rpcService.mutex.Unlock()
+	nonce := rpcService.dbUtxoIndex.GetLastNonceByPubKeyHash(acc.GetPubKeyHash())
+	return &rpcpb.GetNonceResponse{Nonce: nonce}, nil
 }

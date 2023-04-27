@@ -208,6 +208,15 @@ func (utxoCache *UTXOCache) getLastUTXOKey(pubKeyHash string) []byte {
 	return utxoInfo.GetLastUtxoKey()
 }
 
+func (utxoCache *UTXOCache) GetLastNonce(pubKeyHash account.PubKeyHash) uint64 {
+	utxoInfo, err := utxoCache.getUTXOInfo(pubKeyHash.String())
+	if err != nil {
+		logger.Warn("getLastNonce error:", err)
+		return 0
+	}
+	return utxoInfo.GetNonce()
+}
+
 func (utxoCache *UTXOCache) IsLastUtxoKeyExist(pubKeyHash string) bool {
 	if bytes.Equal(utxoCache.getLastUTXOKey(pubKeyHash), []byte{}) {
 		return false
@@ -493,7 +502,7 @@ func GetscStateLogKey(blockHash hash.Hash) string {
 	return "scLog" + util.Bytes2str(blockHash)
 }
 
-func (utxoCache *UTXOCache) saveHardCodeData(utxo *UTXO)  {
+func (utxoCache *UTXOCache) saveHardCodeData(utxo *UTXO) {
 	scStateKey, value, exist := getScKeyValue(utxo.Contract, utxo.PubKeyHash)
 	if !exist {
 		return
@@ -503,7 +512,7 @@ func (utxoCache *UTXOCache) saveHardCodeData(utxo *UTXO)  {
 	}
 }
 
-func (utxoCache *UTXOCache) delHardCodeData(utxo *UTXO)  {
+func (utxoCache *UTXOCache) delHardCodeData(utxo *UTXO) {
 	scStateKey, _, exist := getScKeyValue(utxo.Contract, utxo.PubKeyHash)
 	if !exist {
 		return
@@ -513,19 +522,18 @@ func (utxoCache *UTXOCache) delHardCodeData(utxo *UTXO)  {
 	}
 }
 
-func getScKeyValue(data string, pubkeyHash account.PubKeyHash) ([]byte, []byte,bool){
-	if !gjson.Valid(data){
-		return nil,nil,false
+func getScKeyValue(data string, pubkeyHash account.PubKeyHash) ([]byte, []byte, bool) {
+	if !gjson.Valid(data) {
+		return nil, nil, false
 	}
 
 	key := gjson.Get(data, "data.key").String()
 	value := gjson.Get(data, "data.value").String()
-	if key==""||value==""{
-		return nil,nil,false
+	if key == "" || value == "" {
+		return nil, nil, false
 	}
 
 	address := pubkeyHash.GenerateAddress().String()
 	scStateKey := GetscStateKey(address, key)
-	return util.Str2bytes(scStateKey), util.Str2bytes(value),true
+	return util.Str2bytes(scStateKey), util.Str2bytes(value), true
 }
-

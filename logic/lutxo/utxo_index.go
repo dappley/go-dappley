@@ -220,7 +220,7 @@ func (utxos *UTXOIndex) GetUTXOsAccordingToAmount(pubkeyHash account.PubKeyHash,
 	return append(utxoCache, utxoFromdb...), nil
 }
 
-//get UTXOS from UTXOIndex, if the utxo already exist in remove list, the utxo will not be included.
+// get UTXOS from UTXOIndex, if the utxo already exist in remove list, the utxo will not be included.
 func (utxos *UTXOIndex) getUTXOsFromCacheUTXO(pubkeyHash account.PubKeyHash, amount *common.Amount) (*utxo.UTXOTx, []*utxo.UTXO, *common.Amount, error) {
 	utxoTxAdd := utxos.indexAdd[pubkeyHash.String()]
 	utxoTxRemove := utxos.indexRemove[pubkeyHash.String()]
@@ -405,7 +405,7 @@ func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int
 	return nil
 }
 
-//creates a deepcopy of the receiver object
+// creates a deepcopy of the receiver object
 func (utxos *UTXOIndex) DeepCopy() *UTXOIndex {
 	utxos.mutex.RLock()
 	defer utxos.mutex.RUnlock()
@@ -450,4 +450,10 @@ func (utxos *UTXOIndex) SelfCheckingUTXO() {
 		}
 	}
 	logger.Info("self checking complete")
+}
+
+func (utxos *UTXOIndex) GetLastNonceByPubKeyHash(pubkeyHash account.PubKeyHash) uint64 {
+	utxos.mutex.RLock()
+	defer utxos.mutex.RUnlock()
+	return utxos.cache.GetLastNonce(pubkeyHash.String())
 }

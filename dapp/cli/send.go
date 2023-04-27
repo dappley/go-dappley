@@ -132,8 +132,19 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		return
 	}
 
-	nonce := uint64(0) // TODO: get actual nonce from RPC
-	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction), Nonce: nonce}
+	getNonceRequest := &rpcpb.GetNonceRequest{Address: fromAddress}
+	getNonceResponse, err := c.(rpcpb.RpcServiceClient).RpcGetNonce(ctx, getNonceRequest)
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error: ", status.Convert(err).Message())
+		}
+		return
+	}
+
+	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction), Nonce: getNonceResponse.GetNonce() + 1}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
 	if err != nil {
@@ -261,8 +272,18 @@ func sendAmountCommandHandler(ctx context.Context, c interface{}, flags cmdFlags
 		return
 	}
 
-	nonce := uint64(0) // TODO: get actual nonce from RPC
-	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction), Nonce: nonce}
+	getNonceRequest := &rpcpb.GetNonceRequest{Address: fromAddress}
+	getNonceResponse, err := c.(rpcpb.RpcServiceClient).RpcGetNonce(ctx, getNonceRequest)
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error: ", status.Convert(err).Message())
+		}
+		return
+	}
+	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction), Nonce: getNonceResponse.GetNonce() + 1}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
 	if err != nil {
@@ -359,8 +380,19 @@ func cliSendDataCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
 		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
 	tx, err := ltransaction.NewHardCodeTransaction(transaction.TxTypeNormal, tx_utxos, sendTxParam)
-	nonce := uint64(0) // TODO: get actual nonce from RPC
-	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction), Nonce: nonce}
+
+	getNonceRequest := &rpcpb.GetNonceRequest{Address: fromAddress}
+	getNonceResponse, err := c.(rpcpb.RpcServiceClient).RpcGetNonce(ctx, getNonceRequest)
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error: ", status.Convert(err).Message())
+		}
+		return
+	}
+	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction), Nonce: getNonceResponse.GetNonce() + 1}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
 	if err != nil {
