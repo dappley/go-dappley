@@ -112,6 +112,15 @@ func main() {
 	peerinfoPath = peerConfDirPath + peerinfoPath
 	peerinfoConf := storage.NewFileLoader(peerinfoPath)
 
+	//load producer config information
+	producerConf := &configpb.DynastyConfig{}
+	config.LoadConfig(producerFilePath, producerConf)
+
+	if producerConf == nil {
+		logger.Error("Cannot load genesis configurations from file! Exiting...")
+		return
+	}
+
 	//setup
 	db := storage.OpenDatabase(conf.GetNodeConfig().GetDbPath())
 	defer db.Close()
@@ -168,6 +177,7 @@ func main() {
 	defer server.Stop()
 
 	producer := blockproducerinfo.NewBlockProducerInfo(conf.GetConsensusConfig().GetMinerAddress())
+	updateProducerList(conss, producerConf)
 	blockProducer := blockproducer.NewBlockProducer(bm, conss, producer)
 
 	downloadManager := downloadmanager.NewDownloadManager(node, bm, len(conss.GetProducers()), blockProducer)
@@ -191,12 +201,19 @@ func initConsensus(conf *configpb.DynastyConfig, generalConf *configpb.Config) (
 	//set up consensus
 	conss := consensus.NewDPOS(blockproducerinfo.NewBlockProducerInfo(generalConf.GetConsensusConfig().GetMinerAddress()))
 	dynasty := consensus.NewDynastyWithConfigProducers(conf.GetProducers(), (int)(conf.GetMaxProducers()))
+	logger.Info("producers from config = ", conf.GetProducers())
 	conss.SetDynasty(dynasty)
 	conss.SetKey(generalConf.GetConsensusConfig().GetPrivateKey())
 	logger.WithFields(logger.Fields{
 		"miner_address": generalConf.GetConsensusConfig().GetMinerAddress(),
 	}).Info("Consensus is configured.")
 	return conss, dynasty
+}
+
+func updateProducerList(conss *consensus.DPOS, conf *configpb.DynastyConfig) {
+	dynasty := consensus.NewDynastyWithConfigProducers(conf.GetProducers(), (int)(conf.GetMaxProducers()))
+	conss.SetDynasty(dynasty)
+	logger.Info("Consensus updated based on ", producerFilePath)
 }
 
 func initNode(conf *configpb.Config, peerinfoConf *storage.FileLoader) (*network.Node, error) {
