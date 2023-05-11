@@ -77,6 +77,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIB
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxos(genesis.GetTransactions())
 	scState := scState.NewScState(bc.GetUtxoCache())
+	txPool.SetUTXOCache(bc.GetUtxoCache())
 	err := bc.AddBlockContextToTail(&BlockContext{Block: genesis, UtxoIndex: utxoIndex, State: scState})
 	if err != nil {
 		logger.Panic("CreateBlockchain: failed to add genesis block!")
@@ -102,6 +103,8 @@ func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionp
 		blkSizeLimit,
 		&sync.Mutex{},
 	}
+
+	txPool.SetUTXOCache(bc.GetUtxoCache())
 
 	lib, err := bc.getLIB(bc.GetMaxHeight())
 	if err != nil {
@@ -239,6 +242,8 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		return err
 	}
 
+	// TODO: increment account nonces by the number of added transactions
+
 	bc.updateLIB(ctx.Block.GetHeight())
 
 	numTxBeforeExe := bc.GetTxPool().GetNumOfTxInPool()
@@ -310,7 +315,7 @@ func (bc *Blockchain) String() string {
 	return buffer.String()
 }
 
-//AddBlockToDb record the new block in the database
+// AddBlockToDb record the new block in the database
 func (bc *Blockchain) AddBlockToDb(blk *block.Block) error {
 
 	err := bc.db.Put(blk.GetHash(), blk.Serialize())
@@ -356,7 +361,7 @@ func (bc *Blockchain) IsFoundBeforeLib(hash hash.Hash) bool {
 	}
 }
 
-//rollback the blockchain to a block with the targetHash
+// rollback the blockchain to a block with the targetHash
 func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scState *scState.ScState) bool {
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
@@ -381,6 +386,7 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 		parentblockHash = block.GetPrevHash()
 
 		// rollback the transactions in reverse order
+		// TODO: How does Ethereum rollback the nonce?
 		for i := len(block.GetTransactions()) - 1; i >= 0; i-- {
 			tx := block.GetTransactions()[i]
 			adaptedTx := transaction.NewTxAdapter(tx)
@@ -408,6 +414,7 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 		logger.Warn(err)
 		return false
 	}
+	// TODO: for each sender address, update the last nonce in index
 	bc.savedHash(UtxoSaveHash)
 	//bc.db.DisableBatch()
 	//bc.db.Flush()
@@ -450,7 +457,7 @@ func (bc *Blockchain) CheckMinProducerPolicy(blk *block.Block) bool {
 
 }
 
-//isAliveProducerSufficient returns true if alive producers are greater than minimum producers(total *2/3)
+// isAliveProducerSufficient returns true if alive producers are greater than minimum producers(total *2/3)
 func (bc *Blockchain) isAliveProducerSufficient(blk *block.Block) bool {
 	minProduerNum := bc.libPolicy.GetMinConfirmationNum()
 	onlineProducers := make(map[string]bool)

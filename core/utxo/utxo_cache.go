@@ -212,9 +212,22 @@ func (utxoCache *UTXOCache) GetLastNonce(pubKeyHash account.PubKeyHash) uint64 {
 	utxoInfo, err := utxoCache.getUTXOInfo(pubKeyHash.String())
 	if err != nil {
 		logger.Warn("getLastNonce error:", err)
-		return 0
+		return -1
 	}
 	return utxoInfo.GetNonce()
+}
+
+func (utxoCache *UTXOCache) SetLastNonce(pubKeyHash account.PubKeyHash, nonce uint64) error {
+	utxoInfo, err := utxoCache.getUTXOInfo(pubKeyHash.String())
+	if err != nil {
+		logger.Warn("SetLastNonce:", err)
+	}
+	utxoInfo.SetNonce(nonce)
+	if err = utxoCache.putUTXOInfo(pubKeyHash.String(), utxoInfo); err != nil {
+		logger.Error("put last nonce to db failed.")
+		return err
+	}
+	return nil
 }
 
 func (utxoCache *UTXOCache) IsLastUtxoKeyExist(pubKeyHash string) bool {

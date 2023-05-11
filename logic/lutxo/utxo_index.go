@@ -455,5 +455,11 @@ func (utxos *UTXOIndex) SelfCheckingUTXO() {
 func (utxos *UTXOIndex) GetLastNonceByPubKeyHash(pubkeyHash account.PubKeyHash) uint64 {
 	utxos.mutex.RLock()
 	defer utxos.mutex.RUnlock()
-	return utxos.cache.GetLastNonce(pubkeyHash.String())
+	return utxos.cache.GetLastNonce(pubkeyHash)
+}
+
+func (utxos *UTXOIndex) SetLastNonceByPubKeyHash(pubkeyHash account.PubKeyHash, nonce uint64) error {
+	utxos.mutex.Lock()
+	defer utxos.mutex.Unlock()
+	return utxos.cache.SetLastNonce(pubkeyHash, nonce)
 }

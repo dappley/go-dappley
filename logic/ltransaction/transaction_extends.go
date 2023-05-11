@@ -199,12 +199,12 @@ func NewTxContract(tx *transaction.Transaction) *TxContract {
 	return nil
 }
 
-//GetContract returns the smart contract code in a transaction
+// GetContract returns the smart contract code in a transaction
 func (ctx *TxContract) GetContract() string {
 	return ctx.Vout[transaction.ContractTxouputIndex].Contract
 }
 
-//GetContractPubKeyHash returns the smart contract pubkeyhash in a transaction
+// GetContractPubKeyHash returns the smart contract pubkeyhash in a transaction
 func (ctx *TxContract) GetContractPubKeyHash() account.PubKeyHash {
 	return ctx.Vout[transaction.ContractTxouputIndex].PubKeyHash
 }
@@ -246,7 +246,7 @@ func (ctx *TxContract) VerifyGas(totalBalance *common.Amount) error {
 	return nil
 }
 
-//GetContractAddress gets the smart contract's address if a transaction deploys a smart contract
+// GetContractAddress gets the smart contract's address if a transaction deploys a smart contract
 func (tx *TxContract) GetContractAddress() account.Address {
 	return tx.Address
 }
@@ -269,7 +269,7 @@ func (tx *TxContract) IsContractDeployed(utxoIndex *lutxo.UTXOIndex) bool {
 	return utxoIndex.IsIndexAddExist(pubkeyhash) || utxoIndex.IsLastUtxoKeyExist(pubkeyhash)
 }
 
-//Execute executes the smart contract the transaction points to. it doesnt do anything if is a contract deploy transaction
+// Execute executes the smart contract the transaction points to. it doesnt do anything if is a contract deploy transaction
 func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	isContractDeployed bool,
 	utxoIndex *lutxo.UTXOIndex,
@@ -329,7 +329,7 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	return gasCount, engine.GetGeneratedTXs(), err
 }
 
-//NewRewardTx creates a new transaction that gives reward to addresses according to the input rewards
+// NewRewardTx creates a new transaction that gives reward to addresses according to the input rewards
 func NewRewardTx(blockHeight uint64, rewards map[string]string) transaction.Transaction {
 
 	bh := make([]byte, 8)
@@ -376,7 +376,7 @@ func NewGasRewardTx(to *account.TransactionAccount, blockHeight uint64, actualGa
 	if actualGasCount.Cmp(common.NewAmount(0)) <= 0 {
 		return transaction.Transaction{}, false
 	}
-		fee := actualGasCount.Mul(gasPrice)
+	fee := actualGasCount.Mul(gasPrice)
 	if fee.IsZero() {
 		return transaction.Transaction{}, false
 	}
@@ -542,7 +542,7 @@ func NewContractTransferTX(utxos []*utxo.UTXO, contractAddr, toAddr account.Addr
 	return tx, nil
 }
 
-//prepareInputLists prepares a list of txinputs for a new transaction
+// prepareInputLists prepares a list of txinputs for a new transaction
 func prepareInputLists(utxos []*utxo.UTXO, publicKey []byte, signature []byte) []transactionbase.TXInput {
 	var inputs []transactionbase.TXInput
 
@@ -555,7 +555,7 @@ func prepareInputLists(utxos []*utxo.UTXO, publicKey []byte, signature []byte) [
 	return inputs
 }
 
-//prepareOutPutLists prepares a list of txoutputs for a new transaction
+// prepareOutPutLists prepares a list of txoutputs for a new transaction
 func prepareOutputLists(from, to *account.TransactionAccount, amount *common.Amount, change *common.Amount, contract string) []transactionbase.TXOutput {
 	var outputs []transactionbase.TXOutput
 	toAddr := to
@@ -580,7 +580,7 @@ func prepareOutputListsForHardcode(from, to *account.TransactionAccount, amount 
 	toAddr := to
 
 	outputs = append(outputs, *transactionbase.NewTXOutput(amount, toAddr))
-	outputs[0].Contract=contract
+	outputs[0].Contract = contract
 	if !change.IsZero() {
 		outputs = append(outputs, *transactionbase.NewTXOutput(change, from))
 	}

@@ -406,9 +406,9 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		logger.Error("updateUTXO failed.")
 		return nil, status.Error(codes.InvalidArgument, "updateUTXO failed")
 	}
-	bc.GetTxPool().Push(*tx)
+	bc.GetTxPool().Push(*tx, in.GetNonce(), rpcService.utxoIndex)
 	rpcService.mutex.Unlock()
-	bc.GetTxPool().BroadcastTx(tx)
+	bc.GetTxPool().BroadcastTx(tx, in.GetNonce())
 
 	if generatedContractAddress != "" {
 		logger.WithFields(logger.Fields{"Contract Address": generatedContractAddress}).Info("Smart Contract has been received.")
@@ -423,16 +423,18 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 	utxoIndex, _ := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
 
 	txs := []transaction.Transaction{}
+	nonces := []uint64{}
 	for _, txInReq := range in.Transactions {
 		tx := transaction.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeDefault}
-		tx.FromProto(txInReq)
+		tx.FromProto(txInReq.GetTransaction())
 		txs = append(txs, tx)
+		nonces = append(nonces, txInReq.GetNonce())
 	}
 
 	// verify transactions
 	verifiedTxs := []transaction.Transaction{}
 	st := status.New(codes.OK, "")
-	for _, tx := range txs {
+	for i, tx := range txs {
 		adaptedTx := transaction.NewTxAdapter(&tx)
 		if !adaptedTx.IsNormal() && !adaptedTx.IsContract() {
 			st = status.New(codes.Unknown, "one or more transactions are invalid")
@@ -466,7 +468,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 		}
 
 		utxoIndex.UpdateUtxo(&tx)
-		rpcService.GetBlockchain().GetTxPool().Push(tx)
+		rpcService.GetBlockchain().GetTxPool().Push(tx, nonces[i], utxoIndex)
 		verifiedTxs = append(verifiedTxs, tx)
 
 		respon = append(respon, &rpcpb.SendTransactionStatus{
@@ -475,7 +477,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 			Message: "",
 		})
 	}
-	rpcService.GetBlockchain().GetTxPool().BroadcastBatchTxs(verifiedTxs)
+	rpcService.GetBlockchain().GetTxPool().BroadcastBatchTxs(verifiedTxs, nonces)
 
 	st, _ = st.WithDetails(respon...)
 	return &rpcpb.SendBatchTransactionResponse{}, st.Err()
@@ -608,5 +610,5 @@ func (rpcService *RpcService) RpcGetNonce(ctx context.Context, request *rpcpb.Ge
 	}
 	rpcService.mutex.Unlock()
 	nonce := rpcService.dbUtxoIndex.GetLastNonceByPubKeyHash(acc.GetPubKeyHash())
-	return &rpcpb.GetNonceResponse{Nonce: nonce}, nil
+	return &rpcpb.GetNonceResponse{Nonce: nonce + 1}, nil
 }

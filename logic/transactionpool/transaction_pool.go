@@ -23,9 +23,11 @@ import (
 	"encoding/hex"
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
+	"github.com/dappley/go-dappley/core/utxo"
 	errval "github.com/dappley/go-dappley/errors"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/dappley/go-dappley/storage"
 	"sort"
 	"sync"
 
@@ -57,6 +59,8 @@ var (
 
 type TransactionPool struct {
 	txs        map[string]*transaction.TransactionNode
+	nonces     map[string]uint64 // map of tx addresses to nonces
+	utxoCache  *utxo.UTXOCache
 	pendingTxs []*transaction.Transaction
 	tipOrder   []string
 	sizeLimit  uint32
@@ -69,6 +73,8 @@ type TransactionPool struct {
 func NewTransactionPool(netService NetService, limit uint32) *TransactionPool {
 	txPool := &TransactionPool{
 		txs:        make(map[string]*transaction.TransactionNode),
+		nonces:     make(map[string]uint64),
+		utxoCache:  utxo.NewUTXOCache(storage.NewRamStorage()),
 		pendingTxs: make([]*transaction.Transaction, 0),
 		tipOrder:   make([]string, 0),
 		sizeLimit:  limit,
@@ -109,6 +115,7 @@ func (txPool *TransactionPool) GetTopicHandler(topic string) pubsub.TopicHandler
 func (txPool *TransactionPool) DeepCopy() *TransactionPool {
 	txPoolCopy := TransactionPool{
 		txs:       make(map[string]*transaction.TransactionNode),
+		nonces:    make(map[string]uint64),
 		tipOrder:  make([]string, len(txPool.tipOrder)),
 		sizeLimit: txPool.sizeLimit,
 		currSize:  0,
@@ -128,7 +135,13 @@ func (txPool *TransactionPool) DeepCopy() *TransactionPool {
 		txPoolCopy.txs[key] = newTxNode
 	}
 
+	// TODO: copy nonces and utxoCache
+
 	return &txPoolCopy
+}
+
+func (txPool *TransactionPool) SetUTXOCache(utxoCache *utxo.UTXOCache) {
+	txPool.utxoCache = utxoCache
 }
 
 func (txPool *TransactionPool) SetSizeLimit(sizeLimit uint32) {
@@ -175,7 +188,7 @@ func (txPool *TransactionPool) GetAllTransactions() []*transaction.Transaction {
 	return txs
 }
 
-//PopTransactionWithMostTips pops the transactions with the most tips
+// PopTransactionWithMostTips pops the transactions with the most tips
 func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *lutxo.UTXOIndex) (*transaction.TransactionNode, error) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
@@ -204,7 +217,8 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *lutxo.UTXOI
 	return txNode, nil
 }
 
-//Rollback adds a popped transaction back to the transaction pool. The existing transactions in txpool may be dependent on the input transactionbase. However, the input transaction should never be dependent on any transaction in the current pool
+// Rollback adds a popped transaction back to the transaction pool. The existing transactions in txpool may be dependent on the input transactionbase. However, the input transaction should never be dependent on any transaction in the current pool
+// TODO: figure out rollback implementation
 func (txPool *TransactionPool) Rollback(tx transaction.Transaction) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
@@ -226,7 +240,7 @@ func (txPool *TransactionPool) Rollback(tx transaction.Transaction) {
 
 }
 
-//updateChildren traverses through all transactions in transaction pool and find the input node's children
+// updateChildren traverses through all transactions in transaction pool and find the input node's children
 func (txPool *TransactionPool) updateChildren(node *transaction.TransactionNode) {
 	for txid, txNode := range txPool.txs {
 	loop:
@@ -239,8 +253,8 @@ func (txPool *TransactionPool) updateChildren(node *transaction.TransactionNode)
 	}
 }
 
-//Push pushes a new transaction into the pool
-func (txPool *TransactionPool) Push(tx transaction.Transaction) {
+// Push pushes a new transaction into the pool
+func (txPool *TransactionPool) Push(tx transaction.Transaction, nonce uint64, utxoIndex *lutxo.UTXOIndex) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 	if txPool.sizeLimit == 0 {
@@ -258,12 +272,12 @@ func (txPool *TransactionPool) Push(tx transaction.Transaction) {
 		return
 	}
 
-	txPool.addTransactionAndSort(txNode)
-
+	txPool.nonces[hex.EncodeToString(tx.ID)] = nonce
+	txPool.addTransactionAndSort(txNode, utxoIndex)
 }
 
-//CleanUpMinedTxs updates the transaction pool when a new block is added to the blockchain.
-//It removes the packed transactions from the txpool while keeping their children
+// CleanUpMinedTxs updates the transaction pool when a new block is added to the blockchain.
+// It removes the packed transactions from the txpool while keeping their children
 func (txPool *TransactionPool) CleanUpMinedTxs(minedTxs []*transaction.Transaction) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
@@ -292,46 +306,72 @@ func (txPool *TransactionPool) removeFromTipOrder(txID []byte) {
 
 }
 
+// getSortedTransactions returns the txPool's transactions so that transactions from a single account are always arranged by ascending nonce.
 func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transaction {
-	rootNodes := make(map[string]*transaction.TransactionNode)
-	remaining := make(map[string]*transaction.TransactionNode)
-	sortedTxs := make([]*transaction.Transaction, 0, len(txPool.txs))
-
-	// Recursively traverses the treeNode, appending transactions to sortedTxs
-	var traverse func(key string, node *transaction.TransactionNode)
-	traverse = func(key string, node *transaction.TransactionNode) {
-		_, isRemaining := remaining[key]
-		if isRemaining {
-			sortedTxs = append(sortedTxs, node.Value)
-			delete(remaining, key)
-		}
-		if node.Children != nil {
-			for childKey, _ := range node.Children {
-				if _, exist := txPool.txs[childKey]; exist {
-					traverse(childKey, txPool.txs[childKey])
+	txsByAddress := make(map[string][]*transaction.Transaction)
+	for _, txNode := range txPool.txs {
+		tx := txNode.Value
+		address := tx.GetDefaultFromTransactionAccount().GetAddress().String()
+		if _, exist := txsByAddress[address]; exist {
+			index := sort.Search(len(txsByAddress[address]), func(i int) bool {
+				compareNonce, ok := txPool.nonces[hex.EncodeToString(txsByAddress[address][i].ID)]
+				if !ok {
+					logger.Warnf("could not find nonce for tx %s", hex.EncodeToString(txsByAddress[address][i].ID))
+					return false
 				}
+				txNonce, ok := txPool.nonces[hex.EncodeToString(tx.ID)]
+				if !ok {
+					logger.Warn("could not find nonce for tx %s", hex.EncodeToString(tx.ID))
+					return false
+				}
+				return txNonce < compareNonce
+			})
+
+			txPool.tipOrder = append(txPool.tipOrder, "")
+			copy(txPool.tipOrder[index+1:], txPool.tipOrder[index:])
+			txPool.tipOrder[index] = hex.EncodeToString(txNode.Value.ID)
+		} else {
+			txsByAddress[address] = []*transaction.Transaction{tx}
+		}
+	}
+
+	sortedTxs := make([]*transaction.Transaction, len(txPool.txs))
+	for _, txs := range txsByAddress {
+		sortedTxs = append(sortedTxs, txs...)
+	}
+	return sortedTxs
+}
+
+// TODO: temporary implementation. This could be optimized by storing a map of sender addresses instead of having to iterate through all transactions every time
+func (txPool *TransactionPool) getTransactionsFromAddress(address string) []*transaction.Transaction {
+	addressTxs := []*transaction.Transaction{}
+	for _, txNode := range txPool.txs {
+		tx := txNode.Value
+		if tx.GetDefaultFromTransactionAccount().GetAddress().String() == address {
+			if len(addressTxs) == 0 {
+				addressTxs = append(addressTxs, tx)
+			} else {
+				index := sort.Search(len(addressTxs), func(i int) bool {
+					compareNonce, ok := txPool.nonces[hex.EncodeToString(addressTxs[i].ID)]
+					if !ok {
+						logger.Warnf("could not find nonce for tx %s", hex.EncodeToString(addressTxs[i].ID))
+						return false
+					}
+					txNonce, ok := txPool.nonces[hex.EncodeToString(tx.ID)]
+					if !ok {
+						logger.Warn("could not find nonce for tx %s", hex.EncodeToString(tx.ID))
+						return false
+					}
+					return txNonce < compareNonce
+				})
+
+				addressTxs = append(addressTxs, &transaction.Transaction{})
+				copy(addressTxs[index+1:], addressTxs[index:])
+				addressTxs[index] = tx
 			}
 		}
 	}
-
-	for key, node := range txPool.txs {
-		if !checkDependTxInMap(node.Value, txPool.txs) {
-			rootNodes[key] = node
-		}
-		remaining[key] = node
-	}
-
-	// perform recursive tree traversal starting from the root nodes
-	// all child transactions will appear after their parents, as long as they are properly linked
-	for key, node := range rootNodes {
-		traverse(key, node)
-	}
-
-	if len(remaining) > 0 {
-		logger.Warn("Nodes were not properly traversed.")
-	}
-
-	return sortedTxs
+	return addressTxs
 }
 
 func checkDependTxInMap(tx *transaction.Transaction, existTxs map[string]*transaction.TransactionNode) bool {
@@ -353,8 +393,9 @@ func (txPool *TransactionPool) GetTransactionById(txid []byte) *transaction.Tran
 	return txNode.Value
 }
 
-//removeTransactionNodeAndChildren removes the txNode from tx pool and all its children.
-//Note: this function does not remove the node from tipOrder!
+// removeTransactionNodeAndChildren removes the txNode from tx pool and all its children.
+// Note: this function does not remove the node from tipOrder!
+//
 //todo:delete  node from tipOrder
 func (txPool *TransactionPool) removeTransactionNodeAndChildren(tx *transaction.Transaction) {
 
@@ -373,17 +414,18 @@ func (txPool *TransactionPool) removeTransactionNodeAndChildren(tx *transaction.
 	}
 }
 
-//removeTransactionNodeAndChildren removes the txNode from tx pool.
-//Note: this function does not remove the node from tipOrder!
+// removeTransactionNodeAndChildren removes the txNode from tx pool.
+// Note: this function does not remove the node from tipOrder!
 func (txPool *TransactionPool) removeTransaction(txNode *transaction.TransactionNode) {
 	txPool.disconnectFromParent(txNode.Value)
 	txPool.EventBus.Publish(EvictTransactionTopic, txNode.Value)
 	txPool.currSize -= uint32(txNode.Size)
 	MetricsTransactionPoolSize.Dec(1)
 	delete(txPool.txs, hex.EncodeToString(txNode.Value.ID))
+	delete(txPool.nonces, hex.EncodeToString(txNode.Value.ID))
 }
 
-//disconnectFromParent removes itself from its parent's node's children field
+// disconnectFromParent removes itself from its parent's node's children field
 func (txPool *TransactionPool) disconnectFromParent(tx *transaction.Transaction) {
 	for _, vin := range tx.Vin {
 		if parentTx, exist := txPool.txs[hex.EncodeToString(vin.Txid)]; exist {
@@ -401,34 +443,14 @@ func (txPool *TransactionPool) removeMinTipTx() {
 	txPool.tipOrder = txPool.tipOrder[:len(txPool.tipOrder)-1]
 }
 
-func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.TransactionNode) {
-	isDependentOnParent := false
-	for _, vin := range txNode.Value.Vin {
-		parentTx, exist := txPool.txs[hex.EncodeToString(vin.Txid)]
-		if exist {
-			parentTx.Children[hex.EncodeToString(txNode.Value.ID)] = txNode.Value
-			isDependentOnParent = true
-		}
-	}
-
+func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.TransactionNode, utxoIndex *lutxo.UTXOIndex) {
 	txPool.addTransaction(txNode)
-
-	// remove any txs from tip order if they depend on the new tx, and set it as the child of the new tx
-	for i := len(txPool.tipOrder) - 1; i >= 0; i-- { // iterate backwards so that removeFromTipOrder doesn't cause indexing errors
-		key := txPool.tipOrder[i]
-		tipTx := txPool.txs[key].Value
-		for _, vin := range tipTx.Vin {
-			if bytes.Equal(vin.Txid, txNode.Value.ID) {
-				txPool.removeFromTipOrder(tipTx.ID)
-				txNode.Children[hex.EncodeToString(tipTx.ID)] = tipTx
-			}
-		}
-	}
-
 	txPool.EventBus.Publish(NewTransactionTopic, txNode.Value)
 
 	//if it depends on another tx in txpool, the transaction will be not be included in the sorted list
-	if isDependentOnParent {
+	lastNonce := utxoIndex.GetLastNonceByPubKeyHash(txNode.Value.GetDefaultFromTransactionAccount().GetPubKeyHash())
+	nonce := txPool.nonces[hex.EncodeToString(txNode.Value.ID)]
+	if nonce != lastNonce+1 {
 		return
 	}
 
@@ -442,10 +464,12 @@ func (txPool *TransactionPool) addTransaction(txNode *transaction.TransactionNod
 }
 
 func (txPool *TransactionPool) insertChildrenIntoSortedWaitlist(txNode *transaction.TransactionNode) {
-	for _, child := range txNode.Children {
-		parentTxidsInTxPool := txPool.GetParentTxidsInTxPool(child)
-		if len(parentTxidsInTxPool) == 1 {
-			txPool.insertIntoTipOrder(txPool.txs[hex.EncodeToString(child.ID)])
+	addressTxs := txPool.getTransactionsFromAddress(txNode.Value.GetDefaultFromTransactionAccount().GetAddress().String())
+	if len(addressTxs) > 0 {
+		currNonce := txPool.nonces[hex.EncodeToString(txNode.Value.ID)]
+		nextNonce := txPool.nonces[hex.EncodeToString(addressTxs[0].ID)]
+		if nextNonce == currNonce+1 {
+			txPool.insertIntoTipOrder(txPool.txs[hex.EncodeToString(addressTxs[0].ID)])
 		}
 	}
 }
@@ -461,8 +485,8 @@ func (txPool *TransactionPool) GetParentTxidsInTxPool(tx *transaction.Transactio
 	return txids
 }
 
-//insertIntoTipOrder insert a transaction into txSort based on tip.
-//If the transaction is a child of another transaction, the transaction will NOT be inserted
+// insertIntoTipOrder insert a transaction into tipOrder based on tip.
+// If the transaction is a child of another transaction, the transaction will NOT be inserted
 func (txPool *TransactionPool) insertIntoTipOrder(txNode *transaction.TransactionNode) {
 	index := sort.Search(len(txPool.tipOrder), func(i int) bool {
 		if txPool.txs[txPool.tipOrder[i]] == nil {
@@ -489,7 +513,7 @@ func (txPool *TransactionPool) insertIntoTipOrder(txNode *transaction.Transactio
 	txPool.tipOrder[index] = hex.EncodeToString(txNode.Value.ID)
 }
 
-//getMinTipTransaction gets the transaction.TransactionNode with minimum tip
+// getMinTipTransaction gets the transaction.TransactionNode with minimum tip
 func (txPool *TransactionPool) getMaxTipTransaction() *transaction.TransactionNode {
 	txid := txPool.getMaxTipTxid()
 	if txid == "" {
@@ -508,7 +532,7 @@ func (txPool *TransactionPool) getMaxTipTransaction() *transaction.TransactionNo
 	return txPool.txs[txid]
 }
 
-//getMinTipTransaction gets the transaction.TransactionNode with minimum tip
+// getMinTipTransaction gets the transaction.TransactionNode with minimum tip
 func (txPool *TransactionPool) getMinTipTransaction() *transaction.TransactionNode {
 	txid := txPool.getMinTipTxid()
 	if txid == "" {
@@ -517,7 +541,7 @@ func (txPool *TransactionPool) getMinTipTransaction() *transaction.TransactionNo
 	return txPool.txs[txid]
 }
 
-//getMinTipTxid gets the txid of the transaction with minimum tip
+// getMinTipTxid gets the txid of the transaction with minimum tip
 func (txPool *TransactionPool) getMaxTipTxid() string {
 	if len(txPool.tipOrder) == 0 {
 		logger.Warn("TransactionPool: nothing in the tip order")
@@ -526,7 +550,7 @@ func (txPool *TransactionPool) getMaxTipTxid() string {
 	return txPool.tipOrder[0]
 }
 
-//getMinTipTxid gets the txid of the transaction with minimum tip
+// getMinTipTxid gets the txid of the transaction with minimum tip
 func (txPool *TransactionPool) getMinTipTxid() string {
 	if len(txPool.tipOrder) == 0 {
 		return ""
@@ -534,8 +558,9 @@ func (txPool *TransactionPool) getMinTipTxid() string {
 	return txPool.tipOrder[len(txPool.tipOrder)-1]
 }
 
-func (txPool *TransactionPool) BroadcastTx(tx *transaction.Transaction) {
-	txPool.netService.BroadcastNormalPriorityCommand(BroadcastTx, tx.ToProto())
+func (txPool *TransactionPool) BroadcastTx(tx *transaction.Transaction, nonce uint64) {
+	nonceTx := transaction.NewNonceTransaction(tx, nonce)
+	txPool.netService.BroadcastNormalPriorityCommand(BroadcastTx, nonceTx.ToProto())
 }
 
 func (txPool *TransactionPool) BroadcastTxHandler(input interface{}) {
@@ -543,14 +568,15 @@ func (txPool *TransactionPool) BroadcastTxHandler(input interface{}) {
 	command = input.(*networkmodel.DappRcvdCmdContext)
 
 	//TODO: Check if the blockchain state is ready
-	txpb := &transactionpb.Transaction{}
+	txpb := &transactionpb.NonceTransaction{}
 
 	if err := proto.Unmarshal(command.GetData(), txpb); err != nil {
 		logger.Warn(err)
 	}
 
-	tx := &transaction.Transaction{}
-	tx.FromProto(txpb)
+	nonceTx := &transaction.NonceTransaction{}
+	nonceTx.FromProto(txpb)
+	tx := nonceTx.GetTransaction()
 	//TODO: Check if the transaction is generated from running a smart contract
 	//utxoIndex := lutxo.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
 	//if tx.IsFromContract(utxoIndex) {
@@ -558,7 +584,7 @@ func (txPool *TransactionPool) BroadcastTxHandler(input interface{}) {
 	//}
 
 	tx.CreateTime = -1
-	txPool.Push(*tx)
+	txPool.Push(*tx, nonceTx.GetNonce(), lutxo.NewUTXOIndex(txPool.utxoCache))
 
 	if command.IsBroadcast() {
 		//relay the original command
@@ -566,13 +592,13 @@ func (txPool *TransactionPool) BroadcastTxHandler(input interface{}) {
 	}
 }
 
-func (txPool *TransactionPool) BroadcastBatchTxs(txs []transaction.Transaction) {
+func (txPool *TransactionPool) BroadcastBatchTxs(txs []transaction.Transaction, nonces []uint64) {
 
-	if len(txs) == 0 {
+	if len(txs) == 0 || (len(txs) != len(nonces)) {
 		return
 	}
 
-	transactions := transaction.NewTransactions(txs)
+	transactions := transaction.NewNonceTransactions(txs, nonces)
 
 	txPool.netService.BroadcastNormalPriorityCommand(BroadcastBatchTxs, transactions.ToProto())
 }
@@ -583,25 +609,24 @@ func (txPool *TransactionPool) BroadcastBatchTxsHandler(input interface{}) {
 	command = input.(*networkmodel.DappRcvdCmdContext)
 
 	//TODO: Check if the blockchain state is ready
-	txspb := &transactionpb.Transactions{}
+	txspb := &transactionpb.NonceTransactions{}
 
 	if err := proto.Unmarshal(command.GetData(), txspb); err != nil {
 		logger.Warn(err)
 	}
 
-	txs := &transaction.Transactions{}
+	nonceTxs := &transaction.NonceTransactions{}
+	nonceTxs.FromProto(txspb)
 
-	//load the tx with proto
-	txs.FromProto(txspb)
-
-	for _, tx := range txs.GetTransactions() {
+	for _, nonceTx := range nonceTxs.GetTransactions() {
+		tx := nonceTx.GetTransaction()
 		//TODO: Check if the transaction is generated from running a smart contract
 		//utxoIndex := lutxo.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
 		//if tx.IsFromContract(utxoIndex) {
 		//	return
 		//}
 		tx.CreateTime = -1
-		txPool.Push(tx)
+		txPool.Push(*tx, nonceTx.GetNonce(), lutxo.NewUTXOIndex(txPool.utxoCache))
 	}
 
 	if command.IsBroadcast() {

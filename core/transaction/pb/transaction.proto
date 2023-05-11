@@ -7,6 +7,15 @@ message Transactions{
     repeated Transaction transactions = 1;
 }
 
+message NonceTransactions {
+    repeated NonceTransaction transactions = 1;
+}
+
+message NonceTransaction {
+    Transaction transaction = 1;
+    uint64 nonce = 2;
+}
+
 message Transaction{
     bytes id = 1;
     repeated transactionbasepb.TXInput vin = 2;

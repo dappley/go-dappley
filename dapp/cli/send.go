@@ -144,7 +144,7 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		return
 	}
 
-	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction), Nonce: getNonceResponse.GetNonce() + 1}
+	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction), Nonce: getNonceResponse.GetNonce()}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
 	if err != nil {
@@ -283,7 +283,7 @@ func sendAmountCommandHandler(ctx context.Context, c interface{}, flags cmdFlags
 		}
 		return
 	}
-	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction), Nonce: getNonceResponse.GetNonce() + 1}
+	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction), Nonce: getNonceResponse.GetNonce()}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
 	if err != nil {
@@ -392,7 +392,7 @@ func cliSendDataCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 		}
 		return
 	}
-	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction), Nonce: getNonceResponse.GetNonce() + 1}
+	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction), Nonce: getNonceResponse.GetNonce()}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
 	if err != nil {
