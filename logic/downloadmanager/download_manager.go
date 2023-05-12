@@ -328,11 +328,15 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 
 	downloadManager.mutex.Unlock()
 
-	var blocks []*block.Block
-	for _, pbBlock := range blocksPb.GetBlocks() {
+	blocks := make([]*block.Block, len(blocksPb.GetBlocks()))
+	// create a copy of the dynasty to restore later. The following producer changes are temporary so that verification can pass
+	dynastyCopy := downloadManager.bm.GetDynasty().Copy()
+	// the blocks were received in descending order, so we iterate in reverse to verify them in ascending order
+	for i := len(blocksPb.GetBlocks()) - 1; i >= 0; i-- {
+		pbBlock := blocksPb.GetBlocks()[i]
 		block := &block.Block{}
 		block.FromProto(pbBlock)
-
+		logger.Info("block height ", block.GetHeight())
 		if !downloadManager.bm.VerifyBlock(block) {
 			returnBlocksLogger.WithFields(logger.Fields{
 				"height": block.GetHeight(),
@@ -341,9 +345,21 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 			return
 		}
 
-		blocks = append(blocks, block)
+		// add any producer change requests
+		for _, tx := range block.GetTransactions() {
+			if tx.IsChangeProducter() {
+				downloadManager.bm.SetNewDynastyByString(tx.Vout[0].Contract, tx.Vout[0].PubKeyHash.GenerateAddress().String())
+			}
+		}
+		// execute any producer changes that meet the criteria
+		downloadManager.bm.CheckDynastyTemp(block.GetHeight())
+
+		blocks[i] = block
 	}
 	logger.Infof("DownloadManager: receive blocks source %v to %v.", blocks[0].GetHeight(), blocks[len(blocks)-1].GetHeight())
+
+	// reset the dynasty to the previous state before merging the fork for real
+	downloadManager.bm.SetDynasty(dynastyCopy)
 
 	if err := downloadManager.bm.MergeFork(blocks, blocks[len(blocks)-1].GetPrevHash()); err != nil {
 		downloadManager.finishDownload()

@@ -95,17 +95,17 @@ func main() {
 	// logger.Infof("Genesis conf file is %v,node conf file is %v", genesisPath, filePath)
 	//load genesis file information
 	genesisConf := &configpb.DynastyConfig{}
-	config.LoadConfig(genesisPath, genesisConf)
+	err := config.LoadConfig(genesisPath, genesisConf)
 
-	if genesisConf == nil {
+	if err != nil {
 		logger.Error("Cannot load genesis configurations from file! Exiting...")
 		return
 	}
 
 	//load config file information
 	conf := &configpb.Config{}
-	config.LoadConfig(filePath, conf)
-	if conf == nil {
+	err = config.LoadConfig(filePath, conf)
+	if err != nil {
 		logger.Error("Cannot load configurations from file! Exiting...")
 		return
 	}
@@ -114,12 +114,8 @@ func main() {
 
 	//load producer config information
 	producerConf := &configpb.DynastyConfig{}
-	config.LoadConfig(producerFilePath, producerConf)
-
-	if producerConf == nil {
-		logger.Error("Cannot load genesis configurations from file! Exiting...")
-		return
-	}
+	err = config.LoadConfig(producerFilePath, producerConf)
+	producerConfValid := err == nil
 
 	//setup
 	db := storage.OpenDatabase(conf.GetNodeConfig().GetDbPath())
@@ -177,7 +173,9 @@ func main() {
 	defer server.Stop()
 
 	producer := blockproducerinfo.NewBlockProducerInfo(conf.GetConsensusConfig().GetMinerAddress())
-	updateProducerList(conss, producerConf)
+	if producerConfValid {
+		updateProducerList(conss, producerConf)
+	}
 	blockProducer := blockproducer.NewBlockProducer(bm, conss, producer)
 
 	downloadManager := downloadmanager.NewDownloadManager(node, bm, len(conss.GetProducers()), blockProducer)

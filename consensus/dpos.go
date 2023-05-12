@@ -54,7 +54,7 @@ type DPOS struct {
 	filePath        string
 }
 
-//NewDPOS returns a new DPOS instance
+// NewDPOS returns a new DPOS instance
 func NewDPOS(producer *blockproducerinfo.BlockProducerInfo) *DPOS {
 	dpos := &DPOS{
 		producer: producer,
@@ -69,49 +69,49 @@ func NewDPOS(producer *blockproducerinfo.BlockProducerInfo) *DPOS {
 	return dpos
 }
 
-//SetFilePath sets the path
+// SetFilePath sets the path
 func (dpos *DPOS) SetFilePath(path string) {
 	dpos.filePath = path
 }
 
-//SetKey sets the producer key
+// SetKey sets the producer key
 func (dpos *DPOS) SetKey(key string) {
 	dpos.producerKey = key
 }
 
-//SetDynasty sets the dynasty
+// SetDynasty sets the dynasty
 func (dpos *DPOS) SetDynasty(dynasty *Dynasty) {
 	dpos.dynasty = dynasty
 }
 
-//GetDynasty returns the dynasty
+// GetDynasty returns the dynasty
 func (dpos *DPOS) GetDynasty() *Dynasty {
 	return dpos.dynasty
 }
 
-//AddProducer adds a producer to the dynasty
+// AddProducer adds a producer to the dynasty
 func (dpos *DPOS) AddProducer(producer string) error {
 	err := dpos.dynasty.AddProducer(producer)
 	return err
 }
 
-//GetProducers returns all current producers
+// GetProducers returns all current producers
 func (dpos *DPOS) GetProducers() []string {
 	return dpos.dynasty.GetProducers()
 }
 
-//GetProducerAddress returns the local producer's address
+// GetProducerAddress returns the local producer's address
 func (dpos *DPOS) GetProducerAddress() string {
 	return dpos.producer.Beneficiary()
 }
 
-//Stop stops the current produce block process
+// Stop stops the current produce block process
 func (dpos *DPOS) Stop() {
 	logger.Info("DPoS stops...")
 	dpos.stopCh <- true
 }
 
-//ProduceBlock starts producing block according to dpos consensus
+// ProduceBlock starts producing block according to dpos consensus
 func (dpos *DPOS) ProduceBlock(ProduceBlockFunc func(process func(*block.Block), deadline deadline.Deadline)) {
 	ticker := time.NewTicker(time.Second).C
 	for {
@@ -128,7 +128,7 @@ func (dpos *DPOS) ProduceBlock(ProduceBlockFunc func(process func(*block.Block),
 	}
 }
 
-//IsProducedLocally returns if the local producer produced the block
+// IsProducedLocally returns if the local producer produced the block
 func (dpos *DPOS) IsProducedLocally(blk *block.Block) bool {
 	if blk != nil {
 		return dpos.producer.Produced(blk)
@@ -136,7 +136,7 @@ func (dpos *DPOS) IsProducedLocally(blk *block.Block) bool {
 	return false
 }
 
-//hashAndSign signs the block
+// hashAndSign signs the block
 func (dpos *DPOS) hashAndSign(blk *block.Block) {
 	hash := lblock.CalculateHash(blk)
 	blk.SetHash(hash)
@@ -241,7 +241,7 @@ func (dpos *DPOS) isProducerBeneficiary(block *block.Block) bool {
 	return true
 }
 
-//isDoubleMint returns if the block's producer has already produced a block in the current time slot
+// isDoubleMint returns if the block's producer has already produced a block in the current time slot
 func (dpos *DPOS) isDoubleMint(blk *block.Block) bool {
 	existBlock, exist := dpos.slot.Get(int(blk.GetTimestamp() / int64(dpos.GetDynasty().timeBetweenBlk)))
 	if !exist {
@@ -251,27 +251,33 @@ func (dpos *DPOS) isDoubleMint(blk *block.Block) bool {
 	return !lblock.IsHashEqual(existBlock.(*block.Block).GetHash(), blk.GetHash())
 }
 
-//cacheBlock adds the block to cache for double minting check
+// cacheBlock adds the block to cache for double minting check
 func (dpos *DPOS) cacheBlock(block *block.Block) {
 	dpos.slot.Add(int(block.GetTimestamp()/int64(dpos.GetDynasty().timeBetweenBlk)), block)
 }
 
-//GetMinConfirmationNum returns the minimum number of producers required
+// GetMinConfirmationNum returns the minimum number of producers required
 func (dpos *DPOS) GetMinConfirmationNum() int {
 	return len(dpos.dynasty.GetProducers())*2/3 + 1
 }
 
-//IsBypassingLibCheck returns if LIB check should be skipped
+// IsBypassingLibCheck returns if LIB check should be skipped
 func (dpos *DPOS) IsBypassingLibCheck() bool {
 	return len(dpos.dynasty.GetProducers()) < MinConsensusSize
 }
 
-//GetTotalProducersNum returns the total number of producers
+// GetTotalProducersNum returns the total number of producers
 func (dpos *DPOS) GetTotalProducersNum() int {
 	return dpos.dynasty.maxProducers
 }
 
 func (dpos *DPOS) ChangeDynasty(height uint64) {
+	dpos.ChangeDynastyTemp(height)
+	config.UpdateProducer(dpos.filePath, dpos.dynasty.producers, height)
+}
+
+// ChangeDynastyTemp performs the dynasty change without writing to the config file
+func (dpos *DPOS) ChangeDynastyTemp(height uint64) {
 	for _, r := range dpos.replacement {
 		if height == r.height {
 			newProducers := dpos.dynasty.producers
@@ -304,9 +310,8 @@ func (dpos *DPOS) ChangeDynasty(height uint64) {
 			dpos.dynasty.producers = newProducers
 		}
 	}
-	config.UpdateProducer(dpos.filePath, dpos.dynasty.producers, height)
-
 }
+
 func (dpos *DPOS) AddReplacement(original, new string, height uint64, kind int) {
 	for _, p := range dpos.dynasty.producers {
 		if p == original {

@@ -26,17 +26,18 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-func LoadConfig(filename string, pb proto.Message) {
+func LoadConfig(filename string, pb proto.Message) error {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		logger.WithError(err).Warn("LoadConfig: cannot read the config file!")
-		return
+		return err
 	}
 
 	err = proto.UnmarshalText(string(bytes), pb)
 	if err != nil {
 		logger.WithError(err).Warn("LoadConfig: cannot parse content of the config file!")
 	}
+	return nil
 }
 
 func UpdateProducer(filename string, producers []string, height uint64) {

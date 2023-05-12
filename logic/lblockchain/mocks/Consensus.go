@@ -24,9 +24,28 @@ func (_m *Consensus) ChangeDynasty(height uint64) {
 	_m.Called(height)
 }
 
+// ChangeDynasty provides a mock function with given fields: height
+func (_m *Consensus) ChangeDynastyTemp(height uint64) {
+	_m.Called(height)
+}
+
 // SetDynasty provides a mock function with given fields: dynasty
 func (_m *Consensus) SetDynasty(dynasty *consensus.Dynasty) {
 	_m.Called(dynasty)
+}
+
+// GetDynasty provides a mock function with given fields:
+func (_m *Consensus) GetDynasty() *consensus.Dynasty {
+	ret := _m.Called()
+
+	var r0 *consensus.Dynasty
+	if rf, ok := ret.Get(0).(func() *consensus.Dynasty); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(*consensus.Dynasty)
+	}
+
+	return r0
 }
 
 // Validate provides a mock function with given fields: _a0

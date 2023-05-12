@@ -46,7 +46,7 @@ const (
 	defaultTimeBetweenBlk = 5
 )
 
-//NewDynasty returns a new dynasty instance
+// NewDynasty returns a new dynasty instance
 func NewDynasty(producers []string, maxProducers, timeBetweenBlk int) *Dynasty {
 	return &Dynasty{
 		producers:      producers,
@@ -65,7 +65,7 @@ func NewDynastyReplacement(original, new string, height uint64, kind int) *Dynas
 	}
 }
 
-//NewDynastyWithConfigProducers returns a new dynasty from config file
+// NewDynastyWithConfigProducers returns a new dynasty from config file
 func NewDynastyWithConfigProducers(producers []string, maxProducers int) *Dynasty {
 	validProducers := []string{}
 	for _, producer := range producers {
@@ -89,7 +89,18 @@ func NewDynastyWithConfigProducers(producers []string, maxProducers int) *Dynast
 	return d
 }
 
-//trimProducers deletes producers if the number of producers are more than the maximum
+func (dynasty *Dynasty) Copy() *Dynasty {
+	dynastyCopy := &Dynasty{
+		producers:      make([]string, len(dynasty.producers)),
+		maxProducers:   dynasty.maxProducers,
+		timeBetweenBlk: dynasty.timeBetweenBlk,
+		dynastyTime:    dynasty.dynastyTime,
+	}
+	copy(dynastyCopy.producers, dynasty.producers)
+	return dynastyCopy
+}
+
+// trimProducers deletes producers if the number of producers are more than the maximum
 func (dynasty *Dynasty) trimProducers() {
 	//if producer conf file has too many producers
 	if len(dynasty.producers) > defaultMaxProducers {
@@ -97,12 +108,12 @@ func (dynasty *Dynasty) trimProducers() {
 	}
 }
 
-//GetMaxProducers returns the maximum number of producers allowed in the dynasty
+// GetMaxProducers returns the maximum number of producers allowed in the dynasty
 func (dynasty *Dynasty) GetMaxProducers() int {
 	return dynasty.maxProducers
 }
 
-//SetMaxProducers sets the maximum number of producers allowed in the dynasty
+// SetMaxProducers sets the maximum number of producers allowed in the dynasty
 func (dynasty *Dynasty) SetMaxProducers(maxProducers int) {
 	if maxProducers >= 0 {
 		dynasty.maxProducers = maxProducers
@@ -113,7 +124,7 @@ func (dynasty *Dynasty) SetMaxProducers(maxProducers int) {
 	}
 }
 
-//SetTimeBetweenBlk sets the block time
+// SetTimeBetweenBlk sets the block time
 func (dynasty *Dynasty) SetTimeBetweenBlk(timeBetweenBlk int) {
 	if timeBetweenBlk > 0 {
 		dynasty.timeBetweenBlk = timeBetweenBlk
@@ -121,7 +132,7 @@ func (dynasty *Dynasty) SetTimeBetweenBlk(timeBetweenBlk int) {
 	}
 }
 
-//AddProducer adds a producer to the dynasty
+// AddProducer adds a producer to the dynasty
 func (dynasty *Dynasty) AddProducer(producer string) error {
 	if err := dynasty.isAddingProducerAllowed(producer); err != nil {
 		return err
@@ -134,7 +145,7 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 	return nil
 }
 
-//isAddingProducerAllowed checks if adding a producer is allowed
+// isAddingProducerAllowed checks if adding a producer is allowed
 func (dynasty *Dynasty) isAddingProducerAllowed(producer string) error {
 	for _, producerNow := range dynasty.producers {
 		if producerNow == producer {
@@ -153,25 +164,25 @@ func (dynasty *Dynasty) isAddingProducerAllowed(producer string) error {
 	return errval.MaxProducer
 }
 
-//GetProducers returns all producers
+// GetProducers returns all producers
 func (dynasty *Dynasty) GetProducers() []string {
 	return dynasty.producers
 }
 
-//AddMultipleProducers adds multipled producers to the dynasty
+// AddMultipleProducers adds multipled producers to the dynasty
 func (dynasty *Dynasty) AddMultipleProducers(producers []string) {
 	for _, producer := range producers {
 		dynasty.AddProducer(producer)
 	}
 }
 
-//IsMyTurn returns if it is the input producer's turn to produce block
+// IsMyTurn returns if it is the input producer's turn to produce block
 func (dynasty *Dynasty) IsMyTurn(producer string, now int64) bool {
 	index := dynasty.GetProducerIndex(producer)
 	return dynasty.isMyTurnByIndex(index, now)
 }
 
-//isMyTurnByIndex returns if it is the turn for the producer with producerIndex to produce block
+// isMyTurnByIndex returns if it is the turn for the producer with producerIndex to produce block
 func (dynasty *Dynasty) isMyTurnByIndex(producerIndex int, now int64) bool {
 	if producerIndex < 0 {
 		return false
@@ -180,7 +191,7 @@ func (dynasty *Dynasty) isMyTurnByIndex(producerIndex int, now int64) bool {
 	return dynastyTimeElapsed == producerIndex*dynasty.timeBetweenBlk
 }
 
-//ProducerAtATime returns the expected producer at the input time
+// ProducerAtATime returns the expected producer at the input time
 func (dynasty *Dynasty) ProducerAtATime(time int64) string {
 	if time < 0 {
 		return ""
@@ -190,7 +201,7 @@ func (dynasty *Dynasty) ProducerAtATime(time int64) string {
 	return dynasty.producers[index]
 }
 
-//find the index of the producer. If not found, return -1
+// find the index of the producer. If not found, return -1
 func (dynasty *Dynasty) GetProducerIndex(producer string) int {
 	for i, m := range dynasty.producers {
 		if producer == m {
@@ -200,12 +211,12 @@ func (dynasty *Dynasty) GetProducerIndex(producer string) int {
 	return -1
 }
 
-//GetDynastyTime returns the dynasty time
+// GetDynastyTime returns the dynasty time
 func (dynasty *Dynasty) GetDynastyTime() int {
 	return dynasty.dynastyTime
 }
 
-//IsSettingProducersAllowed returns if setting producers is allowed
+// IsSettingProducersAllowed returns if setting producers is allowed
 func (dynasty *Dynasty) IsSettingProducersAllowed(producers []string, maxProducers ...int) error {
 
 	maxProd := dynasty.maxProducers
@@ -233,7 +244,7 @@ func (dynasty *Dynasty) IsSettingProducersAllowed(producers []string, maxProduce
 	return nil
 }
 
-//SetProducers sets the producers
+// SetProducers sets the producers
 func (dynasty *Dynasty) SetProducers(producers []string) {
 	dynasty.producers = producers
 }
