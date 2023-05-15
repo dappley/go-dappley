@@ -389,7 +389,7 @@ func (dpos *DPOS) SaveDynastyReplacements() {
 	for _, replacement := range dpos.replacement {
 		replacements = append(replacements, replacement.ToProto().(*dynastypb.DynastyReplacement))
 	}
-	file, err := os.OpenFile(dpos.replacementsFilePath, os.O_RDWR|os.O_CREATE, 0666)
+	file, err := os.Create(dpos.replacementsFilePath)
 	if err != nil {
 		logger.WithError(err).Warn("SaveDynastyReplacements: open file failed")
 		return
