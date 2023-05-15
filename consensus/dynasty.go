@@ -21,6 +21,8 @@ package consensus
 import (
 	"errors"
 	"fmt"
+	dynastypb "github.com/dappley/go-dappley/consensus/pb"
+	"github.com/golang/protobuf/proto"
 
 	"github.com/dappley/go-dappley/core/account"
 	errval "github.com/dappley/go-dappley/errors"
@@ -247,4 +249,21 @@ func (dynasty *Dynasty) IsSettingProducersAllowed(producers []string, maxProduce
 // SetProducers sets the producers
 func (dynasty *Dynasty) SetProducers(producers []string) {
 	dynasty.producers = producers
+}
+
+func (replacement *DynastyReplacement) ToProto() proto.Message {
+	return &dynastypb.DynastyReplacement{
+		Original: replacement.original,
+		New:      replacement.new,
+		Height:   replacement.height,
+		Kind:     int32(replacement.kind),
+	}
+}
+
+func (replacement *DynastyReplacement) FromProto(pb proto.Message) {
+	replacementpb := pb.(*dynastypb.DynastyReplacement)
+	replacement.original = replacementpb.GetOriginal()
+	replacement.new = replacementpb.GetNew()
+	replacement.height = replacementpb.GetHeight()
+	replacement.kind = int(replacementpb.GetKind())
 }

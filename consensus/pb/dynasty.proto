@@ -1,0 +1,13 @@
+syntax = "proto3";
+package dynastypb;
+
+message DynastyReplacement {
+  string original = 1;
+  string new = 2;
+  uint64 height = 3;
+  int32 kind = 4;
+}
+
+message DynastyReplacementList {
+  repeated DynastyReplacement replacements = 1;
+}

@@ -336,7 +336,6 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		pbBlock := blocksPb.GetBlocks()[i]
 		block := &block.Block{}
 		block.FromProto(pbBlock)
-		logger.Info("block height ", block.GetHeight())
 		if !downloadManager.bm.VerifyBlock(block) {
 			returnBlocksLogger.WithFields(logger.Fields{
 				"height": block.GetHeight(),

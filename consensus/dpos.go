@@ -20,6 +20,9 @@ package consensus
 
 import (
 	"bytes"
+	dynastypb "github.com/dappley/go-dappley/consensus/pb"
+	"github.com/golang/protobuf/proto"
+	"os"
 	"strings"
 	"time"
 
@@ -44,14 +47,15 @@ const (
 )
 
 type DPOS struct {
-	producer        *blockproducerinfo.BlockProducerInfo
-	producerKey     string
-	stopCh          chan bool
-	dynasty         *Dynasty
-	slot            *lru.Cache
-	lastProduceTime int64
-	replacement     []*DynastyReplacement
-	filePath        string
+	producer             *blockproducerinfo.BlockProducerInfo
+	producerKey          string
+	stopCh               chan bool
+	dynasty              *Dynasty
+	slot                 *lru.Cache
+	lastProduceTime      int64
+	replacement          []*DynastyReplacement
+	filePath             string
+	replacementsFilePath string
 }
 
 // NewDPOS returns a new DPOS instance
@@ -72,6 +76,11 @@ func NewDPOS(producer *blockproducerinfo.BlockProducerInfo) *DPOS {
 // SetFilePath sets the path
 func (dpos *DPOS) SetFilePath(path string) {
 	dpos.filePath = path
+}
+
+// SetReplacementsFilePath sets the path to store pending producer replacements
+func (dpos *DPOS) SetReplacementsFilePath(replacementsFilePath string) {
+	dpos.replacementsFilePath = replacementsFilePath
 }
 
 // SetKey sets the producer key
@@ -272,12 +281,8 @@ func (dpos *DPOS) GetTotalProducersNum() int {
 }
 
 func (dpos *DPOS) ChangeDynasty(height uint64) {
-	dpos.ChangeDynastyTemp(height)
-	config.UpdateProducer(dpos.filePath, dpos.dynasty.producers, height)
-}
-
-// ChangeDynastyTemp performs the dynasty change without writing to the config file
-func (dpos *DPOS) ChangeDynastyTemp(height uint64) {
+	updatedReplacements := make([]*DynastyReplacement, len(dpos.replacement))
+	copy(updatedReplacements, dpos.replacement)
 	for _, r := range dpos.replacement {
 		if height == r.height {
 			newProducers := dpos.dynasty.producers
@@ -308,6 +313,53 @@ func (dpos *DPOS) ChangeDynastyTemp(height uint64) {
 			}
 			logger.Info("DPOS:", len(newProducers))
 			dpos.dynasty.producers = newProducers
+			// write new slice to updatedReplacements which doesn't include r
+			keptReplacements := []*DynastyReplacement{}
+			for _, rTemp := range updatedReplacements {
+				if *rTemp != *r {
+					keptReplacements = append(keptReplacements, rTemp)
+				}
+			}
+			updatedReplacements = keptReplacements
+		}
+	}
+	dpos.replacement = updatedReplacements
+	config.UpdateProducer(dpos.filePath, dpos.dynasty.producers, height)
+	dpos.SaveDynastyReplacements()
+}
+
+// ChangeDynastyTemp performs the dynasty change without writing to the config file
+func (dpos *DPOS) ChangeDynastyTemp(height uint64) {
+	for _, r := range dpos.replacement {
+		if height == r.height {
+			newProducers := dpos.dynasty.producers
+		l:
+			for i := 0; i < len(newProducers); i++ {
+				if newProducers[i] == r.original {
+					if r.kind == 1 {
+						for _, o := range newProducers {
+							if o == r.new {
+								continue l
+							}
+						}
+						newProducers[i] = r.new
+						logger.Info("DPOS: Temp dynasty change ", r.original, " -> ", r.new)
+					} else if r.kind == 2 {
+						for _, o := range newProducers {
+							if o == r.new {
+								continue l
+							}
+						}
+						newProducers = append(newProducers, r.new)
+						logger.Info("DPOS: Temp dynasty add ", " -> ", r.new)
+					} else if r.kind == 3 {
+						newProducers = append(newProducers[:i], newProducers[i+1:]...)
+						logger.Info("DPOS: Temp dynasty delete ", " -> ", r.original)
+					}
+				}
+			}
+			logger.Info("DPOS:", len(newProducers))
+			dpos.dynasty.producers = newProducers
 		}
 	}
 }
@@ -325,9 +377,47 @@ func (dpos *DPOS) AddReplacement(original, new string, height uint64, kind int) 
 			}
 			replacement := NewDynastyReplacement(original, new, height, kind)
 			dpos.replacement = append(dpos.replacement, replacement)
+			dpos.SaveDynastyReplacements()
 			return
-
 		}
 	}
 
+}
+
+func (dpos *DPOS) SaveDynastyReplacements() {
+	replacements := []*dynastypb.DynastyReplacement{}
+	for _, replacement := range dpos.replacement {
+		replacements = append(replacements, replacement.ToProto().(*dynastypb.DynastyReplacement))
+	}
+	file, err := os.OpenFile(dpos.replacementsFilePath, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		logger.WithError(err).Warn("SaveDynastyReplacements: open file failed")
+		return
+	}
+	err = proto.MarshalText(file, &dynastypb.DynastyReplacementList{Replacements: replacements})
+	if err != nil {
+		logger.WithError(err).Warn("SaveDynastyReplacement: proto marshalling failed")
+	}
+}
+
+func (dpos *DPOS) LoadDynastyReplacements() {
+	fileBytes, err := os.ReadFile(dpos.replacementsFilePath)
+	if err != nil {
+		logger.WithError(err).Warn("LoadDynastyReplacements: file read failed")
+		return
+	}
+
+	pb := &dynastypb.DynastyReplacementList{}
+	err = proto.UnmarshalText(string(fileBytes), pb)
+	if err != nil {
+		logger.WithError(err).Warn("LoadDynastyReplacements: proto unmamrshal failed")
+		return
+	}
+	replacements := []*DynastyReplacement{}
+	for _, replacementpb := range pb.GetReplacements() {
+		r := &DynastyReplacement{}
+		r.FromProto(replacementpb)
+		replacements = append(replacements, r)
+	}
+	dpos.replacement = replacements
 }
