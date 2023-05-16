@@ -249,12 +249,12 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	bc.GetTxPool().CleanUpMinedTxs(ctx.Block.GetTransactions())
 	bc.GetTxPool().ResetPendingTransactions()
 
+	// update nonce numbers stored in db
 	nonceIncrements := map[string]uint64{}
 	for _, tx := range ctx.Block.GetTransactions() {
 		nonceIncrements[tx.GetDefaultFromTransactionAccount().GetAddress().String()] += 1
 	}
 
-	// update nonce numbers stored in db
 	for address, nonceAdd := range nonceIncrements {
 		pubKeyHash := account.NewTransactionAccountByAddress(account.NewAddress(address)).GetPubKeyHash()
 		lastNonce := bc.utxoCache.GetLastNonce(pubKeyHash)
@@ -384,7 +384,6 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 	if lblock.IsHashEqual(parentblockHash, targetHash) {
 		return true
 	}
-
 	//keep rolling back blocks until the block with the input hash
 	for bytes.Compare(parentblockHash, targetHash) != 0 {
 		block, err := bc.GetBlockByHash(parentblockHash)
@@ -399,12 +398,19 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 		parentblockHash = block.GetPrevHash()
 
 		// rollback the transactions in reverse order
-		// TODO: How does Ethereum rollback the nonce?
 		for i := len(block.GetTransactions()) - 1; i >= 0; i-- {
 			tx := block.GetTransactions()[i]
 			adaptedTx := transaction.NewTxAdapter(tx)
 			if !adaptedTx.IsCoinbase() && !adaptedTx.IsRewardTx() && !adaptedTx.IsGasRewardTx() && !adaptedTx.IsGasChangeTx() {
-				bc.txPool.Rollback(*tx)
+				rollbackNonce := bc.utxoCache.GetLastNonce(tx.GetDefaultFromTransactionAccount().GetPubKeyHash()) - 1
+				if rollbackNonce < -1 {
+					rollbackNonce = -1
+				}
+				bc.txPool.Rollback(*tx, rollbackNonce)
+				err = bc.utxoCache.SetLastNonce(tx.GetDefaultFromTransactionAccount().GetPubKeyHash(), rollbackNonce)
+				if err != nil {
+					logger.WithError(err).Warn("Rollback: error saving last nonce")
+				}
 			}
 		}
 	}
@@ -427,7 +433,7 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 		logger.Warn(err)
 		return false
 	}
-	// TODO: for each sender address, update the last nonce in index
+
 	bc.savedHash(UtxoSaveHash)
 	//bc.db.DisableBatch()
 	//bc.db.Flush()

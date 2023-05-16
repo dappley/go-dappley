@@ -220,27 +220,28 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *lutxo.UTXOI
 	return txNode, nil
 }
 
-// Rollback adds a popped transaction back to the transaction pool. The existing transactions in txpool may be dependent on the input transactionbase. However, the input transaction should never be dependent on any transaction in the current pool
-// TODO: figure out rollback implementation
-func (txPool *TransactionPool) Rollback(tx transaction.Transaction) {
+// Rollback adds a popped transaction back to the transaction pool. The existing transactions in txpool may be dependent on the input transactionbase.
+// However, the input transaction should never be dependent on any transaction in the current pool
+func (txPool *TransactionPool) Rollback(tx transaction.Transaction, nonce uint64) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 
 	rollbackTxNode := transaction.NewTransactionNode(&tx)
-	txPool.updateChildren(rollbackTxNode)
 	newTipOrder := []string{}
 
+	// this remakes the tipOrder so that it doesn't include the children of the rolled-back tx
 	for _, txid := range txPool.tipOrder {
-		if _, exist := rollbackTxNode.Children[txid]; !exist {
+		tipSender := txPool.txs[txid].Value.GetDefaultFromTransactionAccount().GetAddress().String()
+		if tipSender != tx.GetDefaultFromTransactionAccount().GetAddress().String() {
 			newTipOrder = append(newTipOrder, txid)
 		}
 	}
 
 	txPool.tipOrder = newTipOrder
 
+	txPool.nonces[hex.EncodeToString(tx.ID)] = nonce
 	txPool.addTransaction(rollbackTxNode)
 	txPool.insertIntoTipOrder(rollbackTxNode)
-
 }
 
 // updateChildren traverses through all transactions in transaction pool and find the input node's children
@@ -271,7 +272,6 @@ func (txPool *TransactionPool) Push(tx transaction.Transaction, nonce uint64, ut
 		logger.WithFields(logger.Fields{
 			"sizeLimit": txPool.sizeLimit,
 		}).Warn("TransactionPool: is full.")
-
 		return
 	}
 
