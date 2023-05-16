@@ -116,6 +116,7 @@ func (txPool *TransactionPool) DeepCopy() *TransactionPool {
 	txPoolCopy := TransactionPool{
 		txs:       make(map[string]*transaction.TransactionNode),
 		nonces:    make(map[string]uint64),
+		utxoCache: txPool.utxoCache,
 		tipOrder:  make([]string, len(txPool.tipOrder)),
 		sizeLimit: txPool.sizeLimit,
 		currSize:  0,
@@ -135,7 +136,9 @@ func (txPool *TransactionPool) DeepCopy() *TransactionPool {
 		txPoolCopy.txs[key] = newTxNode
 	}
 
-	// TODO: copy nonces and utxoCache
+	for key, nonce := range txPool.nonces {
+		txPoolCopy.nonces[key] = nonce
+	}
 
 	return &txPoolCopy
 }

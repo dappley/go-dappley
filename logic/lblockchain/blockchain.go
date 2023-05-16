@@ -242,14 +242,27 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		return err
 	}
 
-	// TODO: increment account nonces by the number of added transactions
-
 	bc.updateLIB(ctx.Block.GetHeight())
 
 	numTxBeforeExe := bc.GetTxPool().GetNumOfTxInPool()
 	//Remove transactions in current transaction pool
 	bc.GetTxPool().CleanUpMinedTxs(ctx.Block.GetTransactions())
 	bc.GetTxPool().ResetPendingTransactions()
+
+	nonceIncrements := map[string]uint64{}
+	for _, tx := range ctx.Block.GetTransactions() {
+		nonceIncrements[tx.GetDefaultFromTransactionAccount().GetAddress().String()] += 1
+	}
+
+	// update nonce numbers stored in db
+	for address, nonceAdd := range nonceIncrements {
+		pubKeyHash := account.NewTransactionAccountByAddress(account.NewAddress(address)).GetPubKeyHash()
+		lastNonce := bc.utxoCache.GetLastNonce(pubKeyHash)
+		err := bc.utxoCache.SetLastNonce(pubKeyHash, lastNonce+nonceAdd)
+		if err != nil {
+			logger.WithError(err).Warn("AddBlockContextToTail: error saving last nonce")
+		}
+	}
 
 	logger.WithFields(logger.Fields{
 		"num_txs_before_add_block":    numTxBeforeExe,
