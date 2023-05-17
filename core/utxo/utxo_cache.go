@@ -212,7 +212,7 @@ func (utxoCache *UTXOCache) GetLastNonce(pubKeyHash account.PubKeyHash) uint64 {
 	utxoInfo, err := utxoCache.getUTXOInfo(pubKeyHash.String())
 	if err != nil {
 		logger.Warn("getLastNonce error:", err)
-		return -1
+		return 0
 	}
 	return utxoInfo.GetNonce()
 }

@@ -35,7 +35,6 @@ import (
 	"github.com/dappley/go-dappley/common/pubsub"
 
 	"github.com/dappley/go-dappley/network/networkmodel"
-	"github.com/golang-collections/collections/stack"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 )
@@ -212,7 +211,7 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *lutxo.UTXOI
 		return nil, nil
 	} else {
 		logger.WithError(err).Warn("Transaction Pool: Pop max tip transaction failed! Removing transaction and children from tx pool...")
-		txPool.removeTransactionNodeAndChildren(txNode.Value)
+		txPool.removeTransaction(txNode)
 		return nil, nil
 	}
 
@@ -257,7 +256,8 @@ func (txPool *TransactionPool) updateChildren(node *transaction.TransactionNode)
 	}
 }
 
-// Push pushes a new transaction into the pool
+// Push pushes a new transaction into the pool.
+// If the nonce is the same as another tx in the pool, the one with higher tips per byte will be kept.
 func (txPool *TransactionPool) Push(tx transaction.Transaction, nonce uint64, utxoIndex *lutxo.UTXOIndex) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
@@ -268,15 +268,32 @@ func (txPool *TransactionPool) Push(tx transaction.Transaction, nonce uint64, ut
 
 	txNode := transaction.NewTransactionNode(&tx)
 
-	if txPool.currSize != 0 && txPool.currSize+uint32(txNode.Size) >= txPool.sizeLimit {
+	// check for existing entry with the same nonce, and replace it if the new tx has more tips ber byte
+	replaceTXID := ""
+	senderTxs := txPool.getTransactionsFromAddress(tx.GetDefaultFromTransactionAccount().GetAddress().String())
+	for _, senderTx := range senderTxs {
+		if txPool.nonces[hex.EncodeToString(senderTx.ID)] == nonce {
+			if txNode.GetTipsPerByte().Cmp(txPool.txs[hex.EncodeToString(senderTx.ID)].GetTipsPerByte()) == 1 {
+				replaceTXID = hex.EncodeToString(senderTx.ID)
+			}
+		}
+	}
+
+	newSize := txPool.currSize + uint32(txNode.Size)
+	if replaceTXID != "" {
+		newSize -= uint32(txPool.txs[replaceTXID].Size)
+	}
+	if txPool.currSize != 0 && newSize >= txPool.sizeLimit {
 		logger.WithFields(logger.Fields{
 			"sizeLimit": txPool.sizeLimit,
 		}).Warn("TransactionPool: is full.")
 		return
 	}
 
-	txPool.nonces[hex.EncodeToString(tx.ID)] = nonce
-	txPool.addTransactionAndSort(txNode, utxoIndex)
+	if replaceTXID != "" {
+		txPool.removeTransaction(txPool.txs[replaceTXID])
+	}
+	txPool.addTransactionAndSort(txNode, nonce, utxoIndex)
 }
 
 // CleanUpMinedTxs updates the transaction pool when a new block is added to the blockchain.
@@ -346,6 +363,7 @@ func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transactio
 }
 
 // TODO: temporary implementation. This could be optimized by storing a map of sender addresses instead of having to iterate through all transactions every time
+// getTransactionsFromAddress returns the transactions from a given sender address, sorted by nonce in ascending order
 func (txPool *TransactionPool) getTransactionsFromAddress(address string) []*transaction.Transaction {
 	addressTxs := []*transaction.Transaction{}
 	for _, txNode := range txPool.txs {
@@ -396,28 +414,7 @@ func (txPool *TransactionPool) GetTransactionById(txid []byte) *transaction.Tran
 	return txNode.Value
 }
 
-// removeTransactionNodeAndChildren removes the txNode from tx pool and all its children.
-// Note: this function does not remove the node from tipOrder!
-//
-//todo:delete  node from tipOrder
-func (txPool *TransactionPool) removeTransactionNodeAndChildren(tx *transaction.Transaction) {
-
-	txStack := stack.New()
-	txStack.Push(hex.EncodeToString(tx.ID))
-	for txStack.Len() > 0 {
-		txid := txStack.Pop().(string)
-		currTxNode, ok := txPool.txs[txid]
-		if !ok {
-			continue
-		}
-		for _, child := range currTxNode.Children {
-			txStack.Push(hex.EncodeToString(child.ID))
-		}
-		txPool.removeTransaction(currTxNode)
-	}
-}
-
-// removeTransactionNodeAndChildren removes the txNode from tx pool.
+// removeTransactionNode removes the txNode from tx pool.
 // Note: this function does not remove the node from tipOrder!
 func (txPool *TransactionPool) removeTransaction(txNode *transaction.TransactionNode) {
 	txPool.disconnectFromParent(txNode.Value)
@@ -442,17 +439,17 @@ func (txPool *TransactionPool) removeMinTipTx() {
 	if minTipTx == nil {
 		return
 	}
-	txPool.removeTransactionNodeAndChildren(minTipTx.Value)
+	txPool.removeTransaction(minTipTx)
 	txPool.tipOrder = txPool.tipOrder[:len(txPool.tipOrder)-1]
 }
 
-func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.TransactionNode, utxoIndex *lutxo.UTXOIndex) {
+func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.TransactionNode, nonce uint64, utxoIndex *lutxo.UTXOIndex) {
+	txPool.nonces[hex.EncodeToString(txNode.Value.ID)] = nonce
 	txPool.addTransaction(txNode)
 	txPool.EventBus.Publish(NewTransactionTopic, txNode.Value)
 
 	//if it depends on another tx in txpool, the transaction will be not be included in the sorted list
 	lastNonce := utxoIndex.GetLastNonceByPubKeyHash(txNode.Value.GetDefaultFromTransactionAccount().GetPubKeyHash())
-	nonce := txPool.nonces[hex.EncodeToString(txNode.Value.ID)]
 	if nonce != lastNonce+1 {
 		return
 	}
