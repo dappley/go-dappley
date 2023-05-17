@@ -373,7 +373,6 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	}
 
 	bc := rpcService.GetBlockchain()
-	bc.GetUtxoCache()
 	var generatedContractAddress string
 	if adaptedTx.IsContract() {
 		if adaptedTx.GasPrice.Cmp(common.NewAmount(0)) < 0 || tx.GasPrice.Cmp(common.NewAmount(0)) == ltransaction.GasConsumption {

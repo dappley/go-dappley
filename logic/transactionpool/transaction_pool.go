@@ -58,7 +58,6 @@ var (
 
 type TransactionPool struct {
 	txs        map[string]*transaction.TransactionNode
-	nonces     map[string]uint64 // map of tx addresses to nonces
 	utxoCache  *utxo.UTXOCache
 	pendingTxs []*transaction.Transaction
 	tipOrder   []string
@@ -72,7 +71,6 @@ type TransactionPool struct {
 func NewTransactionPool(netService NetService, limit uint32) *TransactionPool {
 	txPool := &TransactionPool{
 		txs:        make(map[string]*transaction.TransactionNode),
-		nonces:     make(map[string]uint64),
 		utxoCache:  utxo.NewUTXOCache(storage.NewRamStorage()),
 		pendingTxs: make([]*transaction.Transaction, 0),
 		tipOrder:   make([]string, 0),
@@ -114,7 +112,6 @@ func (txPool *TransactionPool) GetTopicHandler(topic string) pubsub.TopicHandler
 func (txPool *TransactionPool) DeepCopy() *TransactionPool {
 	txPoolCopy := TransactionPool{
 		txs:       make(map[string]*transaction.TransactionNode),
-		nonces:    make(map[string]uint64),
 		utxoCache: txPool.utxoCache,
 		tipOrder:  make([]string, len(txPool.tipOrder)),
 		sizeLimit: txPool.sizeLimit,
@@ -127,16 +124,12 @@ func (txPool *TransactionPool) DeepCopy() *TransactionPool {
 
 	for key, tx := range txPool.txs {
 		newTx := tx.Value.DeepCopy()
-		newTxNode := transaction.NewTransactionNode(&newTx)
+		newTxNode := transaction.NewTransactionNode(&newTx, tx.Nonce)
 
 		for childKey, childTx := range tx.Children {
 			newTxNode.Children[childKey] = childTx
 		}
 		txPoolCopy.txs[key] = newTxNode
-	}
-
-	for key, nonce := range txPool.nonces {
-		txPoolCopy.nonces[key] = nonce
 	}
 
 	return &txPoolCopy
@@ -225,7 +218,7 @@ func (txPool *TransactionPool) Rollback(tx transaction.Transaction, nonce uint64
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 
-	rollbackTxNode := transaction.NewTransactionNode(&tx)
+	rollbackTxNode := transaction.NewTransactionNode(&tx, nonce)
 	newTipOrder := []string{}
 
 	// this remakes the tipOrder so that it doesn't include the children of the rolled-back tx
@@ -237,8 +230,6 @@ func (txPool *TransactionPool) Rollback(tx transaction.Transaction, nonce uint64
 	}
 
 	txPool.tipOrder = newTipOrder
-
-	txPool.nonces[hex.EncodeToString(tx.ID)] = nonce
 	txPool.addTransaction(rollbackTxNode)
 	txPool.insertIntoTipOrder(rollbackTxNode)
 }
@@ -266,15 +257,15 @@ func (txPool *TransactionPool) Push(tx transaction.Transaction, nonce uint64, ut
 		return
 	}
 
-	txNode := transaction.NewTransactionNode(&tx)
+	txNode := transaction.NewTransactionNode(&tx, nonce)
 
 	// check for existing entry with the same nonce, and replace it if the new tx has more tips ber byte
 	replaceTXID := ""
 	senderTxs := txPool.getTransactionsFromAddress(tx.GetDefaultFromTransactionAccount().GetAddress().String())
 	for _, senderTx := range senderTxs {
-		if txPool.nonces[hex.EncodeToString(senderTx.ID)] == nonce {
-			if txNode.GetTipsPerByte().Cmp(txPool.txs[hex.EncodeToString(senderTx.ID)].GetTipsPerByte()) == 1 {
-				replaceTXID = hex.EncodeToString(senderTx.ID)
+		if senderTx.Nonce == nonce {
+			if txNode.GetTipsPerByte().Cmp(txPool.txs[hex.EncodeToString(senderTx.Value.ID)].GetTipsPerByte()) == 1 {
+				replaceTXID = hex.EncodeToString(senderTx.Value.ID)
 			}
 		}
 	}
@@ -293,7 +284,7 @@ func (txPool *TransactionPool) Push(tx transaction.Transaction, nonce uint64, ut
 	if replaceTXID != "" {
 		txPool.removeTransaction(txPool.txs[replaceTXID])
 	}
-	txPool.addTransactionAndSort(txNode, nonce, utxoIndex)
+	txPool.addTransactionAndSort(txNode, utxoIndex)
 }
 
 // CleanUpMinedTxs updates the transaction pool when a new block is added to the blockchain.
@@ -330,28 +321,18 @@ func (txPool *TransactionPool) removeFromTipOrder(txID []byte) {
 func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transaction {
 	txsByAddress := make(map[string][]*transaction.Transaction)
 	for _, txNode := range txPool.txs {
-		tx := txNode.Value
-		address := tx.GetDefaultFromTransactionAccount().GetAddress().String()
+		address := txNode.Value.GetDefaultFromTransactionAccount().GetAddress().String()
 		if _, exist := txsByAddress[address]; exist {
 			index := sort.Search(len(txsByAddress[address]), func(i int) bool {
-				compareNonce, ok := txPool.nonces[hex.EncodeToString(txsByAddress[address][i].ID)]
-				if !ok {
-					logger.Warnf("could not find nonce for tx %s", hex.EncodeToString(txsByAddress[address][i].ID))
-					return false
-				}
-				txNonce, ok := txPool.nonces[hex.EncodeToString(tx.ID)]
-				if !ok {
-					logger.Warn("could not find nonce for tx %s", hex.EncodeToString(tx.ID))
-					return false
-				}
-				return txNonce < compareNonce
+				compareTx := txPool.txs[hex.EncodeToString(txsByAddress[address][i].ID)]
+				return txNode.Nonce < compareTx.Nonce
 			})
 
-			txPool.tipOrder = append(txPool.tipOrder, "")
-			copy(txPool.tipOrder[index+1:], txPool.tipOrder[index:])
-			txPool.tipOrder[index] = hex.EncodeToString(txNode.Value.ID)
+			txsByAddress[address] = append(txsByAddress[address], &transaction.Transaction{})
+			copy(txsByAddress[address][index+1:], txsByAddress[address][index:])
+			txsByAddress[address][index] = txNode.Value
 		} else {
-			txsByAddress[address] = []*transaction.Transaction{tx}
+			txsByAddress[address] = []*transaction.Transaction{txNode.Value}
 		}
 	}
 
@@ -364,31 +345,21 @@ func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transactio
 
 // TODO: temporary implementation. This could be optimized by storing a map of sender addresses instead of having to iterate through all transactions every time
 // getTransactionsFromAddress returns the transactions from a given sender address, sorted by nonce in ascending order
-func (txPool *TransactionPool) getTransactionsFromAddress(address string) []*transaction.Transaction {
-	addressTxs := []*transaction.Transaction{}
+func (txPool *TransactionPool) getTransactionsFromAddress(address string) []*transaction.TransactionNode {
+	addressTxs := []*transaction.TransactionNode{}
 	for _, txNode := range txPool.txs {
-		tx := txNode.Value
-		if tx.GetDefaultFromTransactionAccount().GetAddress().String() == address {
+		if txNode.Value.GetDefaultFromTransactionAccount().GetAddress().String() == address {
 			if len(addressTxs) == 0 {
-				addressTxs = append(addressTxs, tx)
+				addressTxs = append(addressTxs, txNode)
 			} else {
 				index := sort.Search(len(addressTxs), func(i int) bool {
-					compareNonce, ok := txPool.nonces[hex.EncodeToString(addressTxs[i].ID)]
-					if !ok {
-						logger.Warnf("could not find nonce for tx %s", hex.EncodeToString(addressTxs[i].ID))
-						return false
-					}
-					txNonce, ok := txPool.nonces[hex.EncodeToString(tx.ID)]
-					if !ok {
-						logger.Warn("could not find nonce for tx %s", hex.EncodeToString(tx.ID))
-						return false
-					}
-					return txNonce < compareNonce
+					compareTx := txPool.txs[hex.EncodeToString(addressTxs[i].Value.ID)]
+					return txNode.Nonce < compareTx.Nonce
 				})
 
-				addressTxs = append(addressTxs, &transaction.Transaction{})
+				addressTxs = append(addressTxs, &transaction.TransactionNode{})
 				copy(addressTxs[index+1:], addressTxs[index:])
-				addressTxs[index] = tx
+				addressTxs[index] = txNode
 			}
 		}
 	}
@@ -422,7 +393,6 @@ func (txPool *TransactionPool) removeTransaction(txNode *transaction.Transaction
 	txPool.currSize -= uint32(txNode.Size)
 	MetricsTransactionPoolSize.Dec(1)
 	delete(txPool.txs, hex.EncodeToString(txNode.Value.ID))
-	delete(txPool.nonces, hex.EncodeToString(txNode.Value.ID))
 }
 
 // disconnectFromParent removes itself from its parent's node's children field
@@ -443,14 +413,13 @@ func (txPool *TransactionPool) removeMinTipTx() {
 	txPool.tipOrder = txPool.tipOrder[:len(txPool.tipOrder)-1]
 }
 
-func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.TransactionNode, nonce uint64, utxoIndex *lutxo.UTXOIndex) {
-	txPool.nonces[hex.EncodeToString(txNode.Value.ID)] = nonce
+func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.TransactionNode, utxoIndex *lutxo.UTXOIndex) {
 	txPool.addTransaction(txNode)
 	txPool.EventBus.Publish(NewTransactionTopic, txNode.Value)
 
 	//if it depends on another tx in txpool, the transaction will be not be included in the sorted list
 	lastNonce := utxoIndex.GetLastNonceByPubKeyHash(txNode.Value.GetDefaultFromTransactionAccount().GetPubKeyHash())
-	if nonce != lastNonce+1 {
+	if txNode.Nonce != lastNonce+1 {
 		return
 	}
 
@@ -466,10 +435,10 @@ func (txPool *TransactionPool) addTransaction(txNode *transaction.TransactionNod
 func (txPool *TransactionPool) insertChildrenIntoSortedWaitlist(txNode *transaction.TransactionNode) {
 	addressTxs := txPool.getTransactionsFromAddress(txNode.Value.GetDefaultFromTransactionAccount().GetAddress().String())
 	if len(addressTxs) > 0 {
-		currNonce := txPool.nonces[hex.EncodeToString(txNode.Value.ID)]
-		nextNonce := txPool.nonces[hex.EncodeToString(addressTxs[0].ID)]
+		currNonce := txNode.Nonce
+		nextNonce := addressTxs[0].Nonce
 		if nextNonce == currNonce+1 {
-			txPool.insertIntoTipOrder(txPool.txs[hex.EncodeToString(addressTxs[0].ID)])
+			txPool.insertIntoTipOrder(txPool.txs[hex.EncodeToString(addressTxs[0].Value.ID)])
 		}
 	}
 }

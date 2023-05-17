@@ -8,9 +8,10 @@ type TransactionNode struct {
 	Children map[string]*Transaction
 	Value    *Transaction
 	Size     int
+	Nonce    uint64
 }
 
-func NewTransactionNode(tx *Transaction) *TransactionNode {
+func NewTransactionNode(tx *Transaction, nonce uint64) *TransactionNode {
 	txNode := &TransactionNode{Children: make(map[string]*Transaction)}
 
 	if tx == nil {
@@ -24,6 +25,7 @@ func NewTransactionNode(tx *Transaction) *TransactionNode {
 
 	txNode.Value = tx
 	txNode.Size = size
+	txNode.Nonce = nonce
 
 	return txNode
 }
