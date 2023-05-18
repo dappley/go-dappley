@@ -38,7 +38,7 @@ func NewKeyPair() *KeyPair {
 }
 
 func (kp KeyPair) GenerateAddress() Address {
-	pubKeyHash := newUserPubKeyHash(kp.publicKey)
+	pubKeyHash := NewUserPubKeyHash(kp.publicKey)
 	return pubKeyHash.GenerateAddress()
 }
 

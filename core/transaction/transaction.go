@@ -88,7 +88,7 @@ type TxIndex struct {
 	BlockIndex int
 }
 
-//SendTxParam Transaction parameters
+// SendTxParam Transaction parameters
 type SendTxParam struct {
 	From          account.Address
 	SenderKeyPair *account.KeyPair
@@ -100,7 +100,6 @@ type SendTxParam struct {
 	Contract      string
 }
 
-//
 func SetSubsidy(amount int) {
 	Subsidy = common.NewAmount(uint64(amount))
 }
@@ -190,7 +189,7 @@ func (tx *Transaction) IsContractSend() bool {
 	return tx.Type == TxTypeContractSend
 }
 
-//GetToHashBytes Get bytes for hash
+// GetToHashBytes Get bytes for hash
 func (tx *Transaction) GetToHashBytes() []byte {
 	var tempBytes []byte
 
@@ -310,7 +309,7 @@ func (tx *Transaction) verifyAmount(totalPrev *common.Amount, totalVoutValue *co
 	return true, nil
 }
 
-//CalculateTotalVoutValue returns total amout of transaction's vout
+// CalculateTotalVoutValue returns total amout of transaction's vout
 func (tx *Transaction) CalculateTotalVoutValue() (*common.Amount, bool) {
 	totalVout := &common.Amount{}
 	for _, vout := range tx.Vout {
@@ -434,7 +433,7 @@ func (tx *Transaction) GetSize() int {
 	return len(rawBytes)
 }
 
-// GetDefaultFromPubKeyHash returns the first from address public key hash
+// GetDefaultFromTransactionAccount returns the first from address account
 func (tx *Transaction) GetDefaultFromTransactionAccount() *account.TransactionAccount {
 	if tx.Vin == nil || len(tx.Vin) <= 0 {
 		return account.NewContractTransactionAccount()
@@ -450,7 +449,23 @@ func (tx *Transaction) GetDefaultFromTransactionAccount() *account.TransactionAc
 	return ta
 }
 
-//CalculateUtxoSum calculates the total amount of all input utxos
+// GetDefaultFromPubKeyHash returns the first from address public key hash
+func (tx *Transaction) GetDefaultFromPubKeyHash() account.PubKeyHash {
+	if tx.Vin == nil || len(tx.Vin) <= 0 {
+		return account.NewContractPubKeyHash()
+	}
+	vin := tx.Vin[0]
+	if ok, err := account.IsValidPubKey(vin.PubKey); !ok {
+		logger.WithError(err).Warn("DPoS: cannot compute the public key hash!")
+		return account.NewContractPubKeyHash()
+	}
+
+	ta := account.NewUserPubKeyHash(vin.PubKey)
+
+	return ta
+}
+
+// CalculateUtxoSum calculates the total amount of all input utxos
 func CalculateUtxoSum(utxos []*utxo.UTXO) *common.Amount {
 	sum := common.NewAmount(0)
 	for _, utxo := range utxos {
@@ -459,7 +474,7 @@ func CalculateUtxoSum(utxos []*utxo.UTXO) *common.Amount {
 	return sum
 }
 
-//CalculateChange calculates the change
+// CalculateChange calculates the change
 func CalculateChange(input, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) (*common.Amount, error) {
 	change, err := input.Sub(amount)
 	if err != nil {
@@ -508,8 +523,8 @@ func (tx *Transaction) VerifySignatures(prevUtxos []*utxo.UTXO) (bool, error) {
 	return true, nil
 }
 
-//verifyPublicKeyHash verifies if the public key in Vin is the original key for the public
-//key hash in utxo
+// verifyPublicKeyHash verifies if the public key in Vin is the original key for the public
+// key hash in utxo
 func (tx *Transaction) VerifyPublicKeyHash(prevUtxos []*utxo.UTXO) (bool, error) {
 
 	for i, vin := range tx.Vin {

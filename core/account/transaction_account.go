@@ -14,7 +14,6 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
-//
 package account
 
 import (
@@ -33,14 +32,14 @@ type TransactionAccount struct {
 
 func NewContractTransactionAccount() *TransactionAccount {
 	account := &TransactionAccount{}
-	account.pubKeyHash = newContractPubKeyHash()
+	account.pubKeyHash = NewContractPubKeyHash()
 	account.address = account.pubKeyHash.GenerateAddress()
 	return account
 }
 
 func NewTransactionAccountByPubKey(pubkey []byte) *TransactionAccount {
 	account := &TransactionAccount{}
-	account.pubKeyHash = newUserPubKeyHash(pubkey)
+	account.pubKeyHash = NewUserPubKeyHash(pubkey)
 	account.address = account.pubKeyHash.GenerateAddress()
 	return account
 }
@@ -59,7 +58,7 @@ func NewTransactionAccountByAddress(address Address) *TransactionAccount {
 	return account
 }
 
-//GeneratePubKeyHashByAddress decodes the address to the original public key hash. If unsuccessful, return false
+// GeneratePubKeyHashByAddress decodes the address to the original public key hash. If unsuccessful, return false
 func generatePubKeyHashByAddress(a Address) (PubKeyHash, bool) {
 	pubKeyHash := base58.Decode(a.String())
 
@@ -92,7 +91,7 @@ func (ca *TransactionAccount) IsValid() bool {
 	return false
 }
 
-//Checksum finds the checksum of a public key hash
+// Checksum finds the checksum of a public key hash
 func Checksum(payload []byte) []byte {
 	firstSHA := sha256.Sum256(payload)
 	secondSHA := sha256.Sum256(firstSHA[:])

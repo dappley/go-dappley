@@ -167,31 +167,31 @@ func TestTransactionPool_addTransaction(t *testing.T) {
 	txPool := NewTransactionPool(nil, 128)
 	txPool.SetUTXOCache(utxo.NewUTXOCache(db))
 	//push the first transactionbase. It should be in stored in txs and tipOrder
-	txPool.addTransactionAndSort(txs[0])
+	txPool.addTransactionAndSort(txs[0], 0)
 	assert.Equal(t, 1, len(txPool.txs))
 	assert.Equal(t, 1, len(txPool.tipOrder))
 	assert.Equal(t, hex.EncodeToString(txs[0].Value.ID), txPool.tipOrder[0])
 
 	//push ttx1. It should be stored in txs. But it should not be in tipOrder since it is a child of ttx0
-	txPool.addTransactionAndSort(txs[1])
+	txPool.addTransactionAndSort(txs[1], 1)
 	assert.Equal(t, 2, len(txPool.txs))
 	assert.Equal(t, 1, len(txPool.tipOrder))
 	assert.Equal(t, hex.EncodeToString(txs[0].Value.ID), txPool.tipOrder[0])
 
 	//push ttx2. It should be stored in txs. But it should not be in tipOrder since it is a child of ttx0
-	txPool.addTransactionAndSort(txs[2])
+	txPool.addTransactionAndSort(txs[2], 2)
 	assert.Equal(t, 3, len(txPool.txs))
 	assert.Equal(t, 1, len(txPool.tipOrder))
 	assert.Equal(t, hex.EncodeToString(txs[0].Value.ID), txPool.tipOrder[0])
 
 	//push ttx3. It should be stored in txs. But it should not be in tipOrder since it is a child of ttx1
-	txPool.addTransactionAndSort(txs[3])
+	txPool.addTransactionAndSort(txs[3], 3)
 	assert.Equal(t, 4, len(txPool.txs))
 	assert.Equal(t, 1, len(txPool.tipOrder))
 	assert.Equal(t, hex.EncodeToString(txs[0].Value.ID), txPool.tipOrder[0])
 
 	//push ttx4. It should be stored in txs and tipOrder
-	txPool.addTransactionAndSort(txs[4])
+	txPool.addTransactionAndSort(txs[4], 0)
 	assert.Equal(t, 5, len(txPool.txs))
 	assert.Equal(t, 2, len(txPool.tipOrder))
 	//since ttx4 has a higher tip than ttx0, it should rank position 0 in tipOrder
@@ -199,7 +199,7 @@ func TestTransactionPool_addTransaction(t *testing.T) {
 	assert.Equal(t, hex.EncodeToString(txs[0].Value.ID), txPool.tipOrder[1])
 
 	//push ttx5. It should be stored in txs. But it should not be in tipOrder since it is a child of ttx4
-	txPool.addTransactionAndSort(txs[5])
+	txPool.addTransactionAndSort(txs[5], 1)
 	assert.Equal(t, 6, len(txPool.txs))
 	assert.Equal(t, 2, len(txPool.tipOrder))
 	//since ttx4 has a higher tip than ttx0, it should rank position 0 in tipOrder
@@ -207,7 +207,7 @@ func TestTransactionPool_addTransaction(t *testing.T) {
 	assert.Equal(t, hex.EncodeToString(txs[0].Value.ID), txPool.tipOrder[1])
 
 	//push ttx6.  It should be stored in txs and tipOrder
-	txPool.addTransactionAndSort(txs[6])
+	txPool.addTransactionAndSort(txs[6], 0)
 	assert.Equal(t, 7, len(txPool.txs))
 	assert.Equal(t, 3, len(txPool.tipOrder))
 	//since ttx4 has a higher tip than ttx0, it should rank position 0 in tipOrder
@@ -245,10 +245,10 @@ func TestTransactionPool_CleanUpMinedTxs(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	txs := generateDependentTxNodes()
-	txPool := NewTransactionPool(nil, 128)
+	txPool := NewTransactionPool(nil, 128000)
 	txPool.SetUTXOCache(utxo.NewUTXOCache(db))
 	for _, tx := range txs {
-		txPool.addTransactionAndSort(tx)
+		txPool.Push(*tx.Value, tx.Nonce)
 	}
 
 	// The tx from the same sender as tx0 with the next nonce will be bumped up into the tip order
@@ -645,22 +645,24 @@ func TestNewTransactionNode(t *testing.T) {
 	assert.Equal(t, uint64(1), txNode.Nonce)
 }
 
-/* TODO: benchmark different conditions: all txs same sender, all txs different sender
-func BenchmarkTransactionPool_GetTransactions(b *testing.B) {
+// TODO: benchmark different conditions: all txs same sender, all txs different sender
+func BenchmarkTransactionPool_GetTransactionsSameSender(b *testing.B) {
 	generateTxPool := func(n int) *TransactionPool {
 		db := storage.NewRamStorage()
 		defer db.Close()
 		txPool := NewTransactionPool(nil, 128000000)
 		txPool.SetUTXOCache(utxo.NewUTXOCache(db))
+
+		txAccount := account.NewAccount()
 		var prevTxId []byte
 		// generate a chain of dependent txs
 		for i := 0; i < n; i++ {
 			tx := transaction.Transaction{
 				ID:   util.GenerateRandomAoB(5),
-				Vin:  []transactionbase.TXInput{{Txid: prevTxId}},
+				Vin:  []transactionbase.TXInput{{Txid: prevTxId, PubKey: txAccount.GetKeyPair().GetPublicKey()}},
 				Vout: GenerateFakeTxOutputs(),
 				Tip:  common.NewAmount(1)}
-			txPool.Push(tx)
+			txPool.Push(tx, uint64(i+1))
 			prevTxId = tx.ID
 		}
 		return txPool
@@ -669,12 +671,12 @@ func BenchmarkTransactionPool_GetTransactions(b *testing.B) {
 	benchData := map[string]struct {
 		n int
 	}{
-		"with 100 txs":       {n: 100},
-		"with 1,000 txs":     {n: 1000},
-		"with 10,000 txs":    {n: 10000},
-		"with 50,000 txs":    {n: 50000},
-		"with 100,000 txs":   {n: 100000},
-		"with 1,000,000 txs": {n: 1000000},
+		"with 100 txs":    {n: 100},
+		"with 1,000 txs":  {n: 1000},
+		"with 10,000 txs": {n: 10000},
+		//"with 50,000 txs":    {n: 50000},
+		//"with 100,000 txs":   {n: 100000},
+		//"with 1,000,000 txs": {n: 1000000},
 	}
 	b.ResetTimer()
 	for benchName, data := range benchData {
@@ -690,19 +692,21 @@ func BenchmarkTransactionPool_GetTransactions(b *testing.B) {
 	}
 }
 
-func BenchmarkTransactionPool_Rollback(b *testing.B) {
-	generateTxsToRollback := func(n int) []transaction.Transaction {
-		txs := make([]transaction.Transaction, 0, n)
+func BenchmarkTransactionPool_RollbackSameSender(b *testing.B) {
+	generateTxsToRollback := func(n int) []*transaction.TransactionNode {
+		txs := make([]*transaction.TransactionNode, 0, n)
 		var prevTxId []byte
+
+		txAccount := account.NewAccount()
 
 		// generate a chain of dependent txs
 		for i := 0; i < n; i++ {
 			tx := transaction.Transaction{
 				ID:   util.GenerateRandomAoB(5),
-				Vin:  []transactionbase.TXInput{{Txid: prevTxId}},
+				Vin:  []transactionbase.TXInput{{Txid: prevTxId, PubKey: txAccount.GetKeyPair().GetPublicKey()}},
 				Vout: GenerateFakeTxOutputs(),
 				Tip:  common.NewAmount(1)}
-			txs = append(txs, tx)
+			txs = append(txs, transaction.NewTransactionNode(&tx, uint64(i+1)))
 			prevTxId = tx.ID
 		}
 		return txs
@@ -728,10 +732,9 @@ func BenchmarkTransactionPool_Rollback(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				txPool := NewTransactionPool(nil, 128000000)
 				for j := len(txs) - 1; j >= 0; j-- {
-					txPool.Rollback(txs[j])
+					txPool.Rollback(*txs[j].Value, txs[j].Nonce)
 				}
 			}
 		})
 	}
 }
-*/

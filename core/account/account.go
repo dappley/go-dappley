@@ -14,7 +14,6 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
-//
 package account
 
 import (
@@ -34,7 +33,7 @@ func NewAccount() *Account {
 	account := &Account{}
 	account.key = NewKeyPair()
 	account.address = account.key.GenerateAddress()
-	account.pubKeyHash = newUserPubKeyHash(account.key.GetPublicKey())
+	account.pubKeyHash = NewUserPubKeyHash(account.key.GetPublicKey())
 	return account
 }
 
@@ -42,7 +41,7 @@ func NewAccountByKey(key *KeyPair) *Account {
 	account := &Account{}
 	account.key = key
 	account.address = account.key.GenerateAddress()
-	account.pubKeyHash = newUserPubKeyHash(account.key.GetPublicKey())
+	account.pubKeyHash = NewUserPubKeyHash(account.key.GetPublicKey())
 	return account
 }
 
@@ -59,7 +58,7 @@ func (a Account) GetAddress() Address {
 	return a.address
 }
 
-func (a *Account) SetAddress(addr string)  {
+func (a *Account) SetAddress(addr string) {
 	address := Address{}
 	address.address = addr
 	a.address = address

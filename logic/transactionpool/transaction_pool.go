@@ -222,8 +222,8 @@ func (txPool *TransactionPool) Rollback(tx transaction.Transaction, nonce uint64
 
 	// this remakes the tipOrder so that it doesn't include the children of the rolled-back tx
 	for _, txid := range txPool.tipOrder {
-		tipSender := txPool.txs[txid].Value.GetDefaultFromTransactionAccount().GetAddress().String()
-		if tipSender != tx.GetDefaultFromTransactionAccount().GetAddress().String() {
+		tipSender := txPool.txs[txid].Value.GetDefaultFromPubKeyHash().String()
+		if tipSender != tx.GetDefaultFromPubKeyHash().String() {
 			newTipOrder = append(newTipOrder, txid)
 		}
 	}
@@ -247,7 +247,7 @@ func (txPool *TransactionPool) Push(tx transaction.Transaction, nonce uint64) {
 
 	// check for existing entry with the same nonce, and replace it if the new tx has more tips ber byte
 	replaceTXID := ""
-	senderTxs := txPool.getTransactionsFromAddress(tx.GetDefaultFromTransactionAccount().GetAddress().String())
+	senderTxs := txPool.getTransactionsFromPubKeyHash(tx.GetDefaultFromPubKeyHash().String())
 	for _, senderTx := range senderTxs {
 		if senderTx.Nonce == nonce {
 			if txNode.GetTipsPerByte().Cmp(txPool.txs[hex.EncodeToString(senderTx.Value.ID)].GetTipsPerByte()) == 1 {
@@ -270,7 +270,12 @@ func (txPool *TransactionPool) Push(tx transaction.Transaction, nonce uint64) {
 	if replaceTXID != "" {
 		txPool.removeTransaction(txPool.txs[replaceTXID])
 	}
-	txPool.addTransactionAndSort(txNode)
+
+	lowestNonce := uint64(0)
+	if len(senderTxs) > 0 {
+		lowestNonce = senderTxs[0].Nonce
+	}
+	txPool.addTransactionAndSort(txNode, lowestNonce)
 }
 
 // CleanUpMinedTxs updates the transaction pool when a new block is added to the blockchain.
@@ -305,36 +310,36 @@ func (txPool *TransactionPool) removeFromTipOrder(txID []byte) {
 
 // getSortedTransactions returns the txPool's transactions so that transactions from a single account are always arranged by ascending nonce.
 func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transaction {
-	txsByAddress := make(map[string][]*transaction.Transaction)
+	txsByPubKeyHash := make(map[string][]*transaction.Transaction) // TODO: USE PKH
 	for _, txNode := range txPool.txs {
-		address := txNode.Value.GetDefaultFromTransactionAccount().GetAddress().String()
-		if _, exist := txsByAddress[address]; exist {
-			index := sort.Search(len(txsByAddress[address]), func(i int) bool {
-				compareTx := txPool.txs[hex.EncodeToString(txsByAddress[address][i].ID)]
+		pkh := txNode.Value.GetDefaultFromPubKeyHash().String()
+		if _, exist := txsByPubKeyHash[pkh]; exist {
+			index := sort.Search(len(txsByPubKeyHash[pkh]), func(i int) bool {
+				compareTx := txPool.txs[hex.EncodeToString(txsByPubKeyHash[pkh][i].ID)]
 				return txNode.Nonce < compareTx.Nonce
 			})
 
-			txsByAddress[address] = append(txsByAddress[address], &transaction.Transaction{})
-			copy(txsByAddress[address][index+1:], txsByAddress[address][index:])
-			txsByAddress[address][index] = txNode.Value
+			txsByPubKeyHash[pkh] = append(txsByPubKeyHash[pkh], &transaction.Transaction{})
+			copy(txsByPubKeyHash[pkh][index+1:], txsByPubKeyHash[pkh][index:])
+			txsByPubKeyHash[pkh][index] = txNode.Value
 		} else {
-			txsByAddress[address] = []*transaction.Transaction{txNode.Value}
+			txsByPubKeyHash[pkh] = []*transaction.Transaction{txNode.Value}
 		}
 	}
 
 	sortedTxs := make([]*transaction.Transaction, 0, len(txPool.txs))
-	for _, txs := range txsByAddress {
+	for _, txs := range txsByPubKeyHash {
 		sortedTxs = append(sortedTxs, txs...)
 	}
 	return sortedTxs
 }
 
 // TODO: temporary implementation. This could be optimized by storing a map of sender addresses instead of having to iterate through all transactions every time
-// getTransactionsFromAddress returns the transactions from a given sender address, sorted by nonce in ascending order
-func (txPool *TransactionPool) getTransactionsFromAddress(address string) []*transaction.TransactionNode {
+// getTransactionsFromPubKeyHash returns the transactions from a given sender pubKeyHash, sorted by nonce in ascending order
+func (txPool *TransactionPool) getTransactionsFromPubKeyHash(pkhString string) []*transaction.TransactionNode {
 	addressTxs := []*transaction.TransactionNode{}
 	for _, txNode := range txPool.txs {
-		if txNode.Value.GetDefaultFromTransactionAccount().GetAddress().String() == address {
+		if txNode.Value.GetDefaultFromPubKeyHash().String() == pkhString {
 			if len(addressTxs) == 0 {
 				addressTxs = append(addressTxs, txNode)
 			} else {
@@ -371,12 +376,15 @@ func (txPool *TransactionPool) removeTransaction(txNode *transaction.Transaction
 	delete(txPool.txs, hex.EncodeToString(txNode.Value.ID))
 }
 
-func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.TransactionNode) {
+func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.TransactionNode, lowestNonce uint64) {
 	txPool.addTransaction(txNode)
 	txPool.EventBus.Publish(NewTransactionTopic, txNode.Value)
 
 	//if it depends on another tx in txpool, the transaction will be not be included in the sorted list
-	lastNonce := txPool.utxoCache.GetLastNonce(txNode.Value.GetDefaultFromTransactionAccount().GetPubKeyHash())
+	if lowestNonce > 0 && txNode.Nonce > lowestNonce {
+		return
+	}
+	lastNonce := txPool.utxoCache.GetLastNonce(txNode.Value.GetDefaultFromPubKeyHash())
 	if txNode.Nonce != lastNonce+1 {
 		return
 	}
@@ -391,7 +399,7 @@ func (txPool *TransactionPool) addTransaction(txNode *transaction.TransactionNod
 }
 
 func (txPool *TransactionPool) insertChildrenIntoSortedWaitlist(txNode *transaction.TransactionNode) {
-	addressTxs := txPool.getTransactionsFromAddress(txNode.Value.GetDefaultFromTransactionAccount().GetAddress().String())
+	addressTxs := txPool.getTransactionsFromPubKeyHash(txNode.Value.GetDefaultFromPubKeyHash().String())
 	for _, tx := range addressTxs {
 		currNonce := txNode.Nonce
 		nextNonce := tx.Nonce
