@@ -19,7 +19,6 @@
 package transactionpool
 
 import (
-	"bytes"
 	"encoding/hex"
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
@@ -234,22 +233,9 @@ func (txPool *TransactionPool) Rollback(tx transaction.Transaction, nonce uint64
 	txPool.insertIntoTipOrder(rollbackTxNode)
 }
 
-// updateChildren traverses through all transactions in transaction pool and find the input node's children
-func (txPool *TransactionPool) updateChildren(node *transaction.TransactionNode) {
-	for txid, txNode := range txPool.txs {
-	loop:
-		for _, vin := range txNode.Value.Vin {
-			if bytes.Compare(vin.Txid, node.Value.ID) == 0 {
-				node.Children[txid] = txNode.Value
-				break loop
-			}
-		}
-	}
-}
-
 // Push pushes a new transaction into the pool.
 // If the nonce is the same as another tx in the pool, the one with higher tips per byte will be kept.
-func (txPool *TransactionPool) Push(tx transaction.Transaction, nonce uint64, utxoIndex *lutxo.UTXOIndex) {
+func (txPool *TransactionPool) Push(tx transaction.Transaction, nonce uint64) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 	if txPool.sizeLimit == 0 {
@@ -284,7 +270,7 @@ func (txPool *TransactionPool) Push(tx transaction.Transaction, nonce uint64, ut
 	if replaceTXID != "" {
 		txPool.removeTransaction(txPool.txs[replaceTXID])
 	}
-	txPool.addTransactionAndSort(txNode, utxoIndex)
+	txPool.addTransactionAndSort(txNode)
 }
 
 // CleanUpMinedTxs updates the transaction pool when a new block is added to the blockchain.
@@ -366,15 +352,6 @@ func (txPool *TransactionPool) getTransactionsFromAddress(address string) []*tra
 	return addressTxs
 }
 
-func checkDependTxInMap(tx *transaction.Transaction, existTxs map[string]*transaction.TransactionNode) bool {
-	for _, vin := range tx.Vin {
-		if _, exist := existTxs[hex.EncodeToString(vin.Txid)]; exist {
-			return true
-		}
-	}
-	return false
-}
-
 func (txPool *TransactionPool) GetTransactionById(txid []byte) *transaction.Transaction {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
@@ -388,37 +365,18 @@ func (txPool *TransactionPool) GetTransactionById(txid []byte) *transaction.Tran
 // removeTransactionNode removes the txNode from tx pool.
 // Note: this function does not remove the node from tipOrder!
 func (txPool *TransactionPool) removeTransaction(txNode *transaction.TransactionNode) {
-	txPool.disconnectFromParent(txNode.Value)
 	txPool.EventBus.Publish(EvictTransactionTopic, txNode.Value)
 	txPool.currSize -= uint32(txNode.Size)
 	MetricsTransactionPoolSize.Dec(1)
 	delete(txPool.txs, hex.EncodeToString(txNode.Value.ID))
 }
 
-// disconnectFromParent removes itself from its parent's node's children field
-func (txPool *TransactionPool) disconnectFromParent(tx *transaction.Transaction) {
-	for _, vin := range tx.Vin {
-		if parentTx, exist := txPool.txs[hex.EncodeToString(vin.Txid)]; exist {
-			delete(parentTx.Children, hex.EncodeToString(tx.ID))
-		}
-	}
-}
-
-func (txPool *TransactionPool) removeMinTipTx() {
-	minTipTx := txPool.getMinTipTransaction()
-	if minTipTx == nil {
-		return
-	}
-	txPool.removeTransaction(minTipTx)
-	txPool.tipOrder = txPool.tipOrder[:len(txPool.tipOrder)-1]
-}
-
-func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.TransactionNode, utxoIndex *lutxo.UTXOIndex) {
+func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.TransactionNode) {
 	txPool.addTransaction(txNode)
 	txPool.EventBus.Publish(NewTransactionTopic, txNode.Value)
 
 	//if it depends on another tx in txpool, the transaction will be not be included in the sorted list
-	lastNonce := utxoIndex.GetLastNonceByPubKeyHash(txNode.Value.GetDefaultFromTransactionAccount().GetPubKeyHash())
+	lastNonce := txPool.utxoCache.GetLastNonce(txNode.Value.GetDefaultFromTransactionAccount().GetPubKeyHash())
 	if txNode.Nonce != lastNonce+1 {
 		return
 	}
@@ -441,17 +399,6 @@ func (txPool *TransactionPool) insertChildrenIntoSortedWaitlist(txNode *transact
 			txPool.insertIntoTipOrder(txPool.txs[hex.EncodeToString(addressTxs[0].Value.ID)])
 		}
 	}
-}
-
-func (txPool *TransactionPool) GetParentTxidsInTxPool(tx *transaction.Transaction) []string {
-	txids := []string{}
-	for _, vin := range tx.Vin {
-		txidStr := hex.EncodeToString(vin.Txid)
-		if _, exist := txPool.txs[txidStr]; exist {
-			txids = append(txids, txidStr)
-		}
-	}
-	return txids
 }
 
 // insertIntoTipOrder insert a transaction into tipOrder based on tip.
@@ -501,15 +448,6 @@ func (txPool *TransactionPool) getMaxTipTransaction() *transaction.TransactionNo
 	return txPool.txs[txid]
 }
 
-// getMinTipTransaction gets the transaction.TransactionNode with minimum tip
-func (txPool *TransactionPool) getMinTipTransaction() *transaction.TransactionNode {
-	txid := txPool.getMinTipTxid()
-	if txid == "" {
-		return nil
-	}
-	return txPool.txs[txid]
-}
-
 // getMinTipTxid gets the txid of the transaction with minimum tip
 func (txPool *TransactionPool) getMaxTipTxid() string {
 	if len(txPool.tipOrder) == 0 {
@@ -517,14 +455,6 @@ func (txPool *TransactionPool) getMaxTipTxid() string {
 		return ""
 	}
 	return txPool.tipOrder[0]
-}
-
-// getMinTipTxid gets the txid of the transaction with minimum tip
-func (txPool *TransactionPool) getMinTipTxid() string {
-	if len(txPool.tipOrder) == 0 {
-		return ""
-	}
-	return txPool.tipOrder[len(txPool.tipOrder)-1]
 }
 
 func (txPool *TransactionPool) BroadcastTx(tx *transaction.Transaction, nonce uint64) {
@@ -553,7 +483,7 @@ func (txPool *TransactionPool) BroadcastTxHandler(input interface{}) {
 	//}
 
 	tx.CreateTime = -1
-	txPool.Push(*tx, nonceTx.GetNonce(), lutxo.NewUTXOIndex(txPool.utxoCache))
+	txPool.Push(*tx, nonceTx.GetNonce())
 
 	if command.IsBroadcast() {
 		//relay the original command
@@ -595,7 +525,7 @@ func (txPool *TransactionPool) BroadcastBatchTxsHandler(input interface{}) {
 		//	return
 		//}
 		tx.CreateTime = -1
-		txPool.Push(*tx, nonceTx.GetNonce(), lutxo.NewUTXOIndex(txPool.utxoCache))
+		txPool.Push(*tx, nonceTx.GetNonce())
 	}
 
 	if command.IsBroadcast() {
