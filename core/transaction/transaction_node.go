@@ -5,10 +5,11 @@ import (
 )
 
 type TransactionNode struct {
-	Children map[string]*Transaction
-	Value    *Transaction
-	Size     int
-	Nonce    uint64
+	Children       map[string]*Transaction
+	Value          *Transaction
+	Size           int
+	Nonce          uint64
+	FromPubKeyHash string
 }
 
 func NewTransactionNode(tx *Transaction, nonce uint64) *TransactionNode {
@@ -26,6 +27,7 @@ func NewTransactionNode(tx *Transaction, nonce uint64) *TransactionNode {
 	txNode.Value = tx
 	txNode.Size = size
 	txNode.Nonce = nonce
+	txNode.FromPubKeyHash = tx.GetDefaultFromPubKeyHash().String()
 
 	return txNode
 }
