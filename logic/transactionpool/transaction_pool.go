@@ -322,7 +322,7 @@ func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transactio
 		}
 	}
 
-	sortedTxs := make([]*transaction.Transaction, len(txPool.txs))
+	sortedTxs := make([]*transaction.Transaction, 0, len(txPool.txs))
 	for _, txs := range txsByAddress {
 		sortedTxs = append(sortedTxs, txs...)
 	}
@@ -392,11 +392,15 @@ func (txPool *TransactionPool) addTransaction(txNode *transaction.TransactionNod
 
 func (txPool *TransactionPool) insertChildrenIntoSortedWaitlist(txNode *transaction.TransactionNode) {
 	addressTxs := txPool.getTransactionsFromAddress(txNode.Value.GetDefaultFromTransactionAccount().GetAddress().String())
-	if len(addressTxs) > 0 {
+	for _, tx := range addressTxs {
 		currNonce := txNode.Nonce
-		nextNonce := addressTxs[0].Nonce
+		nextNonce := tx.Nonce
+		if nextNonce > currNonce+1 {
+			return
+		}
 		if nextNonce == currNonce+1 {
-			txPool.insertIntoTipOrder(txPool.txs[hex.EncodeToString(addressTxs[0].Value.ID)])
+			txPool.insertIntoTipOrder(txPool.txs[hex.EncodeToString(tx.Value.ID)])
+			return
 		}
 	}
 }

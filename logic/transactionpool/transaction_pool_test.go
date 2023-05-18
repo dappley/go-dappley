@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
@@ -52,8 +53,8 @@ func findTransaction(txs []*transaction.Transaction, toFind *transaction.Transac
 
 func GenerateFakeTxInputs() []transactionbase.TXInput {
 	return []transactionbase.TXInput{
-		{getAoB(2), 10, getAoB(2), account.NewAccount().GetPubKeyHash()},
-		{getAoB(2), 5, getAoB(2), account.NewAccount().GetPubKeyHash()},
+		{getAoB(2), 10, getAoB(2), account.NewAccount().GetKeyPair().GetPublicKey()},
+		{getAoB(2), 5, getAoB(2), account.NewAccount().GetKeyPair().GetPublicKey()},
 	}
 }
 
@@ -159,6 +160,9 @@ func TestTransactionPool_addTransaction(t *testing.T) {
 	defer db.Close()
 
 	txs := generateDependentTxNodes()
+	for _, tx := range txs {
+		fmt.Println(tx.Size)
+	}
 
 	txPool := NewTransactionPool(nil, 128)
 	txPool.SetUTXOCache(utxo.NewUTXOCache(db))
@@ -210,7 +214,7 @@ func TestTransactionPool_addTransaction(t *testing.T) {
 	assert.Equal(t, hex.EncodeToString(txs[6].Value.ID), txPool.tipOrder[0])
 	assert.Equal(t, hex.EncodeToString(txs[4].Value.ID), txPool.tipOrder[1])
 	assert.Equal(t, hex.EncodeToString(txs[0].Value.ID), txPool.tipOrder[2])
-	assert.Equal(t, uint32(339), txPool.currSize)
+	assert.Equal(t, uint32(975), txPool.currSize)
 }
 
 func TestTransactionPool_removeTransaction(t *testing.T) {
@@ -251,11 +255,11 @@ func TestTransactionPool_CleanUpMinedTxs(t *testing.T) {
 	packedTxs := []*transaction.Transaction{txs[0].Value}
 	txPool.CleanUpMinedTxs(packedTxs)
 	assert.Equal(t, 7, len(txPool.txs))
-	assert.Equal(t, 5, len(txPool.tipOrder))
+	assert.Equal(t, 4, len(txPool.tipOrder))
 	assert.Equal(t, hex.EncodeToString(txs[6].Value.ID), txPool.tipOrder[0])
-	assert.Equal(t, hex.EncodeToString(txs[4].Value.ID), txPool.tipOrder[1])
-	assert.Equal(t, hex.EncodeToString(txs[1].Value.ID), txPool.tipOrder[2])
-	assert.Equal(t, hex.EncodeToString(txs[7].Value.ID), txPool.tipOrder[3])
+	assert.Equal(t, hex.EncodeToString(txs[7].Value.ID), txPool.tipOrder[1])
+	assert.Equal(t, hex.EncodeToString(txs[4].Value.ID), txPool.tipOrder[2])
+	assert.Equal(t, hex.EncodeToString(txs[1].Value.ID), txPool.tipOrder[3])
 }
 
 func TestTransactionPoolLimit(t *testing.T) {
@@ -400,8 +404,8 @@ func TestTransactionPool_insertChildrenIntoSortedWaitlist(t *testing.T) {
 	// only nodes that aren't children are added
 	expected := []string{
 		hex.EncodeToString(txs[6].Value.ID),
-		hex.EncodeToString(txs[4].Value.ID),
 		hex.EncodeToString(txs[7].Value.ID),
+		hex.EncodeToString(txs[4].Value.ID),
 		hex.EncodeToString(txs[0].Value.ID),
 	}
 	assert.Equal(t, expected, txPool.tipOrder)
@@ -409,9 +413,9 @@ func TestTransactionPool_insertChildrenIntoSortedWaitlist(t *testing.T) {
 	txPool.insertChildrenIntoSortedWaitlist(txPool.txs[hex.EncodeToString(txs[0].Value.ID)])
 	expected = []string{
 		hex.EncodeToString(txs[6].Value.ID),
+		hex.EncodeToString(txs[7].Value.ID),
 		hex.EncodeToString(txs[4].Value.ID),
 		hex.EncodeToString(txs[1].Value.ID), // child of txs[0] inserted
-		hex.EncodeToString(txs[7].Value.ID),
 		hex.EncodeToString(txs[0].Value.ID),
 	}
 	assert.Equal(t, expected, txPool.tipOrder)
@@ -442,8 +446,8 @@ func TestTransactionPool_insertIntoTipOrder(t *testing.T) {
 	// sorted in order of descending tips per byte
 	expected := []string{
 		hex.EncodeToString(txs[6].Value.ID),
-		hex.EncodeToString(txs[4].Value.ID),
 		hex.EncodeToString(txs[7].Value.ID),
+		hex.EncodeToString(txs[4].Value.ID),
 		hex.EncodeToString(txs[0].Value.ID),
 	}
 	assert.Equal(t, expected, txPool.tipOrder)
@@ -461,8 +465,8 @@ func TestTransactionPool_removeFromTipOrder(t *testing.T) {
 	}
 	expected := []string{
 		hex.EncodeToString(txs[6].Value.ID),
-		hex.EncodeToString(txs[4].Value.ID),
 		hex.EncodeToString(txs[7].Value.ID),
+		hex.EncodeToString(txs[4].Value.ID),
 		hex.EncodeToString(txs[0].Value.ID),
 	}
 	assert.Equal(t, expected, txPool.tipOrder)
@@ -512,7 +516,7 @@ func TestTransactionPool_getMaxTipTxid(t *testing.T) {
 
 	txPool.removeFromTipOrder(txs[6].Value.ID)
 	// txs[4] has the next highest tips per byte
-	assert.Equal(t, hex.EncodeToString(txs[4].Value.ID), txPool.getMaxTipTxid())
+	assert.Equal(t, hex.EncodeToString(txs[7].Value.ID), txPool.getMaxTipTxid())
 }
 
 func TestTransactionPool_getMaxTipTransaction(t *testing.T) {
@@ -549,7 +553,7 @@ func generateDependentTxNodes() []*transaction.TransactionNode {
 		sender4: tx7
 	*/
 
-	//size 60
+	//size 185, tips/byte 1621621
 	ttx0 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(5),
 		Vin:  GenerateFakeTxInputs(),
@@ -557,7 +561,7 @@ func generateDependentTxNodes() []*transaction.TransactionNode {
 		Tip:  common.NewAmount(3000),
 	}
 
-	//size 37
+	//size 104, tips/byte 1923076
 	ttx1 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(5),
 		Vin:  []transactionbase.TXInput{{Txid: ttx0.ID, PubKey: ttx0.Vin[0].PubKey}},
@@ -565,7 +569,7 @@ func generateDependentTxNodes() []*transaction.TransactionNode {
 		Tip:  common.NewAmount(2000),
 	}
 
-	//size 37
+	//size 104, tips/byte 961538
 	ttx2 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(5),
 		Vin:  []transactionbase.TXInput{{Txid: ttx0.ID, PubKey: ttx1.Vin[0].PubKey}},
@@ -573,7 +577,7 @@ func generateDependentTxNodes() []*transaction.TransactionNode {
 		Tip:  common.NewAmount(1000),
 	}
 
-	//size 37
+	//size 104, tips/byte 1923076
 	ttx3 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(5),
 		Vin:  []transactionbase.TXInput{{Txid: ttx1.ID, PubKey: ttx2.Vin[0].PubKey}},
@@ -581,7 +585,7 @@ func generateDependentTxNodes() []*transaction.TransactionNode {
 		Tip:  common.NewAmount(2000),
 	}
 
-	//size 61
+	//size 186, tips/byte 2150537
 	ttx4 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(6),
 		Vin:  GenerateFakeTxInputs(),
@@ -589,7 +593,7 @@ func generateDependentTxNodes() []*transaction.TransactionNode {
 		Tip:  common.NewAmount(4000),
 	}
 
-	//size 38
+	//size 105, tips/byte 4761904
 	ttx5 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(5),
 		Vin:  []transactionbase.TXInput{{Txid: ttx4.ID, PubKey: ttx4.Vin[0].PubKey}},
@@ -597,7 +601,7 @@ func generateDependentTxNodes() []*transaction.TransactionNode {
 		Tip:  common.NewAmount(5000),
 	}
 
-	//size 62
+	//size 187, tips/byte 3208556
 	ttx6 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(7),
 		Vin:  GenerateFakeTxInputs(),
@@ -605,7 +609,7 @@ func generateDependentTxNodes() []*transaction.TransactionNode {
 		Tip:  common.NewAmount(6000),
 	}
 
-	//size 135
+	//size 260, tips/byte 2692307
 	ttx7 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(80),
 		Vin:  GenerateFakeTxInputs(),
@@ -638,7 +642,7 @@ func TestNewTransactionNode(t *testing.T) {
 	assert.Equal(t, ttx1, txNode.Value)
 	assert.Equal(t, 0, len(txNode.Children))
 	assert.Equal(t, len(rawBytes), txNode.Size)
-	assert.Equal(t, 1, txNode.Nonce)
+	assert.Equal(t, uint64(1), txNode.Nonce)
 }
 
 /* TODO: benchmark different conditions: all txs same sender, all txs different sender
