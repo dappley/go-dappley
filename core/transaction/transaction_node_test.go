@@ -14,7 +14,6 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
-//
 package transaction
 
 import (
@@ -34,23 +33,24 @@ func TestNewTransactionNode(t *testing.T) {
 		Vout: []transactionbase.TXOutput{
 			{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{0xc6, 0x49}), Contract: "test"},
 		},
-		Tip: common.NewAmount(5),
+		Tip:      common.NewAmount(5),
 		GasLimit: common.NewAmount(1024),
 		GasPrice: common.NewAmount(1),
-		Type: TxTypeNormal,
+		Type:     TxTypeNormal,
 	}
 
-	txNodeNormal := NewTransactionNode(normalTx)
+	txNodeNormal := NewTransactionNode(normalTx, 1)
 	expectedTxNodeNormal := &TransactionNode{
 		Children: make(map[string]*Transaction),
 		Value:    normalTx,
 		Size:     73,
+		Nonce:    1,
 	}
 	assert.Equal(t, expectedTxNodeNormal, txNodeNormal)
 
 	expectedTxNodeEmpty := &TransactionNode{Children: make(map[string]*Transaction)}
-	assert.Equal(t, expectedTxNodeEmpty, NewTransactionNode(nil))
-	assert.Equal(t, expectedTxNodeEmpty, NewTransactionNode(&Transaction{Tip: common.NewAmount(0)}))
+	assert.Equal(t, expectedTxNodeEmpty, NewTransactionNode(nil, 0))
+	assert.Equal(t, expectedTxNodeEmpty, NewTransactionNode(&Transaction{Tip: common.NewAmount(0)}, 0))
 }
 
 func TestTransactionNode_GetTipsPerByte(t *testing.T) {
@@ -62,12 +62,12 @@ func TestTransactionNode_GetTipsPerByte(t *testing.T) {
 		Vout: []transactionbase.TXOutput{
 			{Value: common.NewAmount(1), PubKeyHash: account.PubKeyHash([]byte{0xc6, 0x49}), Contract: "test"},
 		},
-		Tip: common.NewAmount(5),
+		Tip:      common.NewAmount(5),
 		GasLimit: common.NewAmount(1024),
 		GasPrice: common.NewAmount(1),
-		Type: TxTypeNormal,
+		Type:     TxTypeNormal,
 	}
-	txNode := NewTransactionNode(tx1)
+	txNode := NewTransactionNode(tx1, 0)
 
 	assert.Equal(t, common.NewAmount(6849), txNode.GetTipsPerByte())
 }
