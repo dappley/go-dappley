@@ -19,6 +19,7 @@
 package transactionpool
 
 import (
+	"bytes"
 	"encoding/hex"
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
@@ -27,6 +28,7 @@ import (
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/golang-collections/collections/stack"
 	"sort"
 	"sync"
 
@@ -218,6 +220,7 @@ func (txPool *TransactionPool) Rollback(tx transaction.Transaction, nonce uint64
 	defer txPool.mutex.Unlock()
 
 	rollbackTxNode := transaction.NewTransactionNode(&tx, nonce)
+	//txPool.updateChildren(rollbackTxNode)
 	newTipOrder := []string{}
 
 	// this remakes the tipOrder so that it doesn't include the children of the rolled-back tx
@@ -231,6 +234,19 @@ func (txPool *TransactionPool) Rollback(tx transaction.Transaction, nonce uint64
 	txPool.tipOrder = newTipOrder
 	txPool.addTransaction(rollbackTxNode)
 	txPool.insertIntoTipOrder(rollbackTxNode)
+}
+
+// updateChildren traverses through all transactions in transaction pool and find the input node's children
+func (txPool *TransactionPool) updateChildren(node *transaction.TransactionNode) {
+	for txid, txNode := range txPool.txs {
+	loop:
+		for _, vin := range txNode.Value.Vin {
+			if bytes.Compare(vin.Txid, node.Value.ID) == 0 {
+				node.Children[txid] = txNode.Value
+				break loop
+			}
+		}
+	}
 }
 
 // Push pushes a new transaction into the pool.
@@ -342,6 +358,15 @@ func (txPool *TransactionPool) getTransactionsFromPubKeyHash(pkhString string) [
 	return addressTxs
 }
 
+func checkDependTxInMap(tx *transaction.Transaction, existTxs map[string]*transaction.TransactionNode) bool {
+	for _, vin := range tx.Vin {
+		if _, exist := existTxs[hex.EncodeToString(vin.Txid)]; exist {
+			return true
+		}
+	}
+	return false
+}
+
 func (txPool *TransactionPool) GetTransactionById(txid []byte) *transaction.Transaction {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
@@ -352,17 +377,70 @@ func (txPool *TransactionPool) GetTransactionById(txid []byte) *transaction.Tran
 	return txNode.Value
 }
 
+// removeTransactionNodeAndChildren removes the txNode from tx pool and all its children.
+// Note: this function does not remove the node from tipOrder!
+//
+//todo:delete  node from tipOrder
+func (txPool *TransactionPool) removeTransactionNodeAndChildren(tx *transaction.Transaction) {
+
+	txStack := stack.New()
+	txStack.Push(hex.EncodeToString(tx.ID))
+	for txStack.Len() > 0 {
+		txid := txStack.Pop().(string)
+		currTxNode, ok := txPool.txs[txid]
+		if !ok {
+			continue
+		}
+		for _, child := range currTxNode.Children {
+			txStack.Push(hex.EncodeToString(child.ID))
+		}
+		txPool.removeTransaction(currTxNode)
+	}
+}
+
 // removeTransactionNode removes the txNode from tx pool.
 // Note: this function does not remove the node from tipOrder!
 func (txPool *TransactionPool) removeTransaction(txNode *transaction.TransactionNode) {
+	txPool.disconnectFromParent(txNode.Value)
 	txPool.EventBus.Publish(EvictTransactionTopic, txNode.Value)
 	txPool.currSize -= uint32(txNode.Size)
 	MetricsTransactionPoolSize.Dec(1)
 	delete(txPool.txs, hex.EncodeToString(txNode.Value.ID))
 }
 
+// disconnectFromParent removes itself from its parent's node's children field
+func (txPool *TransactionPool) disconnectFromParent(tx *transaction.Transaction) {
+	for _, vin := range tx.Vin {
+		if parentTx, exist := txPool.txs[hex.EncodeToString(vin.Txid)]; exist {
+			delete(parentTx.Children, hex.EncodeToString(tx.ID))
+		}
+	}
+}
+
 func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.TransactionNode, lowestNonce uint64) {
+	isDependentOnParent := false
+	for _, vin := range txNode.Value.Vin {
+		parentTx, exist := txPool.txs[hex.EncodeToString(vin.Txid)]
+		if exist {
+			parentTx.Children[hex.EncodeToString(txNode.Value.ID)] = txNode.Value
+			isDependentOnParent = true
+		}
+	}
+
 	txPool.addTransaction(txNode)
+
+	// remove any txs from tip order if they depend on the new tx, and set it as the child of the new tx
+	for i := len(txPool.tipOrder) - 1; i >= 0; i-- { // iterate backwards so that removeFromTipOrder doesn't cause indexing errors
+		key := txPool.tipOrder[i]
+		tipTx := txPool.txs[key].Value
+		for _, vin := range tipTx.Vin {
+			if bytes.Equal(vin.Txid, txNode.Value.ID) {
+				txPool.removeFromTipOrder(tipTx.ID)
+				txNode.Children[hex.EncodeToString(tipTx.ID)] = tipTx
+			}
+		}
+	}
+
 	txPool.EventBus.Publish(NewTransactionTopic, txNode.Value)
 
 	//if it depends on another tx in txpool, the transaction will be not be included in the sorted list
@@ -371,6 +449,9 @@ func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.Transac
 	}
 	lastNonce := txPool.utxoCache.GetLastNonce(txNode.Value.GetDefaultFromPubKeyHash())
 	if txNode.Nonce != lastNonce+1 {
+		return
+	}
+	if isDependentOnParent {
 		return
 	}
 
@@ -396,6 +477,25 @@ func (txPool *TransactionPool) insertChildrenIntoSortedWaitlist(txNode *transact
 			return
 		}
 	}
+	/*
+		for _, child := range txNode.Children {
+			parentTxidsInTxPool := txPool.GetParentTxidsInTxPool(child)
+			if len(parentTxidsInTxPool) == 1 {
+				txPool.insertIntoTipOrder(txPool.txs[hex.EncodeToString(child.ID)])
+			}
+		}
+	*/
+}
+
+func (txPool *TransactionPool) GetParentTxidsInTxPool(tx *transaction.Transaction) []string {
+	txids := []string{}
+	for _, vin := range tx.Vin {
+		txidStr := hex.EncodeToString(vin.Txid)
+		if _, exist := txPool.txs[txidStr]; exist {
+			txids = append(txids, txidStr)
+		}
+	}
+	return txids
 }
 
 // insertIntoTipOrder insert a transaction into tipOrder based on tip.
