@@ -477,14 +477,15 @@ func (txPool *TransactionPool) insertChildrenIntoSortedWaitlist(txNode *transact
 			return
 		}
 	}
-	/*
-		for _, child := range txNode.Children {
+	for _, child := range txNode.Children {
+		// only insert children that are from a different sender pubkey (avoid a duplicate with the above step)
+		if txPool.txs[hex.EncodeToString(child.ID)].FromPubKeyHash != txNode.FromPubKeyHash {
 			parentTxidsInTxPool := txPool.GetParentTxidsInTxPool(child)
 			if len(parentTxidsInTxPool) == 1 {
 				txPool.insertIntoTipOrder(txPool.txs[hex.EncodeToString(child.ID)])
 			}
 		}
-	*/
+	}
 }
 
 func (txPool *TransactionPool) GetParentTxidsInTxPool(tx *transaction.Transaction) []string {

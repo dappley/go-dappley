@@ -411,7 +411,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		logger.Error("updateUTXO failed.")
 		return nil, status.Error(codes.InvalidArgument, "updateUTXO failed")
 	}
-	bc.GetTxPool().Push(*tx, in.GetNonce(), rpcService.utxoIndex)
+	bc.GetTxPool().Push(*tx, in.GetNonce())
 	rpcService.mutex.Unlock()
 	bc.GetTxPool().BroadcastTx(tx, in.GetNonce())
 
@@ -473,7 +473,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 		}
 
 		utxoIndex.UpdateUtxo(&tx)
-		rpcService.GetBlockchain().GetTxPool().Push(tx, nonces[i], utxoIndex)
+		rpcService.GetBlockchain().GetTxPool().Push(tx, nonces[i])
 		verifiedTxs = append(verifiedTxs, tx)
 
 		respon = append(respon, &rpcpb.SendTransactionStatus{
