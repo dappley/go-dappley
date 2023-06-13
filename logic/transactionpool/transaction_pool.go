@@ -268,6 +268,9 @@ func (txPool *TransactionPool) Push(tx transaction.Transaction, nonce uint64) {
 		if senderTx.Nonce == nonce {
 			if txNode.GetTipsPerByte().Cmp(txPool.txs[hex.EncodeToString(senderTx.Value.ID)].GetTipsPerByte()) == 1 {
 				replaceTXID = hex.EncodeToString(senderTx.Value.ID)
+				break
+			} else {
+				return
 			}
 		}
 	}
@@ -284,6 +287,7 @@ func (txPool *TransactionPool) Push(tx transaction.Transaction, nonce uint64) {
 	}
 
 	if replaceTXID != "" {
+		txPool.removeFromTipOrder(txPool.txs[replaceTXID].Value.ID)
 		txPool.removeTransaction(txPool.txs[replaceTXID])
 	}
 

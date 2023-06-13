@@ -151,8 +151,37 @@ func TestTransactionPool_Push(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		assert.NotEqual(t, diffTxs[i].ID, diffTxs[i+1].ID)
 	}
-	// TODO: test size limit check
-	// TODO: test duplicate nonce handling
+}
+
+func TestTransactionPool_PushReplacement(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+
+	txPool := NewTransactionPool(nil, 128000)
+	txPool.SetUTXOCache(utxo.NewUTXOCache(db))
+	txPool.Push(tx1, 1)
+	assert.Equal(t, 1, len(txPool.GetTransactions()))
+
+	// tx1 replacement should not happen because txReplace's tips per byte <= tx1's tips per byte.
+	txReplace := tx1.DeepCopy()
+	txReplace.ID = []byte("replaced")
+	txPool.Push(txReplace, 1)
+	assert.Equal(t, 1, len(txPool.GetTransactions()))
+	assert.Equal(t, tx1.ID, txPool.GetTransactions()[0].ID)
+
+	// Increase the tip by 1. Now txReplace should be able to replace tx1.
+	txReplace.Tip = txReplace.Tip.Add(common.NewAmount(1))
+	txPool.Push(txReplace, 1)
+	assert.Equal(t, 1, len(txPool.GetTransactions()))
+	assert.Equal(t, txReplace.ID, txPool.GetTransactions()[0].ID)
+
+	// Make a transaction with large size. The next replacement should be rejected because it exceeds the txPool's size limit.
+	txReplace2 := tx1.DeepCopy()
+	txReplace2.ID = getAoB(512)
+	txPool.SetSizeLimit(uint32(txReplace2.GetSize() - 1))
+	txPool.Push(txReplace2, 1)
+	assert.Equal(t, 1, len(txPool.GetTransactions()))
+	assert.Equal(t, txReplace.ID, txPool.GetTransactions()[0].ID)
 }
 
 func TestTransactionPool_addTransaction(t *testing.T) {
