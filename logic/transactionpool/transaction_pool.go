@@ -201,7 +201,7 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *lutxo.UTXOI
 		txPool.removeTransaction(txNode)
 	} else if err == errval.TXInputNotFound {
 		// The parent transaction might not have arrived yet, skip the transaction. It will be added back to the tip order if its parent is successfully used.
-		logger.WithError(err).Warn("Transaction Pool: Pop max tip transaction failed!")
+		logger.WithError(err).Warn("Transaction Pool: Pop max tip transaction failed! Input may not have arrived yet...")
 		return nil, nil
 	} else {
 		logger.WithError(err).Warn("Transaction Pool: Pop max tip transaction failed! Removing transaction and children from tx pool...")
