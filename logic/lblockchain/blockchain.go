@@ -403,8 +403,8 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 			adaptedTx := transaction.NewTxAdapter(tx)
 			if !adaptedTx.IsCoinbase() && !adaptedTx.IsRewardTx() && !adaptedTx.IsGasRewardTx() && !adaptedTx.IsGasChangeTx() {
 				rollbackNonce := bc.utxoCache.GetLastNonce(tx.GetDefaultFromTransactionAccount().GetPubKeyHash()) - 1
-				if rollbackNonce < -1 {
-					rollbackNonce = -1
+				if rollbackNonce < 0 {
+					rollbackNonce = 0
 				}
 				bc.txPool.Rollback(*tx, rollbackNonce)
 				err = bc.utxoCache.SetLastNonce(tx.GetDefaultFromTransactionAccount().GetPubKeyHash(), rollbackNonce)

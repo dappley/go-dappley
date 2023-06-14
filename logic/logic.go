@@ -43,7 +43,7 @@ import (
 
 var minerPrivateKey string
 
-//create a blockchain
+// create a blockchain
 func CreateBlockchain(address account.Address, db storage.Storage, libPolicy lblockchain.LIBPolicy, txPool *transactionpool.TransactionPool, blkSizeLimit int) (*lblockchain.Blockchain, error) {
 	addressAccount := account.NewTransactionAccountByAddress(address)
 	if !addressAccount.IsValid() {
@@ -63,7 +63,7 @@ func getAccountFilePath(argv []string) string {
 	return wallet.GetAccountFilePath()
 }
 
-//Tell if the file empty or not exist
+// Tell if the file empty or not exist
 func IsAccountEmpty(optionalAccountFilePath ...string) (bool, error) {
 	accountFilePath := getAccountFilePath(optionalAccountFilePath)
 
@@ -93,7 +93,7 @@ func SaveAccount(optionalAccountFilePath ...string) error {
 	return nil
 }
 
-//create a account with passphrase
+// create a account with passphrase
 func CreateAccountWithPassphrase(password string, optionalAccountFilePath ...string) (*account.Account, error) {
 	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
 	if err != nil {
@@ -123,7 +123,7 @@ func CreateAccountWithPassphrase(password string, optionalAccountFilePath ...str
 	return account, err
 }
 
-//create a account
+// create a account
 func CreateAccount() (*account.Account, error) {
 	am, err := GetAccountManager(wallet.GetAccountFilePath())
 	if err != nil {
@@ -136,7 +136,7 @@ func CreateAccount() (*account.Account, error) {
 	return account, err
 }
 
-//get balance
+// get balance
 func GetBalance(address account.Address, bc *lblockchain.Blockchain) (*common.Amount, error) {
 	acc := account.NewTransactionAccountByAddress(address)
 	if acc.IsValid() == false {
@@ -166,7 +166,7 @@ func GetMinerAddress() string {
 	return minerPrivateKey
 }
 
-//add balance
+// add balance
 func SendFromMiner(address account.Address, amount *common.Amount, bc *lblockchain.Blockchain) ([]byte, string, error) {
 	minerAccount := account.NewAccountByPrivateKey(minerPrivateKey)
 	sendTxParam := transaction.NewSendTxParam(minerAccount.GetAddress(), minerAccount.GetKeyPair(), address, amount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
@@ -216,8 +216,10 @@ func sendProducerChange(sendTxParam transaction.SendTxParam, bc *lblockchain.Blo
 
 	tx, err := ltransaction.NewProducerChangeUTXOTransaction(utxos, sendTxParam)
 
-	bc.GetTxPool().Push(tx)
-	bc.GetTxPool().BroadcastTx(&tx)
+	nonce := utxoIndex.GetLastNonceByPubKeyHash(acc.GetPubKeyHash()) + 1
+
+	bc.GetTxPool().Push(tx, nonce)
+	bc.GetTxPool().BroadcastTx(&tx, nonce)
 
 	if err != nil {
 		return nil, err
@@ -255,8 +257,10 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 
 	tx, err := ltransaction.NewNormalUTXOTransaction(utxos, sendTxParam)
 
-	bc.GetTxPool().Push(tx)
-	bc.GetTxPool().BroadcastTx(&tx)
+	nonce := utxoIndex.GetLastNonceByPubKeyHash(acc.GetPubKeyHash()) + 1
+
+	bc.GetTxPool().Push(tx, nonce)
+	bc.GetTxPool().BroadcastTx(&tx, nonce)
 
 	contractAddr := account.NewAddress("")
 	if tx.Type == transaction.TxTypeContract {

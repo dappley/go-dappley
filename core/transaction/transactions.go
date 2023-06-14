@@ -56,7 +56,7 @@ func NewNonceTransaction(tx *Transaction, nonce uint64) NonceTransaction {
 
 func (tx *NonceTransaction) ToProto() proto.Message {
 	return &transactionpb.NonceTransaction{
-		Transaction: tx.ToProto().(*transactionpb.Transaction),
+		Transaction: tx.transaction.ToProto().(*transactionpb.Transaction),
 		Nonce:       tx.nonce,
 	}
 }

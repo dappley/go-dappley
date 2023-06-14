@@ -220,13 +220,15 @@ func (txPool *TransactionPool) Rollback(tx transaction.Transaction, nonce uint64
 	defer txPool.mutex.Unlock()
 
 	rollbackTxNode := transaction.NewTransactionNode(&tx, nonce)
-	//txPool.updateChildren(rollbackTxNode)
+	txPool.updateChildren(rollbackTxNode)
 	newTipOrder := []string{}
 
 	// this remakes the tipOrder so that it doesn't include the children of the rolled-back tx
 	for _, txid := range txPool.tipOrder {
 		tipSender := txPool.txs[txid].FromPubKeyHash
 		if tipSender != rollbackTxNode.FromPubKeyHash {
+			newTipOrder = append(newTipOrder, txid)
+		} else if _, exist := rollbackTxNode.Children[txid]; !exist {
 			newTipOrder = append(newTipOrder, txid)
 		}
 	}
@@ -447,7 +449,8 @@ func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.Transac
 
 	txPool.EventBus.Publish(NewTransactionTopic, txNode.Value)
 
-	//if it depends on another tx in txpool, the transaction will be not be included in the sorted list
+	// only add to tip order if the new tx would have the new lowest nonce in the tip order
+	// and if it is the previous utxoCache nonce + 1
 	if lowestNonce > 0 && txNode.Nonce > lowestNonce {
 		return
 	}
@@ -455,6 +458,8 @@ func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.Transac
 	if txNode.Nonce != lastNonce+1 {
 		return
 	}
+
+	//if it depends on another tx in txpool, the transaction will be not be included in the sorted list
 	if isDependentOnParent {
 		return
 	}

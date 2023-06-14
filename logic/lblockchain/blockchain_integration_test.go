@@ -60,15 +60,18 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 	*/
 
 	utxoIndex := lutxo.NewUTXOIndex(bc.utxoCache)
-	txs := fakeDependentTxs(utxoIndex, coinbaseAccount, 5)
+	numOfTx := 5
+	txs := fakeDependentTxs(utxoIndex, coinbaseAccount, numOfTx)
 
 	//tx0 is in blk 4 and tx1 is in blk5. all other transactions are still in transaction pool
 	//The current transactions in transaction pool should look like
 	/*
 		tx2 - tx3 - tx4
 	*/
+	err := bc.utxoCache.SetLastNonce(txs[1].GetDefaultFromPubKeyHash(), 1)
+	assert.Nil(t, err)
 	for i := 2; i < len(txs); i++ {
-		bc.txPool.Push(txs[i])
+		bc.txPool.Push(txs[i], uint64(i))
 	}
 
 	assert.Equal(t, 3, len(bc.txPool.GetAllTransactions()))
@@ -104,7 +107,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 		tx0 - tx1 - tx2 - tx3 - tx4
 	*/
 	assert.Equal(t, 5, len(bc.txPool.GetAllTransactions()))
-	assert.Equal(t, 1, len(bc.txPool.GetTipOrder()))
+	assert.Equal(t, 2, len(bc.txPool.GetTipOrder()))
 
 }
 
@@ -119,7 +122,7 @@ func fakeDependentTxs(utxoIndex *lutxo.UTXOIndex, fundAccount *account.Account, 
 	addr1 := account1.GetAddress()
 
 	account2 := account.NewAccount()
-	keyPair2 := account2.GetKeyPair()
+	//keyPair2 := account2.GetKeyPair()
 	addr2 := account2.GetAddress()
 
 	//first transaction's vin is from fund addr
@@ -127,7 +130,7 @@ func fakeDependentTxs(utxoIndex *lutxo.UTXOIndex, fundAccount *account.Account, 
 		fundAddr,
 		fundKeyPair,
 		addr1,
-		common.NewAmount(5),
+		common.NewAmount(100),
 		common.NewAmount(0),
 		common.NewAmount(0),
 		common.NewAmount(0),
@@ -150,11 +153,13 @@ func fakeDependentTxs(utxoIndex *lutxo.UTXOIndex, fundAccount *account.Account, 
 			common.NewAmount(0),
 			"",
 		}
-		if i%2 == 1 {
-			params.SenderKeyPair = keyPair2
-			params.From = addr2
-			params.To = addr1
-		}
+		/*
+			if i%2 == 1 {
+				params.SenderKeyPair = keyPair2
+				params.From = addr2
+				params.To = addr1
+			}
+		*/
 		newTx, err := createTransaction(utxoIndex, params)
 		if err == nil {
 			txs = append(txs, newTx)

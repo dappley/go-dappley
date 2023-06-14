@@ -177,8 +177,8 @@ func TestBlockchain_GetUpdatedUTXOIndex(t *testing.T) {
 	blk1 := block.NewBlockWithRawInfo(hash.Hash("hash1"), genesis.GetHash(), 1, 0, 2, txs)
 	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk1))
 	assert.Nil(t, err)
-	for _, tx := range txs {
-		bc.GetTxPool().Push(*tx)
+	for i, tx := range txs {
+		bc.GetTxPool().Push(*tx, uint64(i+1))
 	}
 
 	result, ok := bc.GetUpdatedUTXOIndex()
