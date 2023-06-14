@@ -2,7 +2,7 @@ package sdk
 
 import (
 	"context"
-
+	"errors"
 	"github.com/dappley/go-dappley/logic"
 
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
@@ -19,12 +19,12 @@ type DappSdk struct {
 	conn *DappSdkGrpcClient
 }
 
-//NewDappSdk creates a new DappSdk instance
+// NewDappSdk creates a new DappSdk instance
 func NewDappSdk(conn *DappSdkGrpcClient) *DappSdk {
 	return &DappSdk{conn}
 }
 
-//GetBlockHeight requests the height of currnet tail block from the server
+// GetBlockHeight requests the height of currnet tail block from the server
 func (sdk *DappSdk) GetBlockHeight() (uint64, error) {
 	resp, err := sdk.conn.rpcClient.RpcGetBlockchainInfo(
 		context.Background(),
@@ -38,7 +38,7 @@ func (sdk *DappSdk) GetBlockHeight() (uint64, error) {
 	return resp.BlockHeight, nil
 }
 
-//GetBlockHeight requests the balance of the input address from the server
+// GetBlockHeight requests the balance of the input address from the server
 func (sdk *DappSdk) GetBalance(address string) (int64, error) {
 	response, err := sdk.conn.rpcClient.RpcGetBalance(context.Background(), &rpcpb.GetBalanceRequest{Address: address})
 	if err != nil {
@@ -47,7 +47,7 @@ func (sdk *DappSdk) GetBalance(address string) (int64, error) {
 	return response.Amount, err
 }
 
-//Send send a transaction to the network
+// Send send a transaction to the network
 func (sdk *DappSdk) Send(from, to string, amount uint64, data string) (*rpcpb.SendResponse, error) {
 	return sdk.conn.adminClient.RpcSend(context.Background(), &rpcpb.SendRequest{
 		From:        from,
@@ -61,22 +61,33 @@ func (sdk *DappSdk) Send(from, to string, amount uint64, data string) (*rpcpb.Se
 	})
 }
 
-//SendTransaction send a transaction to the network
-func (sdk *DappSdk) SendTransaction(tx *transactionpb.Transaction) (*rpcpb.SendTransactionResponse, error) {
+// SendTransaction send a transaction to the network
+func (sdk *DappSdk) SendTransaction(tx *transactionpb.Transaction, nonce uint64) (*rpcpb.SendTransactionResponse, error) {
 	return sdk.conn.rpcClient.RpcSendTransaction(
 		context.Background(),
 		&rpcpb.SendTransactionRequest{
 			Transaction: tx,
+			Nonce:       nonce,
 		},
 	)
 }
 
-//SendBatchTransactions sends a batch of transactions to the network
-func (sdk *DappSdk) SendBatchTransactions(txs []*transactionpb.Transaction) error {
+// SendBatchTransactions sends a batch of transactions to the network
+func (sdk *DappSdk) SendBatchTransactions(txs []*transactionpb.Transaction, nonces []uint64) error {
+	if len(txs) != len(nonces) {
+		return errors.New("len(txs) must match len(nonces)")
+	}
+	sendTxRequests := []*rpcpb.SendTransactionRequest{}
+	for i, txpb := range txs {
+		sendTxRequests = append(sendTxRequests, &rpcpb.SendTransactionRequest{
+			Transaction: txpb,
+			Nonce:       nonces[i],
+		})
+	}
 	_, err := sdk.conn.rpcClient.RpcSendBatchTransaction(
 		context.Background(),
 		&rpcpb.SendBatchTransactionRequest{
-			Transactions: txs,
+			Transactions: sendTxRequests,
 		},
 	)
 
@@ -91,14 +102,14 @@ func (sdk *DappSdk) SendBatchTransactions(txs []*transactionpb.Transaction) erro
 	return nil
 }
 
-//RequestFund sends a fund request to the server
-//RpcSendFromMiner has been removed; redesign this function if needed
+// RequestFund sends a fund request to the server
+// RpcSendFromMiner has been removed; redesign this function if needed
 func (sdk *DappSdk) RequestFund(fundAddr string, amount *common.Amount) {
 	//	sendFromMinerRequest := &rpcpb.SendFromMinerRequest{To: fundAddr, Amount: amount.Bytes()}
 	//	sdk.conn.adminClient.RpcSendFromMiner(context.Background(), sendFromMinerRequest)
 }
 
-//GetUtxoByAddr gets all utxos related to an address from the server
+// GetUtxoByAddr gets all utxos related to an address from the server
 func (sdk *DappSdk) GetUtxoByAddr(addr account.Address) ([]*utxopb.Utxo, error) {
 
 	resp, err := logic.GetUtxoStream(sdk.conn.rpcClient, &rpcpb.GetUTXORequest{
