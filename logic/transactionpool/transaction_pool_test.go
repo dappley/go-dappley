@@ -184,6 +184,27 @@ func TestTransactionPool_PushReplacement(t *testing.T) {
 	assert.Equal(t, txReplace.ID, txPool.GetTransactions()[0].ID)
 }
 
+func TestTransactionPool_PushHighNonce(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+
+	txPool := NewTransactionPool(nil, 128000)
+	txPool.SetUTXOCache(utxo.NewUTXOCache(db))
+	err := txPool.utxoCache.SetLastNonce(tx1.GetDefaultFromPubKeyHash(), 10)
+	assert.Nil(t, err)
+
+	// this skips nonce 11, so it shouldn't be added to tip order.
+	txPool.Push(tx1, 12)
+	assert.Equal(t, 1, len(txPool.txs))
+	assert.Equal(t, 0, len(txPool.tipOrder))
+
+	otherTx := tx1.DeepCopy()
+	otherTx.ID = []byte("test")
+	txPool.Push(otherTx, 11)
+	assert.Equal(t, 2, len(txPool.txs))
+	assert.Equal(t, 1, len(txPool.tipOrder))
+}
+
 func TestTransactionPool_addTransaction(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()

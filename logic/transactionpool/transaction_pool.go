@@ -424,6 +424,10 @@ func (txPool *TransactionPool) disconnectFromParent(tx *transaction.Transaction)
 }
 
 func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.TransactionNode, lowestNonce uint64) {
+	lastNonce := txPool.utxoCache.GetLastNonce(txNode.Value.GetDefaultFromPubKeyHash())
+	if txNode.Nonce <= lastNonce {
+		return
+	}
 	isDependentOnParent := false
 	for _, vin := range txNode.Value.Vin {
 		parentTx, exist := txPool.txs[hex.EncodeToString(vin.Txid)]
@@ -454,7 +458,6 @@ func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.Transac
 	if lowestNonce > 0 && txNode.Nonce > lowestNonce {
 		return
 	}
-	lastNonce := txPool.utxoCache.GetLastNonce(txNode.Value.GetDefaultFromPubKeyHash())
 	if txNode.Nonce != lastNonce+1 {
 		return
 	}

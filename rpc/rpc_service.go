@@ -367,12 +367,12 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		return nil, status.Error(codes.InvalidArgument, "transaction type error, must be normal or contract")
 	}
 
-	lastNonce := rpcService.utxoIndex.GetLastNonceByPubKeyHash(adaptedTx.GetDefaultFromTransactionAccount().GetPubKeyHash())
+	bc := rpcService.GetBlockchain()
+	lastNonce := bc.GetUtxoCache().GetLastNonce(adaptedTx.GetDefaultFromTransactionAccount().GetPubKeyHash())
 	if in.GetNonce() <= lastNonce {
 		return nil, status.Error(codes.InvalidArgument, "transaction nonce is too low")
 	}
 
-	bc := rpcService.GetBlockchain()
 	var generatedContractAddress string
 	if adaptedTx.IsContract() {
 		if adaptedTx.GasPrice.Cmp(common.NewAmount(0)) < 0 || tx.GasPrice.Cmp(common.NewAmount(0)) == ltransaction.GasConsumption {
@@ -432,6 +432,16 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 	for _, txInReq := range in.Transactions {
 		tx := transaction.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeDefault}
 		tx.FromProto(txInReq.GetTransaction())
+		lastNonce := utxoIndex.GetLastNonceByPubKeyHash(tx.GetDefaultFromTransactionAccount().GetPubKeyHash())
+		if txInReq.GetNonce() <= lastNonce {
+			logger.WithFields(logger.Fields{
+				"txid":          tx.ID,
+				"from":          tx.GetDefaultFromTransactionAccount().GetAddress().String(),
+				"input_nonce":   txInReq.GetNonce(),
+				"minimum_nonce": lastNonce + 1,
+			}).Warnf("nonce too low")
+			continue
+		}
 		txs = append(txs, tx)
 		nonces = append(nonces, txInReq.GetNonce())
 	}
