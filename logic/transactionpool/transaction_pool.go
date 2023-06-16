@@ -58,28 +58,30 @@ var (
 )
 
 type TransactionPool struct {
-	txs        map[string]*transaction.TransactionNode
-	utxoCache  *utxo.UTXOCache
-	pendingTxs []*transaction.Transaction
-	tipOrder   []string
-	sizeLimit  uint32
-	currSize   uint32
-	EventBus   EventBus.Bus
-	mutex      sync.RWMutex
-	netService NetService
+	txs               map[string]*transaction.TransactionNode
+	utxoCache         *utxo.UTXOCache
+	pendingTxs        []*transaction.Transaction
+	txIDsByPubKeyHash map[string][]string
+	tipOrder          []string
+	sizeLimit         uint32
+	currSize          uint32
+	EventBus          EventBus.Bus
+	mutex             sync.RWMutex
+	netService        NetService
 }
 
 func NewTransactionPool(netService NetService, limit uint32) *TransactionPool {
 	txPool := &TransactionPool{
-		txs:        make(map[string]*transaction.TransactionNode),
-		utxoCache:  utxo.NewUTXOCache(storage.NewRamStorage()),
-		pendingTxs: make([]*transaction.Transaction, 0),
-		tipOrder:   make([]string, 0),
-		sizeLimit:  limit,
-		currSize:   0,
-		EventBus:   EventBus.New(),
-		mutex:      sync.RWMutex{},
-		netService: netService,
+		txs:               make(map[string]*transaction.TransactionNode),
+		utxoCache:         utxo.NewUTXOCache(storage.NewRamStorage()),
+		pendingTxs:        make([]*transaction.Transaction, 0),
+		txIDsByPubKeyHash: make(map[string][]string),
+		tipOrder:          make([]string, 0),
+		sizeLimit:         limit,
+		currSize:          0,
+		EventBus:          EventBus.New(),
+		mutex:             sync.RWMutex{},
+		netService:        netService,
 	}
 	txPool.ListenToNetService()
 	return txPool
@@ -112,13 +114,14 @@ func (txPool *TransactionPool) GetTopicHandler(topic string) pubsub.TopicHandler
 
 func (txPool *TransactionPool) DeepCopy() *TransactionPool {
 	txPoolCopy := TransactionPool{
-		txs:       make(map[string]*transaction.TransactionNode),
-		utxoCache: txPool.utxoCache,
-		tipOrder:  make([]string, len(txPool.tipOrder)),
-		sizeLimit: txPool.sizeLimit,
-		currSize:  0,
-		EventBus:  EventBus.New(),
-		mutex:     sync.RWMutex{},
+		txs:               make(map[string]*transaction.TransactionNode),
+		utxoCache:         txPool.utxoCache,
+		tipOrder:          make([]string, len(txPool.tipOrder)),
+		txIDsByPubKeyHash: make(map[string][]string),
+		sizeLimit:         txPool.sizeLimit,
+		currSize:          0,
+		EventBus:          EventBus.New(),
+		mutex:             sync.RWMutex{},
 	}
 
 	copy(txPoolCopy.tipOrder, txPool.tipOrder)
@@ -131,6 +134,13 @@ func (txPool *TransactionPool) DeepCopy() *TransactionPool {
 			newTxNode.Children[childKey] = childTx
 		}
 		txPoolCopy.txs[key] = newTxNode
+	}
+
+	for key, txids := range txPool.txIDsByPubKeyHash {
+		txPoolCopy.txIDsByPubKeyHash[key] = make([]string, len(txids))
+		for _, txid := range txids {
+			txPoolCopy.txIDsByPubKeyHash[key] = append(txPoolCopy.txIDsByPubKeyHash[key], txid)
+		}
 	}
 
 	return &txPoolCopy
@@ -352,16 +362,13 @@ func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transactio
 
 // getTransactionsFromPubKeyHash returns the transactions from a given sender pubKeyHash, sorted by nonce in ascending order
 func (txPool *TransactionPool) getTransactionsFromPubKeyHash(pkhString string) []*transaction.TransactionNode {
-	addressTxs := []*transaction.TransactionNode{}
-	for _, txNode := range txPool.txs {
-		if txNode.FromPubKeyHash == pkhString {
-			addressTxs = append(addressTxs, txNode)
+	txNodes := []*transaction.TransactionNode{}
+	if txids, ok := txPool.txIDsByPubKeyHash[pkhString]; ok {
+		for _, txid := range txids {
+			txNodes = append(txNodes, txPool.txs[txid])
 		}
 	}
-	sort.Slice(addressTxs, func(i, j int) bool {
-		return addressTxs[i].Nonce < addressTxs[j].Nonce
-	})
-	return addressTxs
+	return txNodes
 }
 
 func checkDependTxInMap(tx *transaction.Transaction, existTxs map[string]*transaction.TransactionNode) bool {
@@ -411,7 +418,25 @@ func (txPool *TransactionPool) removeTransaction(txNode *transaction.Transaction
 	txPool.EventBus.Publish(EvictTransactionTopic, txNode.Value)
 	txPool.currSize -= uint32(txNode.Size)
 	MetricsTransactionPoolSize.Dec(1)
-	delete(txPool.txs, hex.EncodeToString(txNode.Value.ID))
+	txid := hex.EncodeToString(txNode.Value.ID)
+
+	// remove the tx from the nonce-sorted list, and delete the map key if it now points to an empty array
+	senderTxs := txPool.txIDsByPubKeyHash[txNode.FromPubKeyHash]
+	index := sort.Search(len(senderTxs), func(i int) bool {
+		compareTx := txPool.txs[senderTxs[i]]
+		if compareTx == nil {
+			logger.Warnf("nil tx for id %s", senderTxs[i])
+			return false
+		}
+		return compareTx.Nonce >= txNode.Nonce
+	})
+	if senderTxs[index] == txid {
+		txPool.txIDsByPubKeyHash[txNode.FromPubKeyHash] = append(senderTxs[:index], senderTxs[index+1:]...)
+	}
+	if len(txPool.txIDsByPubKeyHash[txNode.FromPubKeyHash]) == 0 {
+		delete(txPool.txIDsByPubKeyHash, txNode.FromPubKeyHash)
+	}
+	delete(txPool.txs, txid)
 }
 
 // disconnectFromParent removes itself from its parent's node's children field
@@ -438,6 +463,35 @@ func (txPool *TransactionPool) addTransactionAndSort(txNode *transaction.Transac
 	}
 
 	txPool.addTransaction(txNode)
+
+	if _, ok := txPool.txIDsByPubKeyHash[txNode.FromPubKeyHash]; !ok {
+		txPool.txIDsByPubKeyHash[txNode.FromPubKeyHash] = make([]string, 0)
+	}
+	senderTxs := txPool.txIDsByPubKeyHash[txNode.FromPubKeyHash]
+	index := sort.Search(len(senderTxs), func(i int) bool {
+		if txPool.txs[senderTxs[i]] == nil {
+			logger.WithFields(logger.Fields{
+				"txid":             senderTxs[i],
+				"len_of_tip_order": len(senderTxs),
+				"len_of_txs":       len(txPool.txs),
+			}).Warn("TransactionPool: the txid does not exist in txs!")
+			return false
+		}
+		if txPool.txs[senderTxs[i]].Value == nil {
+			logger.WithFields(logger.Fields{
+				"txid":             senderTxs[i],
+				"len_of_tip_order": len(senderTxs),
+				"len_of_txs":       len(txPool.txs),
+			}).Warn("TransactionPool: the transaction is nil!")
+			return false
+		}
+		return txPool.txs[senderTxs[i]].Nonce >= txNode.Nonce
+	})
+
+	senderTxs = append(senderTxs, "")
+	copy(senderTxs[index+1:], senderTxs[index:])
+	senderTxs[index] = hex.EncodeToString(txNode.Value.ID)
+	txPool.txIDsByPubKeyHash[txNode.FromPubKeyHash] = senderTxs
 
 	// remove any txs from tip order if they depend on the new tx, and set it as the child of the new tx
 	for i := len(txPool.tipOrder) - 1; i >= 0; i-- { // iterate backwards so that removeFromTipOrder doesn't cause indexing errors

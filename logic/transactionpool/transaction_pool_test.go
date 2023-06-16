@@ -394,6 +394,48 @@ func TestTransactionPool_GetAllTransactions(t *testing.T) {
 	assert.Greater(t, txIndex3, txIndex1)
 }
 
+func TestTransactionPool_GetTransactionsFromPubkeyHash(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+	txPool := NewTransactionPool(nil, 100000)
+	txPool.SetUTXOCache(utxo.NewUTXOCache(db))
+
+	txs := generateDependentTxNodes()
+	for _, tx := range txs {
+		txPool.Push(*tx.Value, tx.Nonce)
+	}
+
+	// should return tx0, tx1, tx2, tx3
+	txs0 := txPool.getTransactionsFromPubKeyHash(txs[0].FromPubKeyHash)
+	expect0 := []*transaction.TransactionNode{
+		txPool.txs[hex.EncodeToString(txs[0].Value.ID)],
+		txPool.txs[hex.EncodeToString(txs[1].Value.ID)],
+		txPool.txs[hex.EncodeToString(txs[2].Value.ID)],
+		txPool.txs[hex.EncodeToString(txs[3].Value.ID)]}
+	assert.Equal(t, expect0, txs0)
+
+	// should return tx4, tx5
+	txs1 := txPool.getTransactionsFromPubKeyHash(txs[4].FromPubKeyHash)
+	expect1 := []*transaction.TransactionNode{
+		txPool.txs[hex.EncodeToString(txs[4].Value.ID)],
+		txPool.txs[hex.EncodeToString(txs[5].Value.ID)]}
+	assert.Equal(t, expect1, txs1)
+
+	// should return empty slice
+	txs2 := txPool.getTransactionsFromPubKeyHash("nonexistent")
+	expect2 := []*transaction.TransactionNode{}
+	assert.Equal(t, expect2, txs2)
+
+	txPool.removeTransaction(txPool.txs[hex.EncodeToString(txs[3].Value.ID)])
+	// should return tx0, tx1, tx2
+	txs3 := txPool.getTransactionsFromPubKeyHash(txs[0].FromPubKeyHash)
+	expect3 := []*transaction.TransactionNode{
+		txPool.txs[hex.EncodeToString(txs[0].Value.ID)],
+		txPool.txs[hex.EncodeToString(txs[1].Value.ID)],
+		txPool.txs[hex.EncodeToString(txs[2].Value.ID)]}
+	assert.Equal(t, expect3, txs3)
+}
+
 func TestTransactionPool_Rollback(t *testing.T) {
 	txs := generateDependentTxNodes()
 
