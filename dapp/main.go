@@ -51,15 +51,16 @@ import (
 )
 
 const (
-	producerFilePath = "conf/producer.conf"
-	genesisAddr      = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
-	configFilePath   = "conf/default.conf"
-	genesisFilePath  = "conf/genesis.conf"
-	peerFilePath     = "conf/peer.conf"
-	peerConfDirPath  = "../dapp/"
-	defaultPassword  = "password"
-	size1kB          = 1024
-	version          = "v0.6.1"
+	dynastyReplacementFilePath = "conf/replacements.conf"
+	producerFilePath           = "conf/producer.conf"
+	genesisAddr                = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
+	configFilePath             = "conf/default.conf"
+	genesisFilePath            = "conf/genesis.conf"
+	peerFilePath               = "conf/peer.conf"
+	peerConfDirPath            = "../dapp/"
+	defaultPassword            = "password"
+	size1kB                    = 1024
+	version                    = "v0.6.1"
 )
 
 func main() {
@@ -95,22 +96,27 @@ func main() {
 	// logger.Infof("Genesis conf file is %v,node conf file is %v", genesisPath, filePath)
 	//load genesis file information
 	genesisConf := &configpb.DynastyConfig{}
-	config.LoadConfig(genesisPath, genesisConf)
+	err := config.LoadConfig(genesisPath, genesisConf)
 
-	if genesisConf == nil {
+	if err != nil {
 		logger.Error("Cannot load genesis configurations from file! Exiting...")
 		return
 	}
 
 	//load config file information
 	conf := &configpb.Config{}
-	config.LoadConfig(filePath, conf)
-	if conf == nil {
+	err = config.LoadConfig(filePath, conf)
+	if err != nil {
 		logger.Error("Cannot load configurations from file! Exiting...")
 		return
 	}
 	peerinfoPath = peerConfDirPath + peerinfoPath
 	peerinfoConf := storage.NewFileLoader(peerinfoPath)
+
+	//load producer config information
+	producerConf := &configpb.DynastyConfig{}
+	err = config.LoadConfig(producerFilePath, producerConf)
+	producerConfValid := err == nil
 
 	//setup
 	db := storage.OpenDatabase(conf.GetNodeConfig().GetDbPath())
@@ -125,6 +131,9 @@ func main() {
 	//create blockchain
 	conss, _ := initConsensus(genesisConf, conf)
 	conss.SetFilePath(producerFilePath)
+	conss.SetReplacementsFilePath(dynastyReplacementFilePath)
+	conss.LoadDynastyReplacements()
+
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit() * size1kB
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
 	txPool := transactionpool.NewTransactionPool(node, txPoolLimit)
@@ -168,6 +177,9 @@ func main() {
 	defer server.Stop()
 
 	producer := blockproducerinfo.NewBlockProducerInfo(conf.GetConsensusConfig().GetMinerAddress())
+	if producerConfValid {
+		updateProducerList(conss, producerConf)
+	}
 	blockProducer := blockproducer.NewBlockProducer(bm, conss, producer)
 
 	downloadManager := downloadmanager.NewDownloadManager(node, bm, len(conss.GetProducers()), blockProducer)
@@ -191,12 +203,19 @@ func initConsensus(conf *configpb.DynastyConfig, generalConf *configpb.Config) (
 	//set up consensus
 	conss := consensus.NewDPOS(blockproducerinfo.NewBlockProducerInfo(generalConf.GetConsensusConfig().GetMinerAddress()))
 	dynasty := consensus.NewDynastyWithConfigProducers(conf.GetProducers(), (int)(conf.GetMaxProducers()))
+	logger.Info("producers from config = ", conf.GetProducers())
 	conss.SetDynasty(dynasty)
 	conss.SetKey(generalConf.GetConsensusConfig().GetPrivateKey())
 	logger.WithFields(logger.Fields{
 		"miner_address": generalConf.GetConsensusConfig().GetMinerAddress(),
 	}).Info("Consensus is configured.")
 	return conss, dynasty
+}
+
+func updateProducerList(conss *consensus.DPOS, conf *configpb.DynastyConfig) {
+	dynasty := consensus.NewDynastyWithConfigProducers(conf.GetProducers(), (int)(conf.GetMaxProducers()))
+	conss.SetDynasty(dynasty)
+	logger.Info("Consensus updated based on ", producerFilePath)
 }
 
 func initNode(conf *configpb.Config, peerinfoConf *storage.FileLoader) (*network.Node, error) {

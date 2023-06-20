@@ -14,11 +14,11 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
-//
 package lblockchain
 
 import (
 	"encoding/json"
+	"github.com/dappley/go-dappley/consensus"
 
 	"github.com/dappley/go-dappley/common"
 	errval "github.com/dappley/go-dappley/errors"
@@ -80,6 +80,15 @@ func NewBlockchainManager(blockchain *Blockchain, blockpool *blockchain.BlockPoo
 func (bm *BlockchainManager) GetDownloadRequestCh() chan chan bool {
 	return bm.downloadRequestCh
 }
+
+func (bm *BlockchainManager) GetDynasty() *consensus.Dynasty {
+	return bm.consensus.GetDynasty()
+}
+
+func (bm *BlockchainManager) SetDynasty(dynasty *consensus.Dynasty) {
+	bm.consensus.SetDynasty(dynasty)
+}
+
 func (bm *BlockchainManager) SetNewDynasty(original, new string, height uint64, kind int) {
 	bm.consensus.AddReplacement(original, new, height, kind)
 }
@@ -96,6 +105,10 @@ func (bm *BlockchainManager) SetNewDynastyByString(info, original string) {
 
 func (bm *BlockchainManager) CheckDynast(height uint64) {
 	bm.consensus.ChangeDynasty(height)
+}
+
+func (bm *BlockchainManager) CheckDynastyTemp(height uint64) {
+	bm.consensus.ChangeDynastyTemp(height)
 }
 
 func (bm *BlockchainManager) RequestDownloadBlockchain() {
@@ -328,14 +341,14 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 	return nil
 }
 
-//RequestBlock sends a requestBlock command to its peer with pid through network module
+// RequestBlock sends a requestBlock command to its peer with pid through network module
 func (bm *BlockchainManager) RequestBlock(hash hash.Hash, pid networkmodel.PeerInfo) {
 	request := &lblockchainpb.RequestBlock{Hash: hash}
 
 	bm.netService.UnicastHighProrityCommand(RequestBlock, request, pid)
 }
 
-//RequestBlockhandler handles when blockchain manager receives a requestBlock command from its peers
+// RequestBlockhandler handles when blockchain manager receives a requestBlock command from its peers
 func (bm *BlockchainManager) RequestBlockHandler(input interface{}) {
 
 	var command *networkmodel.DappRcvdCmdContext
@@ -358,18 +371,18 @@ func (bm *BlockchainManager) RequestBlockHandler(input interface{}) {
 	bm.SendBlockToPeer(block, command.GetSource())
 }
 
-//SendBlockToPeer unicasts a block to the peer with peer id "pid"
+// SendBlockToPeer unicasts a block to the peer with peer id "pid"
 func (bm *BlockchainManager) SendBlockToPeer(block *block.Block, pid networkmodel.PeerInfo) {
 
 	bm.netService.UnicastNormalPriorityCommand(SendBlock, block.ToProto(), pid)
 }
 
-//BroadcastBlock broadcasts a block to all peers
+// BroadcastBlock broadcasts a block to all peers
 func (bm *BlockchainManager) BroadcastBlock(block *block.Block) {
 	bm.netService.BroadcastHighProrityCommand(SendBlock, block.ToProto())
 }
 
-//SendBlockHandler handles when blockchain manager receives a sendBlock command from its peers
+// SendBlockHandler handles when blockchain manager receives a sendBlock command from its peers
 func (bm *BlockchainManager) SendBlockHandler(input interface{}) {
 
 	var command *networkmodel.DappRcvdCmdContext
@@ -456,7 +469,7 @@ func (bm *BlockchainManager) NumForks() (int64, int64) {
 	return numForks, maxHeight
 }
 
-//Remove the blocks in the fork which are already on the chain and return the blocks which are not
+// Remove the blocks in the fork which are already on the chain and return the blocks which are not
 func (bm *BlockchainManager) removeRedundantBlks(fork []*block.Block, forkHeadParentkHash hash.Hash) ([]*block.Block, hash.Hash) {
 
 	purifiedForkParentHash := forkHeadParentkHash

@@ -15,8 +15,10 @@ type Storage interface {
 
 type Consensus interface {
 	Validate(*block.Block) bool
+	GetDynasty() *consensus.Dynasty
 	SetDynasty(dynasty *consensus.Dynasty)
 	ChangeDynasty(height uint64)
+	ChangeDynastyTemp(height uint64)
 	AddReplacement(original, new string, height uint64, kind int)
 }
 

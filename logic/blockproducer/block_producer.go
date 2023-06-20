@@ -31,7 +31,7 @@ type BlockProducer struct {
 	isRunning bool
 }
 
-//NewBlockProducer returns a new block producer instance
+// NewBlockProducer returns a new block producer instance
 func NewBlockProducer(bm *lblockchain.BlockchainManager, con Consensus, producer *blockproducerinfo.BlockProducerInfo) *BlockProducer {
 	return &BlockProducer{
 		bm:        bm,
@@ -42,7 +42,7 @@ func NewBlockProducer(bm *lblockchain.BlockchainManager, con Consensus, producer
 	}
 }
 
-//Start starts the block producing process
+// Start starts the block producing process
 func (bp *BlockProducer) Start() {
 	// clear stop channel buffer
 	select {
@@ -69,23 +69,23 @@ func (bp *BlockProducer) Start() {
 	}()
 }
 
-//Stop stops the block producing process
+// Stop stops the block producing process
 func (bp *BlockProducer) Stop() {
 	logger.Info("BlockProducer stops...")
 	bp.stopCh <- true
 }
 
-//IsProducingBlock returns if the local producer is producing a block
+// IsProducingBlock returns if the local producer is producing a block
 func (bp *BlockProducer) IsProducingBlock() bool {
 	return !bp.producer.IsIdle()
 }
 
-//IsProducingBlock returns if the local producer is producing a block
+// IsProducingBlock returns if the local producer is producing a block
 func (bp *BlockProducer) GetProduceBlockStatus() bool {
 	return bp.isRunning
 }
 
-//produceBlock produces a new block and add it to blockchain
+// produceBlock produces a new block and add it to blockchain
 func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline deadline.Deadline) {
 	// Do not produce block if block pool is syncing
 	bp.bm.Getblockchain().GetBlockMutex().Lock()
@@ -131,7 +131,7 @@ func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline d
 	bp.addBlockToBlockchain(ctx)
 }
 
-//prepareBlock generates a new block
+// prepareBlock generates a new block
 func (bp *BlockProducer) prepareBlock(deadline deadline.Deadline) *lblockchain.BlockContext {
 
 	parentBlock, err := bp.bm.Getblockchain().GetTailBlock()
@@ -160,7 +160,7 @@ func (bp *BlockProducer) prepareBlock(deadline deadline.Deadline) *lblockchain.B
 	return &ctx
 }
 
-//collectTransactions pack transactions from transaction pool to a new block
+// collectTransactions pack transactions from transaction pool to a new block
 func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentBlk *block.Block, deadline deadline.Deadline) ([]*transaction.Transaction, *scState.ScState) {
 
 	var validTxs []*transaction.Transaction
@@ -229,7 +229,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 	return validTxs, contractState
 }
 
-//calculateTips calculate how much tips are earned from the input transactions
+// calculateTips calculate how much tips are earned from the input transactions
 func (bp *BlockProducer) calculateTips(txs []*transaction.Transaction) *common.Amount {
 	//calculate tips
 	totalTips := common.NewAmount(0)
@@ -239,7 +239,7 @@ func (bp *BlockProducer) calculateTips(txs []*transaction.Transaction) *common.A
 	return totalTips
 }
 
-//addBlockToBlockchain adds the new block to blockchain
+// addBlockToBlockchain adds the new block to blockchain
 func (bp *BlockProducer) addBlockToBlockchain(ctx *lblockchain.BlockContext) {
 	logger.WithFields(logger.Fields{
 		"height": ctx.Block.GetHeight(),
