@@ -20,6 +20,8 @@ package account
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
+	"fmt"
 
 	accountpb "github.com/dappley/go-dappley/core/account/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
@@ -47,7 +49,11 @@ func newKeyPair() (ecdsa.PrivateKey, []byte) {
 	if err != nil {
 		logger.Panic(err)
 	}
-
+	PrivateKey,err := secp256k1.FromECDSAPrivateKey(private)
+	if err != nil {
+		logger.Panic(err)
+	}
+	fmt.Println("PrivateKey:",hex.EncodeToString(PrivateKey[:]))
 	pubKey, _ := secp256k1.FromECDSAPublicKey(&private.PublicKey)
 	//remove the uncompressed point at pubKey[0]
 	return *private, pubKey[1:]

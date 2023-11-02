@@ -23,9 +23,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"fmt"
+	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256r1"
 	"strings"
 
-	"github.com/dappley/go-dappley/core/utxo"
 	errval "github.com/dappley/go-dappley/errors"
 
 	"github.com/dappley/go-dappley/common"
@@ -140,7 +141,8 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) er
 
 		txCopy.Vin[i].PubKey = oldPubKey
 
-		signature, err := secp256k1.Sign(txCopy.ID, privData)
+		signature, err := secp256r1.Sign(txCopy.ID, privData) // ********
+		//signature, err := secp256k1.Sign(txCopy.ID, privData)
 		if err != nil {
 			logger.WithError(err).Error("Transaction: failed to create a signature.")
 			return err
@@ -497,8 +499,11 @@ func (tx *Transaction) VerifySignatures(prevUtxos []*utxo.UTXO) (bool, error) {
 		if vin.Signature == nil || len(vin.Signature) == 0 {
 			return false, errval.SignaturesEmpty
 		}
-
-		verifyResult, err := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
+		fmt.Printf("txCopy.ID:\\t %v \\n",txCopy.ID)
+		fmt.Printf("vin.Signature:\\t %v \\n",vin.Signature)
+		fmt.Printf("originPub:\\t %v \\n",originPub)
+		verifyResult, err := secp256r1.Verify(txCopy.ID, vin.Signature, originPub)
+		//verifyResult, err := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
 
 		if err != nil || verifyResult == false {
 			return false, errval.SignaturesInvalid

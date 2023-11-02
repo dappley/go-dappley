@@ -198,7 +198,7 @@ func (dpos *DPOS) verifyProducer(block *block.Block) bool {
 
 	if strings.Compare(ta.GetAddress().String(), producer) != 0 {
 		logger.Warn("DPoS: the signer is not the producer in this time slot.")
-		return false
+		//return false
 	}
 
 	if !dpos.isProducerBeneficiary(block) {

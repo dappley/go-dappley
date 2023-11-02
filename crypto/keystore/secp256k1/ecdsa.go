@@ -44,20 +44,21 @@ func NewECDSAPrivateKey() (*ecdsa.PrivateKey, error) {
 
 	// in bitcoin src, they call SeckeyVerify func to verify the generated private key
 	// to make sure valid.
-	for {
-		privKey, err := ecdsa.GenerateKey(S256(), rand.Reader)
+	//for {
+		//privKey, err := ecdsa.GenerateKey(S256(), rand.Reader)
+		privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
 			return nil, err
 		}
-		privData, err := FromECDSAPrivateKey(privKey)
-		if err != nil {
-			return nil, err
-		}
+		//privData, err := FromECDSAPrivateKey(privKey)
+		//if err != nil {
+		//	return nil, err
+		//}
 		priv = privKey
-		if SeckeyVerify(privData) {
-			break
-		}
-	}
+		//if SeckeyVerify(privData) {
+		//	break
+		//}
+	//}
 	return priv, nil
 }
 
@@ -71,11 +72,12 @@ func FromECDSAPrivateKey(priv *ecdsa.PrivateKey) ([]byte, error) {
 }
 
 // FromECDSAPublicKey exports a public key into a binary dump.
-func FromECDSAPublicKey(pub *ecdsa.PublicKey) ([]byte, error) {
+func FromECDSAPublicKey(pub *ecdsa.PublicKey) ([]byte, error) { // 2
 	if pub == nil || pub.X == nil || pub.Y == nil {
 		return nil, errval.ECDSAInputPvtKey
 	}
-	return elliptic.Marshal(S256(), pub.X, pub.Y), nil
+	//return elliptic.Marshal(S256(), pub.X, pub.Y), nil
+	return elliptic.Marshal(elliptic.P256(), pub.X, pub.Y), nil
 }
 
 // HexToECDSAPrivateKey parses a secp256k1 private key.
@@ -87,10 +89,11 @@ func HexToECDSAPrivateKey(hexkey string) (*ecdsa.PrivateKey, error) {
 	return ToECDSAPrivateKey(b)
 }
 
-// ToECDSAPrivateKey creates a private key with the given data value.
+// ToECDSAPrivateKey creates a private key with the given data value.  1
 func ToECDSAPrivateKey(d []byte) (*ecdsa.PrivateKey, error) {
 	priv := new(ecdsa.PrivateKey)
-	priv.PublicKey.Curve = S256()
+	//priv.PublicKey.Curve = S256() // ********************
+	priv.PublicKey.Curve = elliptic.P256() // ********************
 	priv.D = new(big.Int).SetBytes(d)
 	priv.PublicKey.X, priv.PublicKey.Y = priv.PublicKey.Curve.ScalarBaseMult(d)
 	return priv, nil
@@ -101,8 +104,11 @@ func ToECDSAPublicKey(pub []byte) (*ecdsa.PublicKey, error) {
 	if len(pub) == 0 {
 		return nil, errval.ECDSAInputPvtKey
 	}
-	x, y := elliptic.Unmarshal(S256(), pub)
-	return &ecdsa.PublicKey{Curve: S256(), X: x, Y: y}, nil
+
+	//x, y := elliptic.Unmarshal(S256(), pub)
+	x, y := elliptic.Unmarshal(elliptic.P256(), pub)
+	//return &ecdsa.PublicKey{Curve: S256(), X: x, Y: y}, nil
+	return &ecdsa.PublicKey{Curve: elliptic.P256(), X: x, Y: y}, nil
 }
 
 // zeroKey zeroes the private key
